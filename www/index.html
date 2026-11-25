@@ -1062,6 +1062,10 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   .moresheet .navg{grid-column:1/-1;padding:10px 6px 2px}.moresheet .navi{padding:9px 6px;border-left:0;font-size:16px}.moresheet .navi.on{background:rgba(226,194,117,.12)}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
+.rackhandle{display:none}
+@media (min-width:761px){.rackhandle{display:flex;align-items:center;gap:8px;position:fixed;bottom:0;left:calc(186px + (100vw - 186px)/2);transform:translateX(-50%);z-index:9;background:var(--plate2);color:var(--ash);font:700 18px var(--body);padding:9px 44px 10px 36px;border:3px solid var(--ink);border-bottom:0;box-shadow:inset 3px 3px 0 var(--bev-hi);cursor:pointer}
+  .rackhandle:hover{color:var(--straw)}.rackhandle .pxico{width:26px;height:26px;background-size:26px 26px;filter:none}.rackhandle .rackn{color:var(--straw)}.rharrow{color:var(--straw);font-size:13px}
+  .drawerbg,.drawer{left:186px!important}main{padding-bottom:64px}}
 @media (max-width:760px){header{min-height:0!important;align-items:flex-start!important}.mark{margin-top:2px!important}button.who{max-width:138px;top:calc(max(6px,env(safe-area-inset-top)) + 36px)!important}#hud{padding:0 40px 0 0!important}}
 .homenext{display:flex;gap:16px;align-items:center;background:var(--plate);border:3px solid var(--straw);padding:16px 18px;margin:14px 0 8px}
 .homenext>.pxico{width:48px;height:48px;background-size:48px 48px;filter:none;flex:none}.homenext>div{flex:1;min-width:0}.homenext h2{margin:2px 0 4px;font-size:22px}.homenext p{margin:0;color:var(--mute)}.homenext .btn{flex:none}
@@ -2728,7 +2732,8 @@ function navItem(k,nm,cls='navi'){const b=navBadge(k),n=k==='rack'?owned().lengt
   return `<button class="${cls} ${navOn(k)?'on':''}" data-action="nav" data-k="${k}" ${navOn(k)?'aria-current="page"':''}><i class="pxico" style="background-image:var(--ico-${navIco(k)})" aria-hidden="true"></i><span>${nm}${n?` <b class="rackn">${n}</b>`:''}</span>${b?`<b class="navb" aria-label="${b} waiting">${b}</b>`:''}</button>`}
 function navHTML(){const all=NAV.flatMap(g=>g[1]).filter(i=>navShow(i[0]));const rest=all.filter(i=>!NAV_BAR.includes(i[0]));const restN=rest.reduce((s,i)=>s+navBadge(i[0]),0),restOn=rest.some(i=>navOn(i[0]));
   const nm=k=>k==='home'?'Home':all.find(i=>i[0]===k)[1];
-  return `<div class="navlist">${navItem('home','Home')}${NAV.map(([g,l])=>`<p class="navg">${g}</p>${l.filter(i=>navShow(i[0])).map(i=>navItem(i[0],i[1])).join('')}`).join('')}</div>
+  return `<div class="navlist">${navItem('home','Home')}${NAV.map(([g,l])=>`<p class="navg">${g}</p>${l.filter(i=>navShow(i[0])&&i[0]!=='rack').map(i=>navItem(i[0],i[1])).join('')}`).join('')}</div>
+  <button class="rackhandle" data-action="nav" data-k="rack" aria-expanded="${!!UI.rack}"><span class="rharrow" aria-hidden="true">▲</span><i class="pxico" style="background-image:var(--ico-rack)" aria-hidden="true"></i>Rack <b class="rackn">${owned().length}</b></button>
   <div class="navbar">${NAV_BAR.map(k=>navItem(k,nm(k),'railbtn')).join('')}<button class="railbtn ${UI.more||restOn?'on':''}" data-action="navmore" aria-expanded="${!!UI.more}"><i class="pxico" style="background-image:var(--ico-more)" aria-hidden="true"></i><span>More</span>${restN?`<b class="navb">${restN}</b>`:''}</button></div>
   ${UI.more?`<div class="morebg" data-action="navmore"></div><div class="moresheet" role="dialog" aria-label="More pages">${NAV.map(([g,l])=>{const r=l.filter(i=>rest.includes(i));return r.length?`<p class="navg">${g}</p>${r.map(i=>navItem(i[0],i[1])).join('')}`:''}).join('')}</div>`:''}`}
 
