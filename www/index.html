@@ -1034,7 +1034,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 @media (max-width:760px){.hallstats .facts{grid-template-columns:repeat(2,minmax(0,1fr))}.hallwall{gap:4px}}
 /* ===== looks: portraits and the look editor ===== */
 .face{image-rendering:pixelated;image-rendering:crisp-edges;background:#241f2e;border:2px solid var(--ink);vertical-align:middle;flex:none}
-.face.sm{width:26px;height:26px;margin-right:7px}.face.big{width:136px;height:136px;border-width:3px;box-shadow:inset 3px 3px 0 var(--bev-hi)}
+.face.sm{width:26px;height:26px;margin-right:7px}.face.big{width:128px;height:128px;border-width:3px;box-shadow:inset 3px 3px 0 var(--bev-hi)}
 .hallhead{align-items:center;justify-content:flex-start}.hallhead .hallid{flex:1;min-width:180px}
 .lookedit{display:grid;grid-template-columns:auto 1fr;gap:18px;margin-bottom:16px;align-items:start}
 .lookstage{display:grid;gap:10px;justify-items:center;position:sticky;top:90px}.lookfull{image-rendering:pixelated;image-rendering:crisp-edges;width:192px;height:276px;background:#241f2e;border:3px solid var(--ink)}
@@ -1045,7 +1045,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 .lchip.hchip{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;font-size:12.5px;line-height:1.1}.lchip.hchip img{image-rendering:pixelated;width:51px;height:51px;background:#241f2e}
 .sw[aria-pressed=true],.lchip[aria-pressed=true]{outline:3px solid var(--straw);outline-offset:1px}.lchip[aria-pressed=true]{color:var(--straw)}
 .btn.on{border-color:var(--straw)!important}
-@media (max-width:760px){.lookedit{grid-template-columns:1fr}.lookstage{position:static}.lookfull{width:128px;height:184px}.face.big{width:102px;height:102px}}
+@media (max-width:760px){.lookedit{grid-template-columns:1fr}.lookstage{position:static}.lookfull{width:128px;height:184px}.face.big{width:128px;height:128px}}
 </style>
 </head>
 <body>
@@ -1792,7 +1792,7 @@ function renderTabs(){const c=needAcct()?null:C();const tabs=c?[['forge','Forge'
   $('tabs').innerHTML=tabs.map(([k,nm,sec],i)=>`${sec&&!tabs[i-1]?.[2]?'<span class="railsep" aria-hidden="true"></span>':''}<button class="railbtn ${sec?'sec':''} ${A.tab===k?'on':''}" data-action="tab" data-tab="${k}" aria-current="${A.tab===k?'page':'false'}"><i class="pxico" style="background-image:var(--ico-${k})" aria-hidden="true"></i><span>${nm}</span></button>`).join('')+(c?`<span class="railsep" aria-hidden="true"></span><button class="railbtn rackbtn ${UI.rack?'on':''}" data-action="racktoggle" aria-expanded="${!!UI.rack}"><i class="pxico" style="background-image:var(--ico-rack)" aria-hidden="true"></i><span>Rack <b class="rackn">${n}</b></span></button>`:'');
   $('opts').innerHTML=!DEV?'':`<label title="For trying things out: Tempered 1 in 10, Starforged 1 in 40, more Titans, an 8-second dig, auctions of 1 to 6 minutes, and it counts as night with Moonlit at 1 in 3. Real shine odds are 1 in 200 and 1 in 2,000."><input type="checkbox" data-action="odds" ${A.testOdds?'checked':''}> Test mode</label><button class="btn ghost small" data-action="reset" data-confirm="1">Reset all</button>`}
 function render(){if(needAcct()){if(!(A.tab==='hall'&&HALL.user))A.tab='chars';UI.rack=false;UI.board=false;UI.mail=false;RACK.open=null}if(PENDING&&!F&&!revealId){const sv=PENDING;PENDING=null;if((sv.rev||0)>(A.rev||0)){const tab=A.tab;A=sv;if(!DEV)A.testOdds=false;ENT=null;A.tab=tab}}if(TOUR.on)requestAnimationFrame(tourPlace);else if(!needAcct()&&!A.tourDone&&!F&&!revealId&&C()&&!C().forged&&!A.slots.some(x=>x&&x.forged)&&A.tab==='forge'){A.tourDone=1;setTimeout(tourStart,400)}if(!F&&!revealId)claimArmory(C());renderHUD();renderTabs();renderDrawer();renderMailbox();renderBoard();if(F)return;const c=C();if(c)ensure(c);
-  if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+codeBanner()+({forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars,hall:vHall}[A.tab]||vChars)();$('view').scrollTop=0}
+  if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+codeBanner()+({forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars,hall:vHall}[A.tab]||vChars)();$('view').scrollTop=0;faceTick()}
 
 const shineTag=b=>(b.moon?'<span class="tag moon">Moonlit</span>':'')+(b.shine==='star'?'<span class="tag star">Starforged</span>':b.shine==='temp'?'<span class="tag temp">Tempered</span>':'');
 const rarTxt=r=>`<span class="rar" style="--rc:${RAR[r].c}">${RAR[r].n}</span>`;
@@ -2892,7 +2892,7 @@ const FIGHT = (() => {
     c.drawImage(cvF, -OX, -OY); c.restore();
     return R;
   }
-  return { SKIN, HAIRC, CLOTH, TROUS, HAIRS, BODIES, BEARDS, POSES, draw };
+  return { SKIN, HAIRC, CLOTH, TROUS, HAIRS, BODIES, BEARDS, POSES, draw, poly, line, disc, shade, mix };
 })();
 // ----- the forward-facing portrait: the same look, seen from the front (34 x 34 pixels, scaled up with no smoothing)
 const FACE=(()=>{
@@ -2945,6 +2945,87 @@ const FACE=(()=>{
       if(hs===9){for(let y=15;y<=30;y++){R(cx-10-(y%4<2?0:1),y,3,1,y%2?H:hd);R(cx+8+(y%4<2?0:1),y,3,1,y%2?hd:H)}R(cx-10,31,3,1,TR);R(cx+8,31,3,1,TR)}}
   }
   return{draw}})();
+// ----- the large portrait: forward-facing, shaded like the full figure, and alive (it breathes, blinks and glances about)
+const FACE2=(()=>{
+  const N=64,{poly,line,disc,shade,mix}=FIGHT,INK='#100c0b',EYES=['#4a6a8c','#5d7348','#6e4a2e','#3a2a1e','#2a1e16','#5b6b8a'];
+  let tcv,tc,mcv,mc;const setup=()=>{if(tcv)return;tcv=Object.assign(document.createElement('canvas'),{width:N,height:N});tc=tcv.getContext('2d',{willReadFrequently:true});mcv=Object.assign(document.createElement('canvas'),{width:N,height:N});mc=mcv.getContext('2d')};
+  function paint(dest,look,t){setup();const c=tc;c.clearRect(0,0,N,N);
+    const S=FIGHT.SKIN[look.skin%6],H=FIGHT.HAIRC[look.hairC%8],CL=FIGHT.CLOTH[look.cloth%8],TR=FIGHT.CLOTH[(look.trim??0)%8],fem=look.body===1,hs=look.hair%14;
+    const sl=shade(S,1.1),sll=shade(S,1.2),sd=shade(S,.8),sdd=shade(S,.62),hl=shade(H,1.45),hll=shade(H,1.75),hd=shade(H,.68),hdd=shade(H,.5),cl=shade(CL,1.22),cll=shade(CL,1.42),cd=shade(CL,.74),cdd=shade(CL,.54),tl=shade(TR,1.3),td=shade(TR,.68);
+    const br=Math.sin(t/900),by=Math.round(br*.9),sway=Math.sin(t/760)*1.3,blink=(t%4300)<150||((t+1700)%9100)<130,gz=(Math.floor(t/2600)%5===3)?1:(Math.floor(t/2600)%5===1?-1:0);
+    const X=32,P=(x,y)=>[X+x,y],R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(X+x),Math.round(y),w,h)},M=pts=>pts.map(p=>P(p[0],p[1])),pl=(pts,col)=>poly(c,M(pts),col),ln=(a,b,col)=>line(c,P(a[0],a[1]),P(b[0],b[1]),col),dc=(x,y,r,col)=>disc(c,X+x,y,r,col);
+    const mir=(pts)=>pts.map(p=>[-p[0],p[1]]);
+    // a hanging lock or braid, swaying a little at its end
+    const lock=(x0,y0,x1,y1,w,braid)=>{const n=Math.max(3,Math.round((y1-y0)/4));for(let i=0;i<n;i++){const f0=i/n,f1=(i+1)/n,xa=x0+(x1-x0)*f0+sway*f0*f0,xb=x0+(x1-x0)*f1+sway*f1*f1,ya=y0+(y1-y0)*f0,yb=y0+(y1-y0)*f1,ww=braid?w+(i%2?.6:-.2):w*(1-f0*.35);
+        pl([[xa-ww,ya],[xa+ww,ya],[xb+ww,yb+ (braid?1:0)],[xb-ww,yb+(braid?1:0)]],braid?(i%2?H:hd):H);if(braid)ln([xa-ww,yb],[xa+ww,ya+1],hdd);else{ln([xa-ww+1,ya],[xb-ww+1,yb],hl);ln([xa+ww-1,ya],[xb+ww-1,yb],hd)}}
+      return[x0+(x1-x0)+sway,y1]};
+    // ---- hair that falls behind the head and shoulders
+    const back=(yb,w,jag)=>{const pts=[[-15,22]];for(let x=-w;x<=w;x+=4)pts.push([x+sway*.5,yb+(jag?((x/4)%2?3:-2):((Math.abs(x)>w-5)?-3:0))]);pts.push([15,22]);pl(pts,hd);for(let x=-w+3;x<w;x+=5)ln([x*.85,24],[x+sway*.5,yb-2],x<0?H:hdd)};
+    if(hs===2)back(60,19);if(hs===8)back(45,16);if(hs===12)back(40,15);if(hs===13)back(47,17,1);
+    if(hs===11)for(const[x,y,r]of[[-15,24,5.5],[15,24,5.5],[-16,32,5],[16,32,5],[-14,40,4],[14,40,4]]){dc(x,y,r,hd);dc(x-1,y-1,r-2,H)}
+    if(hs===6){const e=lock(15,13,21,40,3.4);R(13,12,5,3,TR);R(13,12,5,1,tl);dc(e[0],e[1],2.2,hd)}
+    // ---- shoulders and tunic
+    const sw=fem?19:23,sy=51+by;pl([[-7,sy-3],[7,sy-3],[sw,sy+3],[sw+3,64],[-sw-3,64],[-sw,sy+3]],CL);
+    pl([[-7,sy-3],[-sw,sy+3],[-sw-3,64],[-sw+4,64],[-sw+5,sy+5],[-5,sy]],cl);pl([[7,sy-3],[sw,sy+3],[sw+3,64],[sw-5,64],[sw-6,sy+6],[5,sy]],cd);pl([[sw-2,sy+5],[sw+3,64],[sw-1,64]],cdd);
+    ln([-sw,sy+3],[-7,sy-3],cll);ln([-sw+7,sy+7],[-sw+5,64],cd);ln([sw-9,sy+8],[sw-8,64],cdd);ln([-9,sy+7],[-11,64],cd);ln([10,sy+8],[12,64],cdd);                    // seams and folds
+    pl([[-6,sy-3],[6,sy-3],[1,sy+8],[-1,sy+8]],sd);pl([[-6,sy-3],[-2,sy-3],[0,sy+7]],S);ln([-6,sy-3],[-1,sy+8],cdd);ln([6,sy-3],[1,sy+8],cdd);                           // open neck
+    R(-2,sy+4,5,1,'#d8cdb8');R(-1,sy+7,3,1,'#d8cdb8');R(0,sy+9,1,4,cdd);R(-9,sy+12,4,4,cll);R(-9,sy+12,1,1,cdd);R(-6,sy+15,1,1,cdd);                                     // lace, and a sewn patch
+    // ---- neck
+    const nw=fem?4.5:6;pl([[-nw,40],[nw,40],[nw+1,sy-2],[-nw-1,sy-2]],sd);pl([[-nw,40],[-nw+3,40],[-nw+2,sy-2],[-nw-1,sy-2]],S);pl([[-nw,40],[nw,40],[nw,45],[0,47],[-nw,45]],sdd);
+    // ---- ears
+    dc(-13.5,30,2.8,S);dc(13.5,30,2.8,sd);R(-14,29,1,3,sd);R(14,29,1,3,sdd);R(-15,28,1,1,sl);
+    // ---- head
+    const jaw=fem?[[12.6,32],[10,39],[5,44.5],[0,46]]:[[13,32],[11.2,40],[6,45.6],[0,47.2]],skull=[[0,10.5],[6,11.2],[11,14.5],[13.2,20],[13.6,26]],head=[...mir(skull).reverse().slice(0,-1),...skull,...jaw,...mir(jaw).reverse().slice(1)];
+    pl(head,S);
+    pl([[7,12],[11,14.5],[13.2,20],[13.6,26],...jaw.slice(0,3),[3,45],[7,40],[9,32],[8.6,22]],sd);pl([[11.5,22],[13.6,26],[13,32],[11.2,40],[9.6,41],[11,32]],sdd);        // the shaded side
+    pl([[-11,15],[-6,12],[-5,20],[-10,24]],sl);pl([[-12.6,27],[-10,27],[-9,36],[-11,38]],sl);                                                                              // light on the brow and cheek
+    if(fem){dc(-8,36,2.2,mix(S,'#c2504a',.22));dc(8,36,2.2,mix(S,'#8a3030',.25))}
+    pl(fem?[[-5,44],[5,44],[3.5,45.6],[0,46],[-3.5,45.6]]:[[-6.5,44.6],[6.5,44.6],[4.5,46.6],[0,47.2],[-4.5,46.6]],sd);                                                     // under the chin
+    // ---- eyes and brows
+    const ey=30,eye=(sx)=>{const x=sx*6.2;R(x-3,ey-3,6,1,sd);                                                              // socket
+      if(blink){R(x-3,ey,6,1,sdd);R(x-3,ey+1,6,1,sd)}else{R(x-3,ey-1,6,3,'#f7f1e6');R(x-3,ey+1,6,1,'#d9d2c4');R(x-1+gz,ey-1,3,3,EYES[look.skin%6]);R(x+gz,ey,1,2,INK);R(x-1+gz,ey-1,1,1,'#ffffff');R(x-3,ey-2,6,1,INK);R(x-3,ey+2,6,1,sdd);
+        if(fem){R(x+sx*3,ey-3,1,2,INK);R(x+sx*4,ey-3,1,1,INK)}}
+      const bc=mix(H,'#000000',.3);pl([[x-4,ey-7+(sx>0?0:1)],[x+4,ey-7+(sx>0?1:0)],[x+4,ey-(fem?5.8:5)+(sx>0?1:0)],[x-4,ey-(fem?5.8:5)+(sx>0?0:1)]],bc);R(x-3,ey-7,3,1,shade(bc,1.5))};
+    eye(-1);eye(1);
+    // ---- nose and mouth
+    ln([1.2,27],[2,35],sd);ln([2.2,28],[3,35],sd);R(-2,34,3,2,sl);pl([[-3,36],[3.6,36],[2.6,38.2],[-2,38.2]],sd);R(-3,37,2,1,sdd);R(2,37,2,1,sdd);R(-1,35,1,1,sll);
+    const lip=fem?mix(S,'#a03a3a',.55):sdd;R(-4,41,8,1,sdd);R(-3,40,3,1,fem?lip:sd);R(0,40,3,1,fem?lip:sd);R(-3,42,6,fem?2:1,fem?lip:sd);if(fem)R(-2,42,2,1,mix(S,'#d06a6a',.5));R(-5,40,1,1,sdd);R(4,40,1,1,sdd);R(-2,44-(fem?0:0),4,1,fem?sd:sl);
+    // ---- beard
+    if(look.beard===1&&!fem){const st=mix(S,H,.4);pl([[-12.4,33],[-9,36],[-4,38.6],[4,38.6],[9,36],[12.4,33],[11.2,40],[6,45.6],[0,47.2],[-6,45.6],[-11.2,40]],st);pl([[-5,39],[5,39],[4,40],[-4,40]],st);R(-4,41,8,1,sdd);R(-3,42,6,1,sd);
+      for(let i=0;i<26;i++){const a=i*2.399,x=Math.round(Math.cos(a)*(4+i%8)),y=38+((i*5)%9);if(Math.abs(x)<11)R(x,y,1,1,shade(st,.8))}}
+    if(look.beard===2&&!fem){pl([[-13,31],[-10,35],[-5,38],[5,38],[10,35],[13,31],[12.4,41],[8,49],[3,53.5],[0,54.2],[-3,53.5],[-8,49],[-12.4,41]],H);pl([[-13,31],[-10,35],[-10,45],[-12.4,41]],hl);pl([[13,31],[10,35],[10,46],[12.4,41]],hdd);
+      pl([[-6,38.4],[0,37.6],[6,38.4],[7,41],[3,40],[0,40.4],[-3,40],[-7,41]],hd);R(-4,41,8,1,INK);R(-3,42,6,1,sdd);R(-6,39,3,1,hl);                                        // moustache and mouth
+      for(const x of[-8,-5,-2,1,4,7]){ln([x,43],[x*.7+sway*.2,52-Math.abs(x)*.6],x<0?hl:hd)}ln([-3,53.5],[0,54.2],hdd);ln([3,53.5],[0,54.2],hdd)}
+    // ---- hair on top of the head
+    const cap=(fr,side)=>{pl([[-14.4,side],[-15,20],[-12,12.5],[-6,8.2],[0,7.4],[6,8.2],[12,12.5],[15,20],[14.4,side],[12.4,side-2],[11.6,21],[7,fr-1.5],[0,fr],[-7,fr-1.5],[-11.6,21],[-12.4,side-2]],H);
+      pl([[-12,12.5],[-6,8.2],[0,7.4],[2,10],[-5,11.5],[-10,16],[-12.5,20]],hl);pl([[-9,10.5],[-4,8.6],[-3,10],[-8,12]],hll);                                                // light across the crown
+      pl([[12,12.5],[15,20],[14.4,side],[12.4,side-2],[11.6,21],[9,14]],hd);pl([[13.6,18],[15,20],[14.4,side],[13.4,side-1]],hdd);
+      for(const x of[-8,-4,0,4,8])ln([x*.7,8.6+Math.abs(x)*.25],[x,fr-1.6+(x?0:.8)],x<0?hd:hdd)};
+    const fringe=(y,notch)=>{pl([[-12,20],[-7,13],[0,12],[7,13],[12,20],[11.6,y-1],[-11.6,y-1]],H);for(let x=-11;x<=10;x+=3){pl([[x,y-2],[x+3,y-2],[x+1.5,y+(notch?((x/3)%2?2.6:.6):1.4)]],x<0?H:hd)}pl([[-10,17],[-5,13.4],[0,13],[-3,16],[-8,19]],hl);for(const x of[-6,-1,4,8])ln([x,14],[x+.6,y-1],hdd)};
+    if(hs===3){pl([[-9,13.5],[-4,11.4],[-3,13],[-8,16]],sll);R(-6,12,3,1,'#ffffff');}
+    else if(hs===10){pl([[-13.4,22],[-12,12.5],[-6,8.2],[0,7.4],[6,8.2],[12,12.5],[13.4,22],[11,20],[6,17.5],[0,18.2],[-6,17.5],[-11,20]],mix(S,H,.32));
+      pl([[-4,19],[-5,8],[-3,2.4],[0,.6],[3,2.4],[5,8],[4,19],[0,20]],H);pl([[-4,19],[-5,8],[-3,2.4],[-1,1.2],[-2,9],[-2,19]],hl);pl([[2,3],[3,2.4],[5,8],[4,19],[2.4,19.4]],hd);for(const y of[4,8,12,16])ln([-4,y+1],[4,y-1],hdd)}
+    else if(hs===5){cap(18.2,25);pl([[-15,20],[-19,15],[-14,15],[-16.5,8],[-11,11],[-10.6,3.4],[-6,8.4],[-3,1],[0,7],[3.4,.6],[6,8.4],[11,3.6],[11.4,11],[17,8.4],[14.4,15],[19,15.6],[15,20],[11,13],[0,9.5],[-11,13]],H);
+      pl([[-16.5,8],[-11,11],[-10.6,3.4],[-6,8.4],[-3,1],[0,7],[-4,9.6],[-10,12.6]],hl);pl([[11,3.6],[11.4,11],[17,8.4],[14.4,15],[19,15.6],[15,20],[11,13]],hd);for(const x of[-9,-3,3,9])ln([x,10],[x*.8,17],hdd)}
+    else if(hs===11){cap(19,26);for(const[x,y,r]of[[-11,14,5.4],[-5,9,5.6],[2,8,5.8],[9,10,5.4],[13,16,4.6],[-14,20,4.4],[-7,17,3.6],[6,16,3.6],[0,14,4]]){dc(x,y,r,H);dc(x-1.2,y-1.2,r*.45,hl);R(x+r*.4,y+r*.4,2,1,hdd)}for(const[x,y]of[[-5,7],[2,6],[-11,12]])dc(x,y,1.2,hll)}
+    else{const fr=hs===0?17.5:hs===8?21:18.6,side=hs===0||hs===1||hs===7?25:hs===4||hs===6||hs===9?27:30;cap(fr,side);
+      if(hs===8)fringe(23,0);if(hs===12)fringe(25.4,1);if(hs===13){fringe(24,1);pl([[-15,20],[-17,27],[-14,25],[-15.6,33],[-12.4,29],[-12,22]],H);pl([[15,20],[17,28],[14,25.4],[15.6,34],[12.4,29],[12,22]],hd)}
+      if(hs===2||hs===8||hs===12||hs===13){const yb=hs===2?56:hs===8?43:hs===12?38:44;lock(-14,24,-15.5,yb,2.6);lock(14,24,15.5,yb,2.6)}
+      if(hs===1){pl([[-2.6,9],[-3.4,3],[-1.6,-.4],[1.6,-.4],[3.4,3],[2.6,9]],H);pl([[-2.6,9],[-3.4,3],[-1.6,-.4],[-.4,1],[-1,9]],hl);R(-4,8,8,2,TR);R(-4,8,8,1,tl);R(3,9,1,1,td)}
+      if(hs===7){dc(0,5.4,6.4,H);dc(-2,3.6,2.8,hl);pl([[2,1],[6,4],[5.6,9],[3,10.6]],hd);ln([-5,5],[4,2.6],hd);ln([-5,8],[5,6],hdd);R(-5,10,10,1,TR)}
+      if(hs===4){const e=lock(13.4,27,16,58,2.6,1);R(e[0]-3,e[1],6,2,TR);R(e[0]-3,e[1],6,1,tl)}
+      if(hs===9){for(const sx of[-1,1]){const e=lock(sx*13.6,27,sx*16,58,2.5,1);R(e[0]-3,e[1],6,2,TR);R(e[0]-3,e[1],6,1,tl)}}}
+    // ---- light: cool light on upper edges, a warm edge on the forge side, shade underneath; then a dark outline
+    const img=c.getImageData(0,0,N,N),d=img.data,A=(x,y)=>(x<0||y<0||x>=N||y>=N)?0:d[(y*N+x)*4+3],out=new Uint8ClampedArray(d),tint=(i,r,g,b,f)=>{out[i]=d[i]+(r-d[i])*f;out[i+1]=d[i+1]+(g-d[i+1])*f;out[i+2]=d[i+2]+(b-d[i+2])*f};
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){const i=(y*N+x)*4;if(!d[i+3])continue;if(!A(x,y-1))tint(i,214,226,255,.42);else if(!A(x,y-2))tint(i,214,226,255,.16);else if(!A(x-1,y))tint(i,255,160,80,.36);else if(!A(x+1,y))tint(i,10,8,20,.3);else if(!A(x,y+1)&&y<N-1)tint(i,10,8,20,.3)}
+    img.data.set(out);c.putImageData(img,0,0);
+    mc.globalCompositeOperation='source-over';mc.clearRect(0,0,N,N);mc.drawImage(tcv,0,0);mc.globalCompositeOperation='source-in';mc.fillStyle=INK;mc.fillRect(0,0,N,N);
+    dest.clearRect(0,0,N,N);for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]])dest.drawImage(mcv,dx,dy);dest.drawImage(tcv,0,0)}
+  return{paint,N}})();
+const STILL=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// every large portrait on the page is repainted a few times a second, so it breathes and blinks
+function faceTick(){const now=performance.now();document.querySelectorAll('canvas.face.live').forEach(cv=>{if(STILL&&cv.dataset.done)return;try{FACE2.paint(cv.getContext('2d'),JSON.parse(cv.dataset.look),STILL?2000:now+(+cv.dataset.seed||0));cv.dataset.done=1}catch(e){}})}
+setInterval(()=>{if(document.visibilityState==='visible')faceTick()},120);
 // ----- looks: what a smith chose, a face for every name, and the editor on your hall
 const LOOK_KEYS=['body','skin','hair','hairC','beard','cloth','trim','trous'],LOOK_MAX={body:2,skin:6,hair:14,hairC:8,beard:3,cloth:8,trim:8,trous:5};
 // until a smith chooses, their look is worked out from their name, so everyone has their own face from the start
@@ -2959,7 +3040,7 @@ function lookImg(look,kind){const key=kind+JSON.stringify(look);if(LOOKIMG[key])
     const t=Object.assign(document.createElement('canvas'),{width:w,height:h}),tc=t.getContext('2d'),m=Object.assign(document.createElement('canvas'),{width:w,height:h}),mc=m.getContext('2d');FACE.draw(tc,look);
     mc.drawImage(t,0,0);mc.globalCompositeOperation='source-in';mc.fillStyle='#100c0b';mc.fillRect(0,0,w,h);for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]])c.drawImage(m,dx,dy);c.drawImage(t,0,0);   // dark outline
     return LOOKIMG[key]=cv.toDataURL()}catch(e){return ''}}
-const portrait=(look,name,cls)=>{const src=lookImg(lookClean(look,name),'bust');return src?`<img class="face ${cls||''}" src="${src}" alt="" width="34" height="34">`:''};
+const portrait=(look,name,cls)=>{if(cls==='big'){const L=lookClean(look,name);let seed=0;for(const ch of String(name||''))seed=(seed*31+ch.charCodeAt(0))%5000;return `<canvas class="face big live" width="64" height="64" data-seed="${seed}" data-look="${esc(JSON.stringify(L))}" role="img" aria-label="Portrait of ${esc(name||'this smith')}"></canvas>`}const src=lookImg(lookClean(look,name),'bust');return src?`<img class="face ${cls||''}" src="${src}" alt="" width="34" height="34">`:''};
 const SKIN_N=['Fair','Tan','Bronze','Brown','Deep','Pale'],HAIRC_N=['Black','Brown','Chestnut','Blond','Red','Grey','Steel blue','Green'],CLOTH_N=['Madder red','Woad blue','Moss green','Plum','Ochre','Undyed linen','Rust','Bark brown'],TROUS_N=['Brown','Charcoal','Hemp','Dark green','Russet'];
 const LOOK_G=[{k:'body',n:'Body',chips:FIGHT.BODIES},{k:'skin',n:'Skin',sw:FIGHT.SKIN,names:SKIN_N},{k:'hair',n:'Hair',chips:FIGHT.HAIRS,thumb:1},{k:'hairC',n:'Hair colour',sw:FIGHT.HAIRC,names:HAIRC_N},{k:'beard',n:'Beard',chips:FIGHT.BEARDS},{k:'cloth',n:'Tunic',sw:FIGHT.CLOTH,names:CLOTH_N},{k:'trous',n:'Trousers',sw:FIGHT.TROUS,names:TROUS_N},{k:'trim',n:'Cord belt',sw:FIGHT.CLOTH,names:CLOTH_N}];
 function lookEditor(){const L=myLook();return `<div class="plate lookedit"><div class="lookstage"><img class="lookfull" src="${lookImg(L,'full')}" alt="Your smith" width="64" height="92"><div class="row2"><button class="btn small" data-action="lookrand">Randomise</button><button class="btn ghost small" data-action="lookclose">Done</button></div></div>
