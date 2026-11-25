@@ -55,5 +55,5 @@ from st, k $$;
 create or replace function public.am_x_records(uid text, input jsonb) returns jsonb
 language sql stable set search_path = public as $$
 select public.am_records() || jsonb_build_object('smiths', coalesce((
-  select jsonb_object_agg(u.value->>'username', jsonb_build_object('t', coalesce(s.save->'hall'->>'title', ''), 'b', s.save->'hall'->>'badge'))
+  select jsonb_object_agg(u.value->>'username', jsonb_build_object('t', coalesce(s.save->'hall'->>'title', ''), 'b', s.save->'hall'->>'badge', 'l', s.save->'hall'->'look'))
   from am_state st, jsonb_each(st.blob->'users') u left join am_saves s on s.uid = u.key where st.id = 1), '{}'::jsonb)) $$;
