@@ -1014,13 +1014,9 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 }
 @media (min-width:761px) and (max-width:940px){.mark{font-size:26px}.hbtns{gap:1px}.hbtns .pxi{width:20px;height:20px;background-size:20px 20px}
  .stocks{flex:1 1 0!important;min-width:0;flex-wrap:wrap!important;justify-content:flex-end;gap:3px 9px!important}button.who{max-width:110px}}
-/* ===== rack: filters open from a button and sit above the blades; long blades may rise over the closed bar ===== */
-.rackbar{position:relative;z-index:1;align-items:flex-end}.rackwall{position:relative;z-index:2}
-.rackmorebtn{display:inline-block!important}.rackmorebtn.on{border-color:var(--straw)!important}
-.rackmore{display:none}.rackwall .vrot{pointer-events:none}
-.rackbar.open{z-index:6;background:var(--plate);box-shadow:0 0 0 12px var(--plate)}
-.rackbar.open .rackmore{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;position:absolute;left:-8px;right:-8px;top:calc(100% + 8px);padding:12px 14px;background:var(--plate);border:3px solid var(--ink);box-shadow:inset 3px 3px 0 var(--bev-hi),inset -3px -3px 0 var(--bev-lo),0 8px 0 rgba(0,0,0,.35)}
-@media (max-width:760px){.rackbar.open .rackmore{display:grid;grid-template-columns:1fr 1fr;position:static;grid-column:1/-1;box-shadow:none;border:0;padding:0;background:none}.rackmore .rsearch{grid-column:1/-1}}
+/* ===== rack: long blades are cut off at the shelf unless "Full blades" is on; then they rise in front of everything ===== */
+.rackwall{overflow:hidden}.talltoggle.on{border-color:var(--straw)!important}
+.rackwall.tall{overflow:visible;position:relative;z-index:8}.rackwall.tall .vrot{pointer-events:none}
 </style>
 </head>
 <body>
@@ -1990,19 +1986,19 @@ function renderDrawer(){const c=C(),fab=$('rackfab'),dr=$('drawer');if(!fab||!dr
   const phone=matchMedia('(max-width:760px)').matches,P=phone?RACK_PX.phone:RACK_PX.desk,BASE=phone?RACK_PX.baseP:RACK_PX.baseD;
   const st=rackStacks(),plain=owned().filter(b=>b.rarity===0&&!b.shine&&b.si>0&&b.si<4&&!vr(b).rare&&!isRecord(b)&&!b.keep);
   const sel=(k,opts,cur)=>`<select data-rack="${k}">${opts.map(([v,t])=>`<option value="${v}" ${cur==v?'selected':''}>${t}</option>`).join('')}</select>`;
-  const shown=st.flatMap(x=>x.list),sellable=shown.filter(b=>!b.keep&&!isGift(b)&&!b.cracked),sellRec=sellable.filter(isRecord).length,sellCoin=sellAllTotal(sellable),nf=[RACK.minR,RACK.minS,RACK.wt,RACK.fx,RACK.minL,RACK.q].filter(Boolean).length;
-  const bar=`<div class="rackbar ${RACK.more?'open':''}"><label class="fld">Sort${sel('sort',[['worth','Worth'],['len','Size'],['rar','Rarity'],['grade','Grade'],['new','Newest']],RACK.sort)}</label>
-    <button class="btn ghost small rackmorebtn ${RACK.more?'on':''}" data-action="rackmore" aria-expanded="${!!RACK.more}">${RACK.more?'Hide filters':'Filters'}${nf?` (${nf})`:''}</button>
-    ${sellable.length?`<button class="btn ghost small" data-action="sellall" data-confirm="1" data-sure="Sell ${sellable.length}${sellRec?`, ${sellRec} record${sellRec>1?'s':''}`:''}? Click again" title="Sells every blade shown except locked blades and keepsakes">Sell all ${sellable.length} for ${fmt(sellCoin)}c</button>`:''}
-    ${plain.length?`<button class="btn ghost small" data-action="salvplain" data-confirm="1">Salvage ${plain.length} plain Commons</button>`:''}
-    <span class="rackshow fine">${rackFiltered()?`Showing ${shown.length} of ${n}`:`${n} blade${n===1?'':'s'}`}</span>
-    <div class="rackmore ${RACK.more?'on':''}">
+  const shown=st.flatMap(x=>x.list),sellable=shown.filter(b=>!b.keep&&!isGift(b)&&!b.cracked),sellRec=sellable.filter(isRecord).length,sellCoin=sellAllTotal(sellable);
+  const bar=`<div class="rackbar"><label class="fld">Sort${sel('sort',[['worth','Worth'],['len','Size'],['rar','Rarity'],['grade','Grade'],['new','Newest']],RACK.sort)}</label>
+    <button class="btn ghost small rackmorebtn ${RACK.more?'on':''}" data-action="rackmore" aria-expanded="${!!RACK.more}">Filters${(()=>{const n2=[RACK.minR,RACK.minS,RACK.wt,RACK.fx,RACK.minL].filter(Boolean).length;return n2?` (${n2})`:''})()}</button><div class="rackmore ${RACK.more?'on':''}">
     <label class="fld">Rarity${sel('minR',RAR.map((r,i)=>[i,i?r.n+'+':'All']),RACK.minR)}</label><label class="fld">Size${sel('minS',[[0,'All'],[3,'Large+'],[4,'Huge+'],[5,'Titan+']],RACK.minS)}</label>
     <label class="fld">Weight${sel('wt',[['','All'],['L','Light'],['M','Medium'],['H','Heavy'],['X','Massive']],RACK.wt)}</label>
     <label class="fld">Special${sel('fx',[['','Any'],...Object.entries(RACK_FX).map(([k,v])=>[k,v[0]])],RACK.fx)}</label>
-    <label class="fld">Longer than<span class="bin"><input type="number" min="0" inputmode="decimal" data-rack="minL" placeholder="any" value="${RACK.minL}"> cm</span></label>
+    <label class="fld">Longer than<span class="bin"><input type="number" min="0" inputmode="decimal" data-rack="minL" placeholder="any" value="${RACK.minL}"> cm</span></label></div>
     <label class="fld rsearch">Search<input type="search" data-rack="q" placeholder="Name, variant or smith" value="${RACK.q.replace(/"/g,'&quot;')}" autocomplete="off"></label>
-    <button class="btn ghost small" data-action="rackclear" ${rackFiltered()?'':'disabled'}>Clear filters</button></div></div>`;
+    <button class="btn ghost small" data-action="rackclear" ${rackFiltered()?'':'disabled'}>Clear filters</button>
+    <button class="btn ghost small talltoggle ${A.rackTall?'on':''}" data-action="racktall" aria-pressed="${!!A.rackTall}" title="Long blades rise above the shelf, in front of everything">${A.rackTall?'Full blades: on':'Full blades: off'}</button>
+    ${sellable.length?`<button class="btn ghost small" data-action="sellall" data-confirm="1" data-sure="Sell ${sellable.length}${sellRec?`, ${sellRec} record${sellRec>1?'s':''}`:''}? Click again" title="Sells every blade shown except locked blades and keepsakes">Sell all ${sellable.length} for ${fmt(sellCoin)}c</button>`:''}
+    ${plain.length?`<button class="btn ghost small" data-action="salvplain" data-confirm="1">Salvage ${plain.length} plain Commons</button>`:''}
+    <span class="rackshow fine">${rackFiltered()?`Showing ${st.reduce((a,x)=>a+x.list.length,0)} of ${n}`:`${n} blade${n===1?'':'s'}`}</span></div>`;
   const slots=st.map(({k,list})=>{const b=list[0],rec=list.some(isRecord),wpx=Math.round(bladeDims(b).W*P),pop=Math.max(0,wpx-BASE+6);return `<div class="slot ${b.shine?'sh-'+b.shine:''} ${b.moon?'sh-moon':''} ${isGift(b)?'isgift'+giftCls(b):''} ${pop?'pops':''}" style="--rc:${rarC(b)};--base:${BASE}px">
       ${list.length>1?`<span class="count"><i class="cx">×</i>${list.length}</span>`:''}<div class="vart"><div class="vrot" style="--w:${wpx}px">${bladeSVG(b,{noRuler:1,minW:0})}</div></div>
       <span class="slotn">${isGift(b)?'The<br>'+TYPES[b.type].n:`${RAR[b.rarity].n} ${vr(b).n}<br>${TYPES[b.type].n}`}</span><span class="slots">${b.len} cm${rec?' <i class="recico" title="Record holder" aria-label="Record holder"></i>':''}</span><span class="slotsh">${b.shine||b.moon?shineTag(b):''}</span>
@@ -2025,7 +2021,7 @@ function renderDrawer(){const c=C(),fab=$('rackfab'),dr=$('drawer');if(!fab||!dr
       <div class="sheetinfo"><div class="tags">${tags(b)}</div><dl class="facts"><div><dt>Length</dt><dd>${b.len} cm</dd></div><div><dt>Grade</dt><dd>${b.grade}</dd></div><div><dt>${isGift(b)?'Rarity':'Worth'}</dt><dd ${isGift(b)?`style="color:${rarC(b)}"`:''}>${isGift(b)?'One of a kind':fmt(worth(b))+'c'}</dd></div><div><dt>Forged by</dt><dd>${b.forger}</dd></div></dl></div>
       <div class="sheetact">${isGift(b)?`<p class="fine keep">One of a kind. ${giftWho(b)}, ${giftDate(b)}. It can’t be sold, salvaged or traded, but it can fight in the Arena.</p>`:`<button class="btn ghost small keepbtn ${b.keep?'on':''}" data-action="keeptoggle" data-id="${b.id}" aria-pressed="${!!b.keep}">${b.keep?'🔒 Locked':'Lock'}</button>${b.keep?'<p class="fine keepnote">Locked. It won’t be sold or salvaged until you unlock it.</p>':`<button class="btn" data-action="sell" data-id="${b.id}" ${big?'data-confirm="1"':''}>Sell ${fmt(value(b))}c</button><button class="btn ghost" data-action="salvage" data-id="${b.id}" ${big?'data-confirm="1"':''}>Salvage: ${yieldStr(salvYield(b))}</button>`}`}</div></div>`}).join('')}</div>`}
   const html=`<div class="drawerbg" data-action="racktoggle"></div><section class="drawer" role="dialog" aria-label="Your rack"><div class="dspace" data-action="racktoggle" aria-hidden="true"></div><div class="dpanel"><div class="platehead"><h2>Your rack</h2><button class="btn ghost small" data-action="racktoggle">Close</button></div>${bar}
-    ${n?`<div class="rackwall">${slots||'<p class="empty">Nothing matches these filters.</p>'}</div>`:'<p class="empty">Empty. Keep a blade after its reveal and it hangs here.</p>'}${sheet}</div></section>`;
+    ${n?`<div class="rackwall ${A.rackTall?'tall':''}">${slots||'<p class="empty">Nothing matches these filters.</p>'}</div>`:'<p class="empty">Empty. Keep a blade after its reveal and it hangs here.</p>'}${sheet}</div></section>`;
   if(html===RACK.html)return;                       // nothing changed: leave it alone, so it never jumps
   const old=dr.querySelector('.drawer'),top=old?old.scrollTop:0,fresh=!old,oldH=old&&old.querySelector('.dpanel')?old.querySelector('.dpanel').offsetHeight:0,foc=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.rack,focId=document.activeElement&&document.activeElement.id;
   RACK.html=html;dr.innerHTML=html;const nd=dr.querySelector('.drawer');if(fresh)nd.classList.add('opening');else{const dp=nd.querySelector('.dpanel');if(dp&&oldH)dp.style.minHeight=oldH+'px';nd.scrollTop=top}
@@ -2810,6 +2806,7 @@ const ACT={
   giftkeep:()=>{SFX.play('coin');closeReveal();UI.rack=true;render()},
   keep:el=>{const b=blade(el.dataset.id);(b.status='owned',b.su=Date.now());save();toast(`${bname(b)} added to your rack.`);closeReveal()},
   sell:el=>{sellBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
+  racktall:()=>{A.rackTall=!A.rackTall;save();render()},
   sellall:()=>{const list=rackStacks().flatMap(x=>x.list).filter(b=>!b.keep&&!isGift(b)&&!b.cracked);if(!list.length)return toast('Nothing to sell.');const c=C(),before=c.coin;SFX.play('coin');list.forEach(b=>{c.coin+=value(b);c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93);b.status='sold';b.su=Date.now()});RACK.open=null;RACK.man={};save();toast(`Sold ${list.length} blade${list.length===1?'':'s'} for ${fmt(C().coin-before)}c. Locked blades and keepsakes were kept.`,4500);render()},
   salvage:el=>{salvBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
   salvplain:()=>{const c=C(),list=owned().filter(b=>b.rarity===0&&!b.shine&&b.si>0&&b.si<4&&!vr(b).rare&&!isRecord(b)&&!b.keep),tot={};list.forEach(b=>{const y=salvYield(b);for(const[k,v]of Object.entries(y)){const add=k==='fuel'?Math.max(0,Math.min(ENERGY_CAP,c[k]+v)-c[k]):v;c[k]+=add;tot[k]=(tot[k]||0)+add}(b.status='salvaged',b.su=Date.now())});save();toast(`Salvaged ${list.length} blades into ${yieldStr(tot)}.`);render()},
