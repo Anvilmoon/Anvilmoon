@@ -26,8 +26,7 @@ rough    as (select * from (select distinct on (who) * from b where anvil = 0 or
 pertype  as (select distinct on (type) * from b order by type, len desc),
 picked as (select * from longest union select * from shortest union select * from finest union select * from rough union select * from pertype),
 wealth as (select u.username as "user",
-             coalesce(case when jsonb_typeof(u.save->'wealth') = 'number' then floor((u.save->>'wealth')::numeric) end,
-                      (select coalesce(sum(case when jsonb_typeof(slot->'coin') = 'number' then floor((slot->>'coin')::numeric) else 0 end), 0) from sl where sl.uid = u.uid)) as wealth
+             (select coalesce(sum(case when jsonb_typeof(slot->'coin') = 'number' then floor((slot->>'coin')::numeric) else 0 end), 0) from sl where sl.uid = u.uid) as wealth
            from u)
 select jsonb_build_object(
   'entries', coalesce((select jsonb_agg(to_jsonb(p)) from picked p), '[]'::jsonb),
