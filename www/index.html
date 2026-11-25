@@ -1063,6 +1063,14 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+.fhlab{margin:0 0 5px;font:600 13px var(--body);color:var(--mute)}.fhlab span{color:var(--dim);font-weight:400}
+.cost em{font-style:normal;font-size:13px;color:var(--mute);margin-left:2px}
+.forgehero .fhart{align-self:center;height:200px;padding:0 18px;border:3px solid var(--ink);background:linear-gradient(#5e3f27,#5e3f27) 0 0/100% 8px no-repeat,linear-gradient(#4a311e,#4a311e) 0 8px/100% 3px no-repeat,radial-gradient(ellipse at 50% 60%,#322b26,#211d1a 75%)}
+.forgehero .fhinfo .gear{min-height:0;margin-bottom:6px}.forgehero .costs{margin-bottom:12px}
+.fhsec{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 16px;font-size:16px}.fhsec small{font-weight:400;font-size:12.5px;color:var(--mute)}.fhsec.go small{color:#4a3a1c}.fhsec[disabled] small{color:inherit}
+.fhact{min-width:230px}
+.bptro{display:flex;align-items:center;gap:3px;font-size:13px;color:var(--mute);margin-top:4px}.bptro i{width:9px;height:9px;background:#1c1917;border:2px solid var(--ink)}.bptro i.on{background:var(--straw)}.bptro>span{margin-left:5px}.bptro.new{color:var(--blue)}
+@media (max-width:760px){.fhact{min-width:0}.forgehero .fhart{height:96px}.fhlab span{display:none}}
 @media (min-width:761px){.rackhandle{display:flex;align-items:center;gap:8px;position:fixed;bottom:0;left:calc(186px + (100vw - 186px)/2);transform:translateX(-50%);z-index:9;background:var(--plate2);color:var(--ash);font:700 18px var(--body);padding:9px 44px 10px 36px;border:3px solid var(--ink);border-bottom:0;box-shadow:inset 3px 3px 0 var(--bev-hi);cursor:pointer}
   .rackhandle:hover{color:var(--straw)}.rackhandle .pxico{width:26px;height:26px;background-size:26px 26px;filter:none}.rackhandle .rackn{color:var(--straw)}.rharrow{color:var(--straw);font-size:13px}
   .drawerbg,.drawer{left:186px!important;top:var(--hh,74px)!important}main{padding-bottom:64px}
@@ -1854,7 +1862,7 @@ function hardTimes(c){const broke=isBroke(c),digging=c.digUntil&&Date.now()<c.di
      <button class="btn" data-action="labor" ${broke&&left>0&&!digging?'':'disabled'}>Work a shift</button></div>
     <div><h3>Dig the slag heap</h3><p class="fine" title="Bog iron blades can never be better than Fine.">Free but slow · 1 bog iron + 1 coal</p>${dig}</div></div></div>`}
 const bookBtn=(extra='')=>`<div class="ptools">${extra}<button class="bookbtn" data-action="tab" data-tab="armory" title="Your Armory: every blade you’ve found"><i class="pxi" style="background-image:var(--ico-armory)"></i>Armory</button></div>`;
-function costChip(k,need,have){const short=have<need;return `<span class="cost ${short?'short':''}" title="${MATN[k]}: you have ${have}, this needs ${need}"><i class="pxi" style="background-image:var(--ico-${k})" aria-hidden="true"></i><b>${need}</b><small>${have}</small></span>`}
+function costChip(k,need,have){const short=have<need;return `<span class="cost ${short?'short':''}" title="${MATN[k]}: you have ${have}, this needs ${need}"><i class="pxi" style="background-image:var(--ico-${k})" aria-hidden="true"></i><b>${need}</b><small>${have}</small><em>${MATN[k]}</em></span>`}
 function forgeNeeds(c,k){return c.commissions.filter(q=>q.type===k)}
 function demandTag(c,k){const d=c.demand[k];if(d==null)return '';return d>1.1?`<span class="tag dem up" title="Merchants pay ×${d.toFixed(2)} for this blade right now">▲ ${d.toFixed(1)}×</span>`:d<.8?`<span class="tag dem down" title="Merchants pay ×${d.toFixed(2)} for this blade right now">▼ ${d.toFixed(1)}×</span>`:''}
 function vForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt],h=hammerFx(),locked=!knows(c,t.wt),bogUse=Math.max(0,w.iron-c.iron),can=!locked&&c.fuel>=1&&c.iron+(c.bog||0)>=w.iron&&c.coal>=w.coal;
@@ -1862,7 +1870,7 @@ function vForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt],h=hammerFx(),locked=!kno
   const selW=c.selW||t.wt,sw=WT[selW];
   const wtabs=`<div class="ahtabs wtabs" role="tablist">${['L','M','H','X'].map(x=>`<button class="ahtab ${selW===x?'on':''}" role="tab" aria-selected="${selW===x}" data-action="pickw" data-w="${x}">${WT[x].n}${knows(c,x)?'':' <span class="lockico" aria-label="locked">🔒</span>'}</button>`).join('')}</div>`;
   const bps=typesOf(c.cls).filter(k=>TYPES[k].wt===selW).map(k=>{const tt=TYPES[k],lk=!knows(c,tt.wt),orders=forgeNeeds(c,k);
-    return `<button class="bp ${c.sel===k?'on':''} ${lk?'lk':''}" data-action="pick" data-type="${k}"><span class="bpart">${bladeSVG({type:k,len:100,rarity:0,variant:0,si:2,grade:70},{plain:!lk,stage:lk?'sil':'',noRuler:1,minW:330})}</span><span class="bpn">${tt.n}</span>
+    return `<button class="bp ${c.sel===k?'on':''} ${lk?'lk':''}" data-action="pick" data-type="${k}"><span class="bpart">${bladeSVG({type:k,len:100,rarity:0,variant:0,si:2,grade:70},{plain:!lk,stage:lk?'sil':'',noRuler:1,minW:330})}</span><span class="bpn">${tt.n}</span>${lk?'<span class="bptro">Locked · needs the pattern</span>':(A.claimed||{})[k+':found1']?`<span class="bptro" title="Trophies found for this blade: Legendary, Titan, Tempered, Starforged, Moonlit">${['leg','big','temp','star','moon'].map(g=>`<i class="${(A.claimed||{})[k+':'+g]?'on':''}"></i>`).join('')}<span>${['leg','big','temp','star','moon'].filter(g=>(A.claimed||{})[k+':'+g]).length} of 5 trophies</span></span>`:'<span class="bptro new">Not found yet</span>'}
       <span class="bpbadges">${orders.length?`<span class="tag ord" title="${orders.map(q=>q.patron+' pays '+q.pay+'c').join(', ')}">Order ${Math.max(...orders.map(q=>q.pay))}c</span>`:''}${lk?'':demandTag(c,k)}</span></button>`}).join('');
   const orders=forgeNeeds(c,c.sel),broken=c.hammer!=='worn'&&h===HAMMERS.worn,short=!locked&&!can;
   const supply=UI.sup?`<div class="suppop"><div class="sheetbg" data-action="supclose"></div><div class="plate supply" role="dialog" aria-label="Supplies"><div class="platehead"><h3>Supplies</h3><button class="btn ghost small" data-action="supclose">Close</button></div>
@@ -1873,22 +1881,22 @@ function vForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt],h=hammerFx(),locked=!kno
     <li><i class="pxi" style="background-image:var(--ico-forge)"></i><span><b>Light the forge.</b> It costs the energy, iron and coal shown.</span></li>
     <li><i class="pxi" style="background-image:var(--ico-workshop)"></i><span><b>Hold the bellows</b> until it says <b>Strike now</b>, then strike as the marker crosses the middle.</span></li>
     <li><i class="pxi" style="background-image:var(--ico-coin)"></i><span><b>Quench it</b> and watch the reveal. Keep it, sell it, or deliver it to a patron who ordered one.</span></li></ol></div>`:'';
-  return `<section class="page forgepage"><div class="pagehead"><h1>The forge</h1>${bookBtn(`<button class="bookbtn boardopen ${UI.board?'on':''}" data-action="boardtoggle" aria-pressed="${!!UI.board}" title="Patrons’ orders for specific blades"><i class="pxi" style="background-image:var(--ico-board)"></i>Commissions${boardFit()?`<b class="badge">${boardFit()}</b>`:''}</button>`+'<button class="btn ghost small qbtnhelp" data-action="tutopen" title="Take the tour" aria-label="Take the tour">?</button>')}</div>
+  return `<section class="page forgepage"><div class="pagehead"><h1>The forge</h1><div class="ptools"><button class="btn small" data-action="tutopen">How to forge</button></div></div>
   ${tut}${hardTimes(c)}
   <div class="plate forgehero">
     <div class="fhart">${bladeSVG({type:c.sel,len:100,rarity:0,variant:0,si:2,grade:70},{plain:!locked,stage:locked?'sil':'',noRuler:1,minW:330})}</div>
     <div class="fhinfo"><h2>${t.n}</h2>
-      <div class="costs">${costChip('fuel',1,c.fuel)}${costChip('iron',w.iron,c.iron+(c.bog||0))}${costChip('coal',w.coal,c.coal)}<span class="cost strikes" title="Strikes needed"><b>${w.strikes}</b><small>strikes</small></span></div>
-      <div class="gear"><button class="gearbtn" aria-label="${ANVILS[c.anvil].n}: show the odds"><i class="pxi" style="background-image:var(--ico-anvil)"></i>${ANVILS[c.anvil].n.replace(' Anvil','')}
+      <p class="fhlab">Cost of one forge <span>· what it uses / what you have</span></p><div class="costs">${costChip('fuel',1,c.fuel)}${costChip('iron',w.iron,c.iron+(c.bog||0))}${costChip('coal',w.coal,c.coal)}<span class="cost strikes" title="Strikes needed"><b>${w.strikes}</b><small>strikes</small></span></div>
+      <p class="fhlab">Your tools <span>· point at the anvil to see your odds</span></p><div class="gear"><button class="gearbtn" aria-label="${ANVILS[c.anvil].n}: show the odds"><i class="pxi" style="background-image:var(--ico-anvil)"></i>${ANVILS[c.anvil].n}
         <span class="pop" role="tooltip"><span class="popcol"><b>Rarity</b><table class="ledger tight">${oddsRows(c.anvil)}</table><small>Grade 90+ rolls on the next anvil up.</small></span>
         <span class="popcol"><b>Size</b><table class="ledger tight">${SIZES.map(z=>`<tr><td>${z.n}</td><td class="n">${z.p<.1?'1 in 10,000':z.p+'%'}</td></tr>`).join('')}</table></span>
         <span class="popcol"><b>Shine</b><table class="ledger tight"><tr><td>Moonlit</td><td class="n">1 in ${A.testOdds?3:15}</td></tr><tr><td>Tempered</td><td class="n">1 in ${A.testOdds?SHINE.temp.test:SHINE.temp.p}</td></tr><tr><td>Starforged</td><td class="n">1 in ${A.testOdds?SHINE.star.test:fmt(SHINE.star.p)}</td></tr></table><small>${isNight()?'The moon is up.':'Moonlit: 8pm to 6am.'}</small></span></span></button>
-        <span class="gearbtn ${broken?'bad':''}" title="${broken?'Broken. Repair it in the Workshop.':`Sweet spot +${Math.round((h.zone-1)*100)}% · cooling −${Math.round((1-h.cool)*100)}%`}"><i class="pxi" style="background-image:var(--ico-workshop)"></i>${h.n.replace(' Hammer','')}${broken?' (broken)':''}</span>
+        <span class="gearbtn ${broken?'bad':''}" title="${broken?'Broken. Repair it in the Workshop.':`Sweet spot +${Math.round((h.zone-1)*100)}% · cooling −${Math.round((1-h.cool)*100)}%`}"><i class="pxi" style="background-image:var(--ico-workshop)"></i>${h.n}${broken?' (broken)':''}</span>
         ${orders.map(q=>`<span class="tag ord big" title="${RAR[q.minR].n} or better${q.minS?', '+SIZES[q.minS].n+' or bigger':''}${q.minG?', grade '+q.minG+'+':''}">${q.patron} pays ${q.pay}c</span>`).join('')}${demandTag(c,c.sel)}</div>
       ${locked?`<p class="warn fhnote">Needs the ${WT[t.wt].n.toLowerCase()} pattern.</p>`:bogUse&&can?`<p class="bogwarn fhnote">Uses ${bogUse} bog iron: capped at Fine.</p>`:'<p class="fhnote" aria-hidden="true">&nbsp;</p>'}
     </div>
-    <div class="fhact">${locked?`<button class="btn go big" data-action="tab" data-tab="workshop">Get the pattern</button>`:`<button class="btn go big" data-action="begin" ${can?'':'disabled'}>Light the forge</button>${can?'<p class="needs" aria-hidden="true">&nbsp;</p>':`<p class="needs">${(()=>{const m=[c.fuel<1&&'1 energy',(c.iron+(c.bog||0))<w.iron&&`${w.iron-(c.iron+(c.bog||0))} iron`,c.coal<w.coal&&`${w.coal-c.coal} coal`].filter(Boolean);return m.length?'Need '+m.join(', '):broken?'Repair your hammer first':''})()}</p>`}<button class="btn small" data-action="quick" ${can?'':'disabled'} title="Skip the hammering. Quick blades come out at grade 30 to 55. Forging by hand reaches 100, and a grade of 90+ rolls on the next anvil up.">Quick forge <span class="mute">grade ≤55</span></button>`}
-      ${!locked?`<button class="btn ${short?'':'ghost '}small" data-action="supopen">Buy supplies</button>`:''}</div>
+    <div class="fhact">${locked?`<button class="btn go big" data-action="tab" data-tab="workshop">Get the pattern</button>`:`<button class="btn go big" data-action="begin" ${can?'':'disabled'}>Light the forge</button>${can?'<p class="needs" aria-hidden="true">&nbsp;</p>':`<p class="needs">${(()=>{const m=[c.fuel<1&&'1 energy',(c.iron+(c.bog||0))<w.iron&&`${w.iron-(c.iron+(c.bog||0))} iron`,c.coal<w.coal&&`${w.coal-c.coal} coal`].filter(Boolean);return m.length?'Need '+m.join(', '):broken?'Repair your hammer first':''})()}</p>`}<button class="btn fhsec" data-action="quick" ${can?'':'disabled'} title="Skip the hammering. Quick blades come out at grade 30 to 55. Forging by hand reaches 100, and a grade of 90+ rolls on the next anvil up.">Quick forge<small>No hammering · grade up to 55</small></button>`}
+      ${!locked?`<button class="btn fhsec ${short?'go':''}" data-action="supopen">Buy supplies<small>Iron, coal and meals</small></button>`:''}</div>
   </div>
   ${supply}
   ${wtabs}<div class="bprow">${bps}</div>
@@ -1911,7 +1919,7 @@ const TOUR_STEPS=[
  {go:()=>{},act:1,noBack:1,waitSel:1,sel:'#quench .qbtn:not(:disabled)',skipIf:()=>TOUR.noForge===true,done:()=>!F&&!revealId,t:'Quench it',x:()=>document.querySelector('.arcforge')?'Pick a binding. The salt circle is safe. Moonwater and starfire add grade, but the blade might unravel.':'Pick a quench. Oil is safe. Brine and water add grade, but the blade might crack.'},
  {go:()=>{},act:1,noBack:1,waitSel:1,sel:'.reveal .rlive .actions .btn.go',skipIf:()=>TOUR.noForge===true,done:()=>!revealId&&!document.querySelector('.qseq'),t:'Your first blade',x:'Pulling it from the barrel showed its length. Then the forge revealed its rarity and grade. Tap the gold button to keep it.'},
  {go:tourGo('forge'),skipIf:()=>TOUR.noForge!==true,sel:'.forgehero .fhact',t:'Forging',x:'Light the forge, then hold Bellows to heat the metal and tap Strike as the marker crosses the bright centre. When every strike is in, pick a quench and pull your blade from the barrel to see what you made.'},
- {go:tourGo('forge'),t:'That’s the forge',x:'Your <b>Home</b> page lists what to try next, one step at a time, and each step pays a little coin. You can replay this from the ? button on the forge.'},
+ {go:tourGo('forge'),t:'That’s the forge',x:'Your <b>Home</b> page lists what to try next, one step at a time, and each step pays a little coin. You can replay this from the How to forge button.'},
 ];
 
 // tour demos: a looping, hands-off copy of the forging mini-game, and the quench choice
