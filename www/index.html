@@ -316,7 +316,7 @@ select,input[type=text],input[type=number]{background:#22201e;border:1px solid v
 @media (max-width:760px){.lot{grid-template-columns:1fr}.lotnums,.lotact{grid-column:1}}
 /* accounts & arena */
 .acct{margin-bottom:16px}.codeplate{margin-bottom:16px;border-color:var(--gold,#e0bd6e)}.rcode{font-size:26px;letter-spacing:.08em;margin:10px 0 12px;padding:10px 14px;background:rgba(0,0,0,.35);border:2px dashed rgba(255,255,255,.2);display:inline-block;user-select:all;word-break:break-all}.codeplate .row2{display:flex;gap:10px;flex-wrap:wrap}.orline{display:flex;align-items:center;gap:10px;max-width:380px;margin:14px 0 10px;color:var(--mute,#8a8172);font-size:14px}.orline::before,.orline::after{content:'';flex:1;border-top:2px solid rgba(255,255,255,.1)}.provrow{display:grid;gap:8px;max-width:380px}.btn.prov{width:100%;text-align:center}.linkbtn{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}.forgot{margin-top:12px}.forgotbox{max-width:380px;margin-top:6px;padding:10px 12px;border:2px dashed rgba(255,255,255,.14)}.forgotbox .provrow{margin:8px 0}.linkh{margin:18px 0 6px;font-size:16px}.links{list-style:none;margin:0 0 10px;padding:0;max-width:380px}.links li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)}.btn.sm{padding:3px 10px;font-size:13px}.authform{display:grid;gap:10px;max-width:380px;margin-top:8px}.authform input{width:100%}
-input[type=password],input[name=username]{background:#22201e;border:1px solid var(--rule2);border-radius:3px;padding:8px 10px;font-size:15px;color:var(--ash)}
+input[type=password],input[name=username],.authform input[name=code]{background:#22201e;border:1px solid var(--rule2);border-radius:3px;padding:8px 10px;font-size:15px;color:var(--ash)}
 .conflict{margin-bottom:18px}
 .arenagrid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}.arenagrid .plate+.plate{margin-top:0}
 .arenagrid select{width:100%;margin:6px 0 10px}.arenagrid .btn.big{width:100%;margin-top:14px}
@@ -992,6 +992,28 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 .qseq.arc img.qbb{filter:drop-shadow(0 0 10px rgba(143,107,255,.8))}
 @media (prefers-reduced-motion:reduce){.hearth.arc .hearthblade{animation:none}}
 @media (max-width:760px){.hearth.arc{padding:52px 6px 0}}
+/* ===== header fit (phones and tablets), records tabs, toasts ===== */
+#toast>*{pointer-events:auto;cursor:pointer}
+.authform input::placeholder{font-size:inherit;opacity:.55}
+@media (max-width:760px){
+ .stocks{display:flex!important;flex-wrap:wrap!important;gap:12px 9px!important;overflow:visible!important;padding-right:6px!important;max-width:100%}
+ .stock{gap:3px!important}.stock b{min-width:0!important}
+ .ahtabs.rectabs{display:flex!important;flex-wrap:nowrap;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;gap:0}.rectabs::-webkit-scrollbar{display:none}
+ .rectabs>.ahtab{flex:none;padding:8px 12px!important;white-space:nowrap}
+}
+@media (max-width:760px){header{align-items:flex-start!important;min-height:105px}.mark{margin-top:36px!important}}
+@media (max-width:420px){.mark{font-size:22px!important}.mark .emblem{width:22px;height:20px}}
+@media (min-width:761px){
+ header{flex-wrap:nowrap!important}#hud{flex-wrap:nowrap!important;min-width:0}
+ button.who{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stocks{flex:none}
+}
+@media (min-width:761px) and (max-width:1180px){
+ header{gap:12px}#hud{gap:10px}.whocls{display:none}button.who{max-width:150px}
+ .stocks{gap:8px!important}.stock{gap:3px!important;font-size:14px!important}.stock b{min-width:0!important}
+ .stock .pxi{width:18px!important;height:18px!important;background-size:18px 18px!important}.stock .tick{display:none!important}
+}
+@media (min-width:761px) and (max-width:940px){.mark{font-size:26px}.hbtns{gap:1px}.hbtns .pxi{width:20px;height:20px;background-size:20px 20px}
+ .stocks{flex:1 1 0!important;min-width:0;flex-wrap:wrap!important;justify-content:flex-end;gap:3px 9px!important}button.who{max-width:110px}}
 </style>
 </head>
 <body>
@@ -1217,7 +1239,8 @@ function learnClass(k){const c=C(),o=c&&classOffer(c);if(!o||c.classes.includes(
 const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toLocaleString();
 const pick=a=>a[Math.floor(Math.random()*a.length)];
-function toast(m,ms=2800){const t=document.createElement('div');t.className='t';t.innerHTML=m;$('toast').appendChild(t);setTimeout(()=>t.remove(),ms)}
+function toast(m,ms=2800){const t=document.createElement('div');t.className='t';t.innerHTML=m;t.onclick=()=>t.remove();$('toast').appendChild(t);setTimeout(()=>t.remove(),ms)}
+document.addEventListener('focusin',e=>{if(e.target.matches&&e.target.matches('input:not([type=checkbox]):not([type=radio]),textarea'))$('toast').replaceChildren()});
 const LABOR_MAX=5,DIG_MS=45000,SLOT_PCT=[0,.05,.15,.3];
 const RECIPES={
   M:{n:'Medium blade pattern',d:'Lets you forge your class’s Medium blade.',cost:{coin:150,iron:10}},
@@ -1723,11 +1746,13 @@ const ICONS={
 };
 const icon=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
 const MATC={coin:'#e2c275',fuel:'#e0a24f',iron:'#9aa2a9',coal:'#4a4542',damascus:'#8e7a66',dust:'#8fb3e0',shards:'#c9a6ff'};
+// the header shows very large amounts in thousands so the row always fits
+const hudNum=n=>{n=Math.floor(n||0);return n>=1e6?(Math.floor(n/1e5)/10)+'m':n>=1e5?Math.floor(n/1e3)+'k':fmt(n)};
 const stock=(k,v,extra='')=>`<span class="stock" title="${MATN[k]}"><i class="pxi" style="background-image:var(--ico-${k})" aria-hidden="true"></i><b>${v}</b><span class="lbl">${MATN[k].toLowerCase()}</span>${extra}</span>`;
 
 function renderHUD(){setTimeout(renderSync,0);if(needAcct()){$('hud').innerHTML='<span class="who">Not signed in</span><span class="stocks"></span>';return}const c=C();if(!c){$('hud').innerHTML=`<span class="who">No smith yet</span><span class="stocks"></span><span class="hbtns"><button class="hico" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button></span>`;return}tickFuel();
   const ft=c.fuel<FUEL_MAX?`<span class="tick" title="Time until your next energy">${(()=>{const r=Math.ceil((FUEL_MS-(Date.now()-c.fuelTs))/1000);return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
-  $('hud').innerHTML=`<button class="who" data-action="tab" data-tab="chars" title="Your smith"><b>${c.name}</b><span class="whocls"> the ${CLASSES[c.cls].n}</span></button><span class="stocks">${stock('coin',fmt(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',c.iron)}${stock('coal',c.coal)}${stock('damascus',c.damascus)}${stock('dust',c.dust)}${stock('shards',c.shards)}</span><span class="hbtns">${NET.user?`<button class="hico mailbtn" data-action="mailopen" title="Mailbox" aria-label="Mailbox, ${MAIL.list.length} unread"><i class="pxi" style="background-image:var(--ico-mail)"></i>${MAIL.list.length?`<b class="badge">${MAIL.list.length}</b>`:''}</button>`:''}<button class="hico boardbtn ${UI.board?'on':''}" data-action="boardtoggle" title="Commission board" aria-label="Commission board${boardFit()?`, ${boardFit()} you can fill`:''}" aria-pressed="${!!UI.board}"><i class="pxi" style="background-image:var(--ico-board)"></i>${boardFit()?`<b class="badge">${boardFit()}</b>`:''}</button><button class="hico ${A.tab==='records'?'on':''}" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
+  $('hud').innerHTML=`<button class="who" data-action="tab" data-tab="chars" title="Your smith"><b>${c.name}</b><span class="whocls"> the ${CLASSES[c.cls].n}</span></button><span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}</span><span class="hbtns">${NET.user?`<button class="hico mailbtn" data-action="mailopen" title="Mailbox" aria-label="Mailbox, ${MAIL.list.length} unread"><i class="pxi" style="background-image:var(--ico-mail)"></i>${MAIL.list.length?`<b class="badge">${MAIL.list.length}</b>`:''}</button>`:''}<button class="hico boardbtn ${UI.board?'on':''}" data-action="boardtoggle" title="Commission board" aria-label="Commission board${boardFit()?`, ${boardFit()} you can fill`:''}" aria-pressed="${!!UI.board}"><i class="pxi" style="background-image:var(--ico-board)"></i>${boardFit()?`<b class="badge">${boardFit()}</b>`:''}</button><button class="hico ${A.tab==='records'?'on':''}" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
 function renderTabs(){const c=needAcct()?null:C();const tabs=c?[['forge','Forge'],['workshop','Workshop'],['market','Market'],['auction','Auctions'],['arena','Arena']]:[];
   if(A.tab==='rack'){UI.rack=true;A.tab='forge'}
   if(!['chars','armory','records'].includes(A.tab)&&!tabs.some(t=>t[0]===A.tab))A.tab=c?'forge':'chars';const n=c?owned().length:0;
@@ -2119,7 +2144,7 @@ function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPic
   <div class="plate smithone"><h2>${c.name}</h2><dl class="facts"><div><dt>Forged</dt><dd>${c.forged}</dd></div><div><dt>Coin</dt><dd>${fmt(c.coin)}</dd></div><div><dt>On rack</dt><dd>${c.blades.filter(b=>b.status==='owned').length}</dd></div><div><dt>Anvil</dt><dd>${ANVILS[c.anvil].n.replace(' Anvil','')}</dd></div><div><dt>Patterns</dt><dd>${['L','M','H','X'].filter(w=>knows(c,w)).length} of 4</dd></div><div><dt>Classes</dt><dd>${c.classes.length} of ${CK.length}</dd></div></dl></div>
   <h2 class="clshead">Classes</h2><div class="smiths">${cards}</div>
   `+SETTINGS_PLATE()+`</section>`}
-function SETTINGS_PLATE(){return `  <div class="plate settings"><h2>Your save</h2><p class="fine">Saved on this device. Sign in, or copy a backup code, to keep it safe.</p>
+function SETTINGS_PLATE(){return `  <div class="plate settings"><h2>Your save</h2><p class="fine">${NET.user?'Backed up to your account. A backup code is an extra copy you can keep yourself.':'Saved on this device. Sign in, or copy a backup code, to keep it safe.'}</p>
    <div class="row2"><button class="btn" data-action="backup">Copy backup code</button><button class="btn ghost" data-action="restoreopen">Restore from a code</button><button class="btn ghost" data-action="reset" data-confirm="1">Delete everything</button></div>
    <div id="restorebox" class="hidden"><textarea id="restoretxt" placeholder="Paste your backup code here" aria-label="Backup code"></textarea><div class="row2"><button class="btn go" data-action="restore" data-confirm="1">Restore this save</button></div></div></div>`}
 
@@ -2428,7 +2453,11 @@ async function oauthName(username){NET.busy=true;NET.authErr='';render();
 // ----- recovery code: shown once, the player keeps it; username + code sets a new password
 try{NET.newCode=sessionStorage.getItem('anvilmoon-code')||null}catch(e){}
 function showCode(c){NET.newCode=c;try{c?sessionStorage.setItem('anvilmoon-code',c):sessionStorage.removeItem('anvilmoon-code')}catch(e){}}
-function codeBanner(){if(!NET.newCode||!NET.user)return '';return `<div class="plate codeplate" role="alert"><h2>Save your recovery code</h2><p class="fine">If you ever forget your password, this code and your username get you back in. Write it down or save it somewhere safe. It is shown only this once.</p>
+function codeBanner(){if(!NET.user)return '';
+  if(!NET.newCode){if(NET.user.hasCode!==false||NET.codeLater||F||revealId)return '';
+    return `<div class="plate codeplate"><h2>Get a recovery code</h2><p class="fine">Your account has no recovery code yet. If you ever forget your password, the code is the way back in. It takes a few seconds.</p>
+  ${NET.user.hasPw===false?'<div class="row2"><button class="btn go" data-action="codeget">Show my code</button><button class="btn ghost" data-action="codelater">Later</button></div>':'<form class="authform" data-auth="code"><label class="fld">Your password<input type="password" name="password" autocomplete="current-password" required></label><div class="row2"><button class="btn go" type="submit">Show my code</button><button class="btn ghost" type="button" data-action="codelater">Later</button></div></form>'}</div>`}
+  return `<div class="plate codeplate" role="alert"><h2>Save your recovery code</h2><p class="fine">If you ever forget your password, this code and your username get you back in. Write it down or save it somewhere safe. It is shown only this once.</p>
   <p class="rcode">${NET.newCode}</p><div class="row2"><button class="btn" data-action="codecopy">Copy</button><button class="btn go" data-action="codedone">I’ve saved it</button></div></div>`}
 async function doRecover(username,code,next){NET.busy=true;NET.authErr='';render();
   try{const r=await apiCall('/api/recover',{method:'POST',body:{username,code,next}});NET.token=r.token;NET.user=r.user;NET.forgot=false;storeToken();showCode(r.code);toast('New password saved. Here is a new recovery code.');await afterLogin()}
@@ -2652,6 +2681,7 @@ function accountPlate(){if(!SERVER)return '';
     <form class="authform" data-auth="recover"><label class="fld">Username<input name="username" autocomplete="username" required></label><label class="fld">Recovery code<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="XXXX-XXXX-XXXX-XXXX"></label>
     <label class="fld">New password<input type="password" name="next" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></label><label class="fld">Confirm password<input type="password" name="confirm" autocomplete="new-password" required></label>
     <button class="btn go" type="submit" ${NET.busy?'disabled':''}>Save new password</button></form>
+    <p class="fine">Lost your code as well? Ask Anvilmoon’s owner to issue you a new one.</p>
     ${prov?`<p class="fine">Or, if you linked Discord or Google, sign in with it and you’ll be asked for a new password.</p><div class="provrow">${oauthBtns('reset','Reset with')}</div>`:''}</div>`:''}`:''}
     ${NET.offline?'<p class="warn">Can’t reach the Anvilmoon server right now.</p>':''}</div>`}
 document.addEventListener('submit',async e=>{const f=e.target.closest('form.authform');if(!f)return;e.preventDefault();const v=n=>(f.elements.namedItem(n)||{}).value||'';
@@ -2719,6 +2749,7 @@ const ACT={
   signout:async()=>{await pushSave();try{await apiCall('/api/logout',{method:'POST'})}catch(e){}signedOut('Signed out. You can keep playing on this device.')},
   pwopen:()=>{const f=$('pwform');if(f)f.classList.toggle('hidden')},
   codeopen:()=>{const f=$('codeform');if(f)f.classList.toggle('hidden')},codeget:async()=>{try{const r=await apiCall('/api/recovery',{method:'POST',body:{}});NET.user=r.user;showCode(r.code);window.scrollTo(0,0)}catch(x){toast(x.msg)}render()},
+  codelater:()=>{NET.codeLater=true;render()},
   codecopy:async()=>{try{await navigator.clipboard.writeText(NET.newCode);toast('Copied.')}catch(e){toast('Couldn’t copy. Select the code and copy it by hand.')}},codedone:()=>{showCode(null);render()},
   oauth:el=>oauthGo(el.dataset.p,el.dataset.m),forgot:()=>{NET.forgot=!NET.forgot;render()},oauthcancel:()=>{NET.oauth=null;NET.authErr='';render()},resetskip:()=>{NET.resetTok=null;NET.authErr='';render()},
   unlink:async el=>{try{const r=await apiCall('/api/unlink',{method:'POST',body:{id:el.dataset.id}});NET.user=r.user;toast('Unlinked.')}catch(x){toast(x.msg)}render()},
@@ -2732,7 +2763,7 @@ const ACT={
   pickw:el=>{const c=C(),w=el.dataset.w;c.selW=w;const first=typesOf(c.cls).find(k=>TYPES[k].wt===w);if(TYPES[c.sel].wt!==w&&first)c.sel=first;save();render()},
   armcls:el=>{UI.armCls=el.dataset.k;render()},
   reccls:el=>{UI.recCls=el.dataset.k;render()},
-  recpage:el=>{UI.recPage=el.dataset.k;render()},
+  recpage:el=>{UI.recPage=el.dataset.k;render();document.querySelector('.rectabs .ahtab.on')?.scrollIntoView({block:'nearest',inline:'center'})},
   backup:async()=>{const code=btoa(unescape(encodeURIComponent(JSON.stringify(A))));try{await navigator.clipboard.writeText(code);toast('Backup code copied. Keep it somewhere safe.')}catch(e){const b=$('restorebox'),t=$('restoretxt');b.classList.remove('hidden');t.value=code;t.select();toast('Copy the code from the box below.')}},
   restoreopen:()=>{$('restorebox').classList.remove('hidden');$('restoretxt').focus()},
   restore:()=>{try{const s2=JSON.parse(decodeURIComponent(escape(atob($('restoretxt').value.trim()))));if(!s2||!s2.slots)throw 0;A=s2;save();toast('Save restored.');render()}catch(e){toast('That code didn’t work. Check that you copied all of it.')}},
