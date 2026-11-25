@@ -2894,6 +2894,57 @@ const FIGHT = (() => {
   }
   return { SKIN, HAIRC, CLOTH, TROUS, HAIRS, BODIES, BEARDS, POSES, draw };
 })();
+// ----- the forward-facing portrait: the same look, seen from the front (34 x 34 pixels, scaled up with no smoothing)
+const FACE=(()=>{
+  const hex=h=>{const n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255]},sh=(h,f)=>{const c=hex(h).map(v=>Math.max(0,Math.min(255,Math.round(v*f))));return`rgb(${c[0]},${c[1]},${c[2]})`};
+  const mixc=(a,b,f)=>{const x=hex(a),y=hex(b);return'#'+x.map((v,i)=>Math.round(v+(y[i]-v)*f).toString(16).padStart(2,'0')).join('')};
+  function draw(c,look){const S=FIGHT.SKIN[look.skin%6],H=FIGHT.HAIRC[look.hairC%8],CL=FIGHT.CLOTH[look.cloth%8],TR=FIGHT.CLOTH[(look.trim??0)%8],fem=look.body===1,hs=look.hair%14;
+    const sl=sh(S,1.1),sd=sh(S,.8),sdd=sh(S,.62),hl=sh(H,1.45),hd=sh(H,.68),cl=sh(CL,1.22),cd=sh(CL,.74),cdd=sh(CL,.54),INK='#100c0b',brow=mixc(H,'#000000',.3);
+    const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)},cx=17;
+    // rows of hair: [y, left, right] spans, mirrored when asked
+    const span=(y,x0,x1,col)=>R(x0,y,x1-x0+1,1,col);
+    const disc=(x,y,r,col)=>{for(let dy=-Math.ceil(r);dy<=Math.ceil(r);dy++){const w=Math.sqrt(Math.max(0,r*r-dy*dy));if(w>.3)R(Math.round(x-w),Math.round(y)+dy,Math.max(1,Math.round(w*2)),1,col)}};
+    // ---- hair that falls behind the head and shoulders
+    if(hs===2){for(let y=8;y<=30;y++){span(y,8,26,y%3?H:hd)}span(31,9,25,hd)}
+    if(hs===13){for(let y=8;y<=23;y++)span(y,8-(y%4===0?1:0),26+(y%3===0?1:0),y%3?H:hd)}
+    if(hs===8){for(let y=8;y<=21;y++)span(y,8,26,H);span(22,9,25,hd)}
+    if(hs===12){for(let y=8;y<=19;y++)span(y,8,26,H);span(20,9,25,hd)}
+    if(hs===6){for(let y=7;y<=20;y++)span(y,24+Math.round(Math.sin(y/2)*1),27+Math.round(Math.sin(y/2)*1),y%2?H:hd);R(24,7,3,2,TR)}
+    if(hs===11){for(const[x,y,r]of[[9,11,3.2],[25,11,3.2],[8,16,2.8],[26,16,2.8],[9,20,2.2],[25,20,2.2]])disc(x,y,r,H)}
+    // ---- shoulders and tunic
+    const sw=fem?10:12;for(let y=27;y<34;y++){const hw=Math.min(sw,6+(y-27)*3);span(y,cx-hw,cx+hw,CL)}
+    for(let y=28;y<34;y++){const hw=Math.min(sw,6+(y-27)*3);R(cx+hw-2,y,3,1,cd);R(cx-hw,y,2,1,cl)}
+    R(cx-3,27,7,1,cd);for(let i=0;i<4;i++){R(cx-3+i,27+i,7-i*2,1,sd)}R(cx,30,1,3,cdd);R(cx-1,31,3,1,'#d8cdb8');     // open neck with a lace
+    // ---- neck
+    R(cx-(fem?2:3),23,fem?5:7,5,sd);R(cx-(fem?2:3),23,fem?5:7,1,sdd);
+    // ---- head
+    const top=6,bot=fem?23:24,rows=[];for(let y=top;y<=bot;y++){const t=(y-14)/(y<14?8.6:(fem?9.6:10.4));let hw=7.4*Math.sqrt(Math.max(0,1-t*t));if(y>18)hw-= (y-18)*(fem?.55:.3);hw=Math.max(2,Math.round(hw));rows.push([y,hw]);span(y,cx-hw,cx+hw,S)}
+    for(const[y,hw]of rows){R(cx+hw-1,y,2,1,sd);if(y<16)R(cx-hw,y,1,1,sl)}                                           // shade on one side, light on the other
+    R(cx-8,14,1,3,sd);R(cx+8,14,1,3,sdd);R(cx-8,14,1,1,S);                                                             // ears
+    for(const[y,hw]of rows)if(y>=bot-1)span(y,cx-hw,cx+hw,sd);
+    // ---- face
+    R(cx-5,12,4,1,brow);R(cx+2,12,4,1,brow);R(cx-5,14,3,2,'#f7f1e6');R(cx+3,14,3,2,'#f7f1e6');R(cx-4,14,2,2,INK);R(cx+3,14,2,2,INK);R(cx-4,14,1,1,'#3a2f2a');R(cx+3,14,1,1,'#3a2f2a');
+    if(fem){R(cx-6,13,1,1,INK);R(cx+6,13,1,1,INK)}
+    R(cx,15,1,3,sd);R(cx-1,18,3,1,sdd);R(cx+1,17,1,1,sdd);                                                             // nose
+    R(cx-2,20,fem?4:5,1,fem?mixc(S,'#a03a3a',.55):sdd);if(!fem)R(cx-1,22,3,1,sd);                                      // mouth, chin crease
+    if(look.beard===1&&!fem){for(const[y,hw]of rows)if(y>=18){span(y,cx-hw,cx+hw,mixc(S,H,.38))}R(cx-2,20,5,1,sdd);R(cx-1,18,3,1,sdd)}
+    if(look.beard===2&&!fem){for(const[y,hw]of rows)if(y>=17)span(y,cx-hw,cx+hw,H);span(25,cx-4,cx+4,H);span(26,cx-3,cx+3,hd);R(cx-2,20,5,1,sdd);R(cx-3,19,7,1,hd);R(cx-5,18,2,3,hl);R(cx-1,17,3,1,S);R(cx-1,18,3,1,sdd)}
+    // ---- hair on top of the head
+    const cap=(y0,side)=>{for(const[y,hw]of rows){if(y<=y0)span(y,cx-hw-1,cx+hw+1,H);else if(y<=side){R(cx-hw-1,y,2,1,H);R(cx+hw,y,2,1,hd)}}span(top-1,cx-5,cx+5,H);span(top-2,cx-3,cx+3,H);R(cx-4,top-1,5,1,hl);R(cx-5,top+1,3,1,hl);for(const[y,hw]of rows)if(y<=y0)R(cx+hw-1,y,3,1,hd)};
+    if(hs===3){R(cx-4,top+1,4,1,sl);R(cx-5,top+2,2,1,sl)}
+    else if(hs===10){for(const[y,hw]of rows)if(y<=11){R(cx-hw,y,hw*2+1,1,mixc(S,H,.3))}for(let y=1;y<=10;y++){const w=y<3?1:2;span(y,cx-w,cx+w,y%2?H:hl)}R(cx-1,0,3,1,H);R(cx+2,3,1,8,hd)}
+    else if(hs===5){cap(10,13);for(const[x,h]of[[cx-9,4],[cx-6,6],[cx-3,7],[cx,8],[cx+3,7],[cx+6,6],[cx+9,4]]){for(let i=0;i<h;i++)R(x-(i<2?1:0),top+1-i,i<2?3:1,1,i%3===1?hl:H)}R(cx-9,9,2,3,H);R(cx+8,9,2,3,hd)}
+    else if(hs===11){for(const[x,y,r]of[[cx-6,7,3.2],[cx-2,5,3.4],[cx+3,5,3.4],[cx+7,7,3.2],[cx-8,11,2.6],[cx+8,11,2.6]])disc(x,y,r,H);for(const[x,y]of[[cx-6,6],[cx-2,4],[cx+3,4],[cx+6,6]])disc(x,y,1.2,hl);for(const[x,y]of[[cx-4,8],[cx+1,7],[cx+5,9]])R(x,y,2,1,hd)}
+    else{const fr=hs===8||hs===12?12:hs===13?11:hs===0?9:10,side=hs===0||hs===1||hs===7?12:hs===6||hs===4||hs===9?14:16;cap(fr,side);
+      if(hs===8||hs===12){for(let x=cx-6;x<=cx+6;x++)R(x,11,1,(x%3===0)?1:2,x<cx?H:hd)}
+      if(hs===13){for(let x=cx-7;x<=cx+7;x+=2)R(x,11,1,2+(x%3?0:1),H);R(cx-8,12,2,6,H);R(cx+7,12,2,5,hd)}
+      if(hs===2||hs===8||hs===12||hs===13){R(cx-9,10,2,hs===2?10:hs===8?9:7,H);R(cx+8,10,2,hs===2?10:hs===8?9:7,hd)}
+      if(hs===1){disc(cx,2,2.6,H);R(cx-1,1,2,1,hl);R(cx-2,5,5,1,TR)}
+      if(hs===7){disc(cx,3,3.2,H);disc(cx-1,2,1.4,hl);R(cx-2,6,5,1,TR)}
+      if(hs===4){for(let y=17;y<=31;y++)R(cx+7+(y%4<2?0:1),y,3,1,y%2?H:hd);R(cx+7,32,3,1,TR)}
+      if(hs===9){for(let y=15;y<=30;y++){R(cx-10-(y%4<2?0:1),y,3,1,y%2?H:hd);R(cx+8+(y%4<2?0:1),y,3,1,y%2?hd:H)}R(cx-10,31,3,1,TR);R(cx+8,31,3,1,TR)}}
+  }
+  return{draw}})();
 // ----- looks: what a smith chose, a face for every name, and the editor on your hall
 const LOOK_KEYS=['body','skin','hair','hairC','beard','cloth','trim','trous'],LOOK_MAX={body:2,skin:6,hair:14,hairC:8,beard:3,cloth:8,trim:8,trous:5};
 // until a smith chooses, their look is worked out from their name, so everyone has their own face from the start
@@ -2904,7 +2955,10 @@ const myLook=()=>lookClean(A.look,NET.user?NET.user.username:(C()?C().name:''));
 const NOBLADE={len:1,none:true},LOOKIMG={};
 // head-and-shoulders portrait (kind 'bust') or the whole figure (kind 'full'), as a picture address; cached per look
 function lookImg(look,kind){const key=kind+JSON.stringify(look);if(LOOKIMG[key])return LOOKIMG[key];try{const full=kind==='full',w=full?64:34,h=full?92:34,cv=Object.assign(document.createElement('canvas'),{width:w,height:h}),c=cv.getContext('2d');
-    FIGHT.draw(c,full?30:16,full?90:84,look,FIGHT.POSES.idle,1,NOBLADE,0,0,0);return LOOKIMG[key]=cv.toDataURL()}catch(e){return ''}}
+    if(full){FIGHT.draw(c,30,90,look,FIGHT.POSES.idle,1,NOBLADE,0,0,0);return LOOKIMG[key]=cv.toDataURL()}
+    const t=Object.assign(document.createElement('canvas'),{width:w,height:h}),tc=t.getContext('2d'),m=Object.assign(document.createElement('canvas'),{width:w,height:h}),mc=m.getContext('2d');FACE.draw(tc,look);
+    mc.drawImage(t,0,0);mc.globalCompositeOperation='source-in';mc.fillStyle='#100c0b';mc.fillRect(0,0,w,h);for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]])c.drawImage(m,dx,dy);c.drawImage(t,0,0);   // dark outline
+    return LOOKIMG[key]=cv.toDataURL()}catch(e){return ''}}
 const portrait=(look,name,cls)=>{const src=lookImg(lookClean(look,name),'bust');return src?`<img class="face ${cls||''}" src="${src}" alt="" width="34" height="34">`:''};
 const SKIN_N=['Fair','Tan','Bronze','Brown','Deep','Pale'],HAIRC_N=['Black','Brown','Chestnut','Blond','Red','Grey','Steel blue','Green'],CLOTH_N=['Madder red','Woad blue','Moss green','Plum','Ochre','Undyed linen','Rust','Bark brown'],TROUS_N=['Brown','Charcoal','Hemp','Dark green','Russet'];
 const LOOK_G=[{k:'body',n:'Body',chips:FIGHT.BODIES},{k:'skin',n:'Skin',sw:FIGHT.SKIN,names:SKIN_N},{k:'hair',n:'Hair',chips:FIGHT.HAIRS,thumb:1},{k:'hairC',n:'Hair colour',sw:FIGHT.HAIRC,names:HAIRC_N},{k:'beard',n:'Beard',chips:FIGHT.BEARDS},{k:'cloth',n:'Tunic',sw:FIGHT.CLOTH,names:CLOTH_N},{k:'trous',n:'Trousers',sw:FIGHT.TROUS,names:TROUS_N},{k:'trim',n:'Cord belt',sw:FIGHT.CLOTH,names:CLOTH_N}];
