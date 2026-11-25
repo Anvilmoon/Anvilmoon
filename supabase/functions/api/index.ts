@@ -5,6 +5,7 @@
 import postgres from 'npm:postgres@3.4.5';
 import crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
+import { createRemoteJWKSet, jwtVerify } from 'npm:jose@5.9.6';
 import { TYPEW } from './types.ts';
 
 const sql = postgres(Deno.env.get('SUPABASE_DB_URL'), { max: 1, prepare: false, idle_timeout: 20, connect_timeout: 10 });
@@ -18,6 +19,7 @@ const now = () => Date.now();
 // ---------------------------------------------------------------- accounts
 const hashPw = (pw, salt = crypto.randomBytes(16).toString('hex')) => salt + ':' + crypto.scryptSync(pw, salt, 64).toString('hex');
 function checkPw(pw, stored) {
+  if (!stored) return false;   // accounts made with Discord or Google have no password until one is set
   const [salt, h] = String(stored).split(':');
   const a = Buffer.from(h || '', 'hex'), b = crypto.scryptSync(pw, salt, 64);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -38,6 +40,33 @@ function userFrom(R) {
 }
 const cleanName = (v, fallback = 'Unknown') => (String(v || '').normalize('NFC').replace(/[^\p{L}\p{N} .\-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 24) || fallback);
 const publicUser = (u) => ({ id: u.id, username: u.username, rating: u.rating, wins: u.wins, losses: u.losses, created: u.created });
+// what an account sees about itself: also whether it has a password and which Discord / Google sign-ins are linked
+const selfUser = (u) => ({ ...publicUser(u), hasPw: !!u.pass, links: Object.entries(u.links || {}).map(([k, l]) => ({ id: k, providers: l.providers, name: l.name })) });
+
+// ---------------------------------------------------------------- Discord and Google sign-in
+// Supabase Auth runs the Discord / Google sign-in and hands the browser a signed token. Here that token is checked and
+// matched to an Anvilmoon account. Nothing but the provider's account id and display name is kept.
+const SB_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/$/, '');
+const JWKS = SB_URL ? createRemoteJWKSet(new URL(SB_URL + '/auth/v1/.well-known/jwks.json')) : null;
+const PROVIDERS = { discord: 'Discord', google: 'Google' };
+async function oauthWho(t) {
+  t = String(t || '');
+  if (TESTING && t.startsWith('test:')) { const [, prov, sub, name] = t.split(':'); return { sub, providers: prov.split('+'), name }; }
+  if (!JWKS || t.length < 20 || t.length > 8000) return null;
+  let c = null;
+  try { c = (await jwtVerify(t, JWKS, { issuer: SB_URL + '/auth/v1', audience: 'authenticated' })).payload; }
+  catch (e) {
+    // projects that sign with a shared secret can't be checked here, so the auth server is asked instead
+    const key = Deno.env.get('SUPABASE_ANON_KEY');
+    if (key) try { const r = await fetch(SB_URL + '/auth/v1/user', { headers: { apikey: key, Authorization: 'Bearer ' + t } }); if (r.ok) { const j = await r.json(); c = { sub: j.id, email: j.email, app_metadata: j.app_metadata, user_metadata: j.user_metadata }; } } catch (e2) { /* treated as not signed in */ }
+  }
+  if (!c || !c.sub) return null;
+  const am = c.app_metadata || {}, um = c.user_metadata || {};
+  const providers = (Array.isArray(am.providers) ? am.providers : [am.provider]).filter((x) => PROVIDERS[x]);
+  if (!providers.length) return null;
+  return { sub: String(c.sub), providers, name: cleanName(um.full_name || um.name || String(c.email || '').split('@')[0], 'linked account') };
+}
+const provLabel = (who) => who.providers.map((x) => PROVIDERS[x]).join(' / ');
 
 // per-key throttles, kept in the shared state so they hold across function instances
 function limited(key, max, windowMs) {
@@ -303,7 +332,7 @@ async function api(tx, R) {
     if (db.names[name.toLowerCase()]) return fail(409, 'That username is taken.');
     const user = { id: id('u'), username: name, pass: hashPw(String(password)), created: now(), rating: 1000, wins: 0, losses: 0 };
     db.users[user.id] = user; db.names[name.toLowerCase()] = user.id; markDirty();
-    return ok({ token: newSession(user.id), user: publicUser(user) });
+    return ok({ token: newSession(user.id), user: selfUser(user) });
   }
   if (p === '/api/login' && m === 'POST') {
     if (throttled(ip)) return fail(429, 'Too many attempts. Wait a minute and try again.');
@@ -311,7 +340,7 @@ async function api(tx, R) {
     const user = db.users[db.names[String(username).trim().toLowerCase()]];
     if (limited('user:' + String(username).trim().toLowerCase(), 8, 600e3)) return fail(429, 'Too many attempts on this account. Wait ten minutes and try again.');
     if (!user || !checkPw(String(password), user.pass)) return fail(401, 'That username and password don’t match.');
-    return ok({ token: newSession(user.id), user: publicUser(user) });
+    return ok({ token: newSession(user.id), user: selfUser(user) });
   }
   if (p === '/api/logout' && m === 'POST') {
     const h = R.auth || ''; if (h.startsWith('Bearer ')) { delete db.sessions[tokenHash(h.slice(7))]; markDirty(); }
@@ -320,14 +349,57 @@ async function api(tx, R) {
   if (p === '/api/password' && m === 'POST') {
     if (!u) return NEED;
     const { current = '', next = '' } = q;
-    if (!checkPw(String(current), u.pass)) return fail(401, 'Your current password isn’t right.');
+    // Three ways in: the current password; a fresh Discord / Google sign-in that is linked to this account (a reset);
+    // or no password yet (the account was made with Discord or Google).
+    let reset = false;
+    if (q.access_token) {
+      const who = await oauthWho(q.access_token);
+      if (!who || (db.links || {})[who.sub] !== u.id) return fail(401, 'That sign-in isn’t linked to this account.');
+      reset = true;
+    } else if (u.pass && !checkPw(String(current), u.pass)) return fail(401, 'Your current password isn’t right.');
     if (String(next).length < 8) return fail(400, 'Passwords need at least 8 characters.');
-    u.pass = hashPw(String(next)); markDirty(); return ok({ ok: true });
+    u.pass = hashPw(String(next)); markDirty();
+    if (reset) {   // a reset signs out every other device
+      const h = R.auth || '', mine = h.startsWith('Bearer ') ? tokenHash(h.slice(7)) : '';
+      for (const [k, v] of Object.entries(db.sessions)) if (v.uid === u.id && k !== mine) delete db.sessions[k];
+    }
+    return ok({ ok: true, user: selfUser(u) });
+  }
+  if (p === '/api/oauth' && m === 'POST') {
+    if (throttled(ip)) return fail(429, 'Too many attempts. Wait a minute and try again.');
+    const who = await oauthWho(q.access_token);
+    if (!who) return fail(401, 'That sign-in didn’t work. Try again.');
+    db.links = db.links || {};
+    const owner = db.users[db.links[who.sub]];
+    const note = (x) => { x.links = x.links || {}; x.links[who.sub] = { providers: who.providers, name: who.name, at: (x.links[who.sub] || {}).at || now() }; db.links[who.sub] = x.id; markDirty(); };
+    if (q.mode === 'link') {
+      if (!u) return NEED;
+      if (owner && owner.id !== u.id) return fail(409, `That ${provLabel(who)} account is already linked to another Anvilmoon account.`);
+      note(u); return ok({ linked: provLabel(who), user: selfUser(u) });
+    }
+    if (owner) { note(owner); return ok({ token: newSession(owner.id), user: selfUser(owner) }); }
+    // nobody has linked this Discord / Google account: it can start a new Anvilmoon account once a username is chosen
+    if (q.username === undefined) return ok({ needName: true, provider: provLabel(who), suggest: who.name.replace(/[^A-Za-z0-9_]/g, '').slice(0, 20) });
+    const name = String(q.username).trim();
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(name)) return fail(400, 'Usernames are 3 to 20 letters, numbers or underscores.');
+    if (db.names[name.toLowerCase()]) return fail(409, 'That username is taken.');
+    if (!TESTING && (limited('reg:' + ip, 3, 3600e3) || limited('reg:all', 60, 3600e3))) return fail(429, 'Too many new accounts from here. Try again later.');
+    const user = { id: id('u'), username: name, pass: null, created: now(), rating: 1000, wins: 0, losses: 0 };
+    db.users[user.id] = user; db.names[name.toLowerCase()] = user.id; note(user);
+    return ok({ token: newSession(user.id), user: selfUser(user), created: true });
+  }
+  if (p === '/api/unlink' && m === 'POST') {
+    if (!u) return NEED;
+    const k = String(q.id || '');
+    if (!u.links || !u.links[k]) return fail(404, 'That sign-in isn’t linked.');
+    if (!u.pass && Object.keys(u.links).length < 2) return fail(400, 'Set a password first, or you’d have no way to sign in.');
+    delete u.links[k]; if (db.links) delete db.links[k]; markDirty();
+    return ok({ user: selfUser(u) });
   }
   if (p === '/api/me' && m === 'GET') {
     if (!u) return NEED;
     const [s] = await tx`select save_at from am_saves where uid = ${u.id}`;
-    return ok({ user: publicUser(u), saveAt: s ? Number(s.save_at) : 0 });
+    return ok({ user: selfUser(u), saveAt: s ? Number(s.save_at) : 0 });
   }
 
   // cloud save
@@ -480,7 +552,7 @@ async function api(tx, R) {
 // ---------------------------------------------------------------- request handling
 const HEAD = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
 const reply = (code, obj) => new Response(JSON.stringify(obj), { status: code, headers: HEAD });
-const blank = () => ({ users: {}, names: {}, sessions: {}, ah: {}, mail: {}, seq: 0, campaigns: {}, limits: {}, queue: { ranked: [], wager: [] }, matches: {}, playerMatch: {}, ahRev: 0, config: {} });
+const blank = () => ({ users: {}, names: {}, sessions: {}, ah: {}, mail: {}, seq: 0, campaigns: {}, limits: {}, queue: { ranked: [], wager: [] }, matches: {}, playerMatch: {}, ahRev: 0, config: {}, links: {} });
 
 async function handle(req) {
   const url = new URL(req.url), i = url.pathname.indexOf('/api');

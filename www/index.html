@@ -315,7 +315,7 @@ select,input[type=text],input[type=number]{background:#22201e;border:1px solid v
 @media (max-width:1050px){.lot{grid-template-columns:180px 1fr}.lotnums,.lotact{grid-column:2}.sellgrid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:760px){.lot{grid-template-columns:1fr}.lotnums,.lotact{grid-column:1}}
 /* accounts & arena */
-.acct{margin-bottom:16px}.authform{display:grid;gap:10px;max-width:380px;margin-top:8px}.authform input{width:100%}
+.acct{margin-bottom:16px}.orline{display:flex;align-items:center;gap:10px;max-width:380px;margin:14px 0 10px;color:var(--mute,#8a8172);font-size:14px}.orline::before,.orline::after{content:'';flex:1;border-top:2px solid rgba(255,255,255,.1)}.provrow{display:grid;gap:8px;max-width:380px}.btn.prov{width:100%;text-align:center}.linkbtn{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}.forgot{margin-top:12px}.forgotbox{max-width:380px;margin-top:6px;padding:10px 12px;border:2px dashed rgba(255,255,255,.14)}.forgotbox .provrow{margin:8px 0}.linkh{margin:18px 0 6px;font-size:16px}.links{list-style:none;margin:0 0 10px;padding:0;max-width:380px}.links li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)}.btn.sm{padding:3px 10px;font-size:13px}.authform{display:grid;gap:10px;max-width:380px;margin-top:8px}.authform input{width:100%}
 input[type=password],input[name=username]{background:#22201e;border:1px solid var(--rule2);border-radius:3px;padding:8px 10px;font-size:15px;color:var(--ash)}
 .conflict{margin-bottom:18px}
 .arenagrid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}.arenagrid .plate+.plate{margin-top:0}
@@ -2390,14 +2390,39 @@ async function apiCall(path,opts={}){let r;
   try{r=await fetch(SERVER+path,{method:opts.method||'GET',headers:{'Content-Type':'application/json',...(NET.token?{Authorization:'Bearer '+NET.token}:{})},body:opts.body!==undefined?JSON.stringify(opts.body):undefined,keepalive:!!opts.keepalive})}
   catch(e){NET.offline=true;throw{status:0,msg:'Can’t reach the Anvilmoon server. Check your connection, or try again in a moment.'}}
   NET.offline=false;let j={};try{j=scrub(await r.json())}catch(e){}
-  if(r.status===401&&NET.user&&path!=='/api/login'){signedOut('Your session ended. Sign in again.')}
+  if(r.status===401&&NET.user&&!['/api/login','/api/password','/api/oauth'].includes(path)){signedOut('Your session ended. Sign in again.')}
   if(!r.ok)throw{status:r.status,msg:j.error||'The server couldn’t do that. Try again.',body:j};return j}
 const online=()=>!!(SERVER&&NET.user);
-const needAcct=()=>!!(SERVER&&!NET.user&&!NET.token);
+const needAcct=()=>!!(SERVER&&!NET.user&&(!NET.token||NET.oauth));
 
-async function netInit(){if(!SERVER||!NET.token)return;
-  try{const r=await apiCall('/api/me');NET.user=r.user;await afterLogin()}catch(e){if(e.status===401){NET.token=null;storeToken()}}
+async function netInit(){if(!SERVER)return;const back=oauthBack();
+  if(back&&back.err){NET.authErr=back.err}
+  if(back&&back.tok&&back.mode!=='link'){NET.token=null;storeToken()}
+  if(NET.token){try{const r=await apiCall('/api/me');NET.user=r.user;await afterLogin()}catch(e){if(e.status===401){NET.token=null;storeToken()}}}
+  if(back&&back.tok)await oauthFinish(back);
   render()}
+// ----- Discord and Google sign-in. The sign-in itself happens on their pages; the browser comes back here with a short-lived token.
+const OAUTH=(window.ANVILMOON_AUTH&&SERVER)?window.ANVILMOON_AUTH:{providers:[]},PROV={discord:'Discord',google:'Google'};
+function oauthGo(provider,mode){if(!OAUTH.url||!PROV[provider])return;try{sessionStorage.setItem('anvilmoon-oauth',mode)}catch(e){}flushSave();
+  location.href=OAUTH.url+'/auth/v1/authorize?provider='+provider+'&redirect_to='+encodeURIComponent(location.origin+'/')}
+function oauthBack(){const h=location.hash||'';if(!/access_token=|error_description=|error=/.test(h))return null;
+  const q=new URLSearchParams(h.slice(1));let mode='login';try{mode=sessionStorage.getItem('anvilmoon-oauth')||'login';sessionStorage.removeItem('anvilmoon-oauth')}catch(e){}
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  if(q.get('access_token'))return{tok:q.get('access_token'),mode};
+  return{err:'That sign-in was cancelled or didn’t work. Try again.'}}
+async function oauthFinish(b){
+  try{if(b.mode==='link'){if(!NET.user){NET.authErr='Sign in first, then link the account.';return}
+      const r=await apiCall('/api/oauth',{method:'POST',body:{access_token:b.tok,mode:'link'}});NET.user=r.user;toast(`${r.linked} linked. You can sign in with it from now on.`);return}
+    const r=await apiCall('/api/oauth',{method:'POST',body:{access_token:b.tok}});
+    if(r.needName){if(b.mode==='reset'){NET.authErr=`No Anvilmoon account is linked to that ${r.provider} account, so it can’t reset a password.`;return}
+      NET.oauth={tok:b.tok,provider:r.provider,suggest:r.suggest||''};return}
+    NET.token=r.token;NET.user=r.user;storeToken();if(b.mode==='reset'){NET.resetTok=b.tok;A.tab='chars'}else toast(`Signed in as ${r.user.username}.`);await afterLogin()}
+  catch(e){NET.authErr=e.msg||'That sign-in didn’t work. Try again.';if(NET.user)toast(NET.authErr)}}
+async function oauthName(username){NET.busy=true;NET.authErr='';render();
+  try{const r=await apiCall('/api/oauth',{method:'POST',body:{access_token:NET.oauth.tok,username}});NET.token=r.token;NET.user=r.user;NET.oauth=null;storeToken();toast(`Welcome to Anvilmoon, ${r.user.username}.`);await afterLogin()}
+  catch(e){NET.authErr=e.status===401?'That took too long. Start the sign-in again.':e.msg;if(e.status===401)NET.oauth=null}NET.busy=false;render()}
+const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const oauthBtns=(mode,verb,list)=>(list||OAUTH.providers).filter(x=>PROV[x]).map(x=>`<button type="button" class="btn prov" data-action="oauth" data-p="${x}" data-m="${mode}">${verb} ${PROV[x]}</button>`).join('');
 async function afterLogin(){openEvents();refreshAH();fetchMail();await syncSave();oneName()}
 // A smith no longer has a name of its own: it goes by the account's username. Blades forged under an old smith name are re-signed.
 const FORGER_AKA={'Spriggan':'Anvilmoon','Lexy':'lexy','Edda Emberly':'Stubbs38','John':'Mouflon'},HIDE_REC=[];
@@ -2408,7 +2433,7 @@ function oneName(){if(!NET.user)return;const un=NET.user.username;let ch=false;
     const fix=b=>{if(!b||b.forger===un)return;const f=old.has(b.forger)?un:forgerNow(b.forger);if(f!==b.forger){b.forger=f;ch=true}};
     (c.blades||[]).forEach(fix);(c.trader||[]).forEach(fix)});
   if(ch){ENT=null;save();render()}}
-function signedOut(msg){clearTimeout(NET.pt);NET.pv=0;NET.pm=NET.pa=undefined;NET.user=null;NET.token=null;storeToken();AHL=[];ARENA.match=null;ARENA.queued=null;if(msg)toast(msg);render()}
+function signedOut(msg){NET.resetTok=null;NET.oauth=null;clearTimeout(NET.pt);NET.pv=0;NET.pm=NET.pa=undefined;NET.user=null;NET.token=null;storeToken();AHL=[];ARENA.match=null;ARENA.queued=null;if(msg)toast(msg);render()}
 
 // Live updates: the game asks the server every few seconds what has changed (faster while a duel is on, not at all while the tab is hidden).
 function openEvents(){NET.pv=0;NET.pm=NET.pa=undefined;NET.pp='';pollLoop()}
@@ -2588,19 +2613,33 @@ document.addEventListener('change',e=>{if(e.target.id==='arenablade'){ARENA.blad
 
 // =============== ACCOUNT SCREENS ===============
 function accountPlate(){if(!SERVER)return '';
-  if(NET.user)return `<div class="plate acct"><h2>Signed in as ${NET.user.username}</h2><p class="fine">Your save is backed up to your account${NET.saveAt?`, last at ${new Date(NET.saveAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`:''}. Sign in on any device to pick up where you left off.</p>
-    <div class="row2"><button class="btn" data-action="pwopen">Change password</button><button class="btn ghost" data-action="signout">Sign out</button></div>
-    <form id="pwform" class="authform hidden" data-auth="password"><label class="fld">Current password<input type="password" name="current" autocomplete="current-password" required></label><label class="fld">New password<input type="password" name="next" autocomplete="new-password" minlength="8" required></label><button class="btn go" type="submit">Save new password</button></form></div>`;
-  const create=NET.authMode==='create';
+  if(NET.user){const u=NET.user,links=u.links||[],has=new Set(links.flatMap(l=>l.providers||[])),more=OAUTH.providers.filter(x=>PROV[x]&&!has.has(x));
+    if(NET.resetTok)return `<div class="plate acct"><h2>Choose a new password</h2><p class="fine">You’re signed in as ${u.username}. Set a new password for this account. Other devices will be signed out.</p>
+    <form class="authform" data-auth="reset"><label class="fld">New password<input type="password" name="next" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></label><label class="fld">Confirm password<input type="password" name="confirm" autocomplete="new-password" required></label>
+    ${NET.authErr?`<p class="warn" role="alert">${NET.authErr}</p>`:''}<div class="row2"><button class="btn go" type="submit">Save new password</button><button class="btn ghost" type="button" data-action="resetskip">Not now</button></div></form></div>`;
+    return `<div class="plate acct"><h2>Signed in as ${u.username}</h2><p class="fine">Your save is backed up to your account${NET.saveAt?`, last at ${new Date(NET.saveAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`:''}. Sign in on any device to pick up where you left off.</p>
+    <div class="row2"><button class="btn" data-action="pwopen">${u.hasPw===false?'Set a password':'Change password'}</button><button class="btn ghost" data-action="signout">Sign out</button></div>
+    <form id="pwform" class="authform hidden" data-auth="password">${u.hasPw===false?'':'<label class="fld">Current password<input type="password" name="current" autocomplete="current-password" required></label>'}<label class="fld">New password<input type="password" name="next" autocomplete="new-password" minlength="8" required></label><button class="btn go" type="submit">Save new password</button></form>
+    ${(links.length||more.length)?`<h3 class="linkh">Linked sign-ins</h3>${links.length?`<ul class="links">${links.map(l=>`<li><span><b>${(l.providers||[]).map(x=>PROV[x]||x).join(' / ')}</b> ${esc(l.name||'')}</span><button class="btn ghost sm" data-action="unlink" data-id="${esc(l.id)}">Unlink</button></li>`).join('')}</ul>`:`<p class="fine">Link Discord or Google to sign in with one click, and to get back in if you forget your password.</p>`}
+    ${more.length?`<div class="provrow">${oauthBtns('link','Link',more)}</div>`:''}`:''}</div>`}
+  if(NET.oauth)return `<div class="plate acct"><h2>Choose a username</h2><p class="fine">No Anvilmoon account is linked to that ${NET.oauth.provider} account yet. Pick a username to start a new one. If you already play, go back, sign in with your password and link ${NET.oauth.provider} from the Account page instead.</p>
+    <form class="authform" data-auth="oauthname"><label class="fld">Username<input name="username" autocomplete="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" placeholder="3 to 20 letters, numbers or _" value="${esc(NET.oauth.suggest.length>=3?NET.oauth.suggest:'')}"></label>
+    ${NET.authErr?`<p class="warn" role="alert">${NET.authErr}</p>`:''}<div class="row2"><button class="btn go" type="submit" ${NET.busy?'disabled':''}>Create account</button><button class="btn ghost" type="button" data-action="oauthcancel">Back</button></div></form></div>`;
+  const create=NET.authMode==='create',prov=OAUTH.providers.some(x=>PROV[x]);
   return `<div class="plate acct"><div class="ahtabs" role="tablist"><button class="ahtab ${!create?'on':''}" data-action="authmode" data-m="signin">Sign in</button><button class="ahtab ${create?'on':''}" data-action="authmode" data-m="create">Create account</button></div>
     <p class="fine">${create?'An account backs up your save online and lets you trade and duel with other players.':'Sign in to load your save, trade at the Auction House and fight in the Arena.'}</p>
     <form class="authform" data-auth="${create?'create':'signin'}"><label class="fld">Username<input name="username" autocomplete="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" ${create?'placeholder="3 to 20 letters, numbers or _"':''}></label>
     <label class="fld">Password<input type="password" name="password" autocomplete="${create?'new-password':'current-password'}" required minlength="${create?8:1}" ${create?'placeholder="At least 8 characters"':''}></label>
     ${create?'<label class="fld">Confirm password<input type="password" name="confirm" autocomplete="new-password" required></label>':''}
     ${NET.authErr?`<p class="warn" role="alert">${NET.authErr}</p>`:''}<button class="btn go" type="submit" ${NET.busy?'disabled':''}>${create?'Create account':'Sign in'}</button></form>
+    ${prov?`<p class="orline">or</p><div class="provrow">${oauthBtns('login','Continue with')}</div>`:''}
+    ${prov&&!create?`<p class="fine forgot"><button type="button" class="linkbtn" data-action="forgot">Forgot your password?</button></p>${NET.forgot?`<div class="forgotbox"><p class="fine">If you linked Discord or Google to your account, sign in with it here and you’ll be asked for a new password.</p><div class="provrow">${oauthBtns('reset','Reset with')}</div><p class="fine">If you never linked one, the password can’t be reset from here.</p></div>`:''}`:''}
     ${NET.offline?'<p class="warn">Can’t reach the Anvilmoon server right now.</p>':''}</div>`}
 document.addEventListener('submit',async e=>{const f=e.target.closest('form.authform');if(!f)return;e.preventDefault();const v=n=>(f.elements.namedItem(n)||{}).value||'';
-  if(f.dataset.auth==='password'){try{await apiCall('/api/password',{method:'POST',body:{current:v('current'),next:v('next')}});toast('Password changed.');f.classList.add('hidden');f.reset()}catch(x){toast(x.msg)}return}
+  if(f.dataset.auth==='password'){try{const r=await apiCall('/api/password',{method:'POST',body:{current:v('current'),next:v('next')}});if(r.user)NET.user=r.user;toast('Password saved.');render()}catch(x){toast(x.msg)}return}
+  if(f.dataset.auth==='reset'){if(v('next')!==v('confirm')){NET.authErr='The two passwords don’t match.';render();return}
+    try{const r=await apiCall('/api/password',{method:'POST',body:{access_token:NET.resetTok,next:v('next')}});if(r.user)NET.user=r.user;NET.resetTok=null;NET.authErr='';toast('New password saved.')}catch(x){NET.authErr=x.status===401?'That took too long. Start the reset again.':x.msg;if(x.status===401)NET.resetTok=null}render();return}
+  if(f.dataset.auth==='oauthname'){oauthName(v('username').trim());return}
   if(f.dataset.auth==='create'&&v('password')!==v('confirm')){NET.authErr='The two passwords don’t match.';render();return}
   doAuth(f.dataset.auth,v('username').trim(),v('password'))});
 function conflictBanner(){return '';if(!NET.conflict)return '';return `<div class="hard conflict"><div class="hardhead"><h2>Two different saves</h2><p>This device has a save, and your account has a different one. Choose which to keep. The other is replaced.</p></div>
@@ -2658,6 +2697,8 @@ const ACT={
   authmode:el=>{NET.authPicked=true;NET.authMode=el.dataset.m;NET.authErr='';render()},
   signout:async()=>{await pushSave();try{await apiCall('/api/logout',{method:'POST'})}catch(e){}signedOut('Signed out. You can keep playing on this device.')},
   pwopen:()=>{const f=$('pwform');if(f)f.classList.toggle('hidden')},
+  oauth:el=>oauthGo(el.dataset.p,el.dataset.m),forgot:()=>{NET.forgot=!NET.forgot;render()},oauthcancel:()=>{NET.oauth=null;NET.authErr='';render()},resetskip:()=>{NET.resetTok=null;NET.authErr='';render()},
+  unlink:async el=>{try{const r=await apiCall('/api/unlink',{method:'POST',body:{id:el.dataset.id}});NET.user=r.user;toast('Unlinked.')}catch(x){toast(x.msg)}render()},
   keeplocal:async()=>{NET.conflict=null;await pushSave();toast('Kept this device’s save. Your account now has it too.');render()},
   keepremote:()=>{A=NET.conflict;NET.conflict=null;if(!DEV)A.testOdds=false;ENT=null;try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}toast('Your account’s save is loaded.');render()},
   arenago:()=>arenaQueue(),
