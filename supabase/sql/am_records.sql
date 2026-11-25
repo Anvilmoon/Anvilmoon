@@ -39,3 +39,21 @@ revoke all on function public.am_records() from public, anon, authenticated;
 -- Records without the one-minute cache: always worked out from the latest saves (the game asks /api/x/records).
 create or replace function public.am_x_records(uid text, input jsonb) returns jsonb
 language sql stable set search_path = public as $$ select public.am_records() $$;
+
+-- A smith's public hall (the game asks /api/x/hall?u=<username>). The hall itself is worked out by that player's game and kept in their save.
+create or replace function public.am_x_hall(uid text, input jsonb) returns jsonb
+language sql stable set search_path = public as $$
+with st as (select blob from am_state where id = 1),
+k as (select st.blob->'names'->>lower(coalesce(input->>'u', '')) as id from st)
+select case when k.id is null or k.id = 'reserved' or not (st.blob->'users' ? k.id) then jsonb_build_object('missing', true)
+  else jsonb_build_object('user', st.blob->'users'->k.id->>'username', 'created', st.blob->'users'->k.id->'created',
+    'rating', st.blob->'users'->k.id->'rating', 'wins', st.blob->'users'->k.id->'wins', 'losses', st.blob->'users'->k.id->'losses',
+    'hall', (select s.save->'hall' from am_saves s where s.uid = k.id)) end
+from st, k $$;
+
+-- Records, plus every player's badge and title so names can link to their hall.
+create or replace function public.am_x_records(uid text, input jsonb) returns jsonb
+language sql stable set search_path = public as $$
+select public.am_records() || jsonb_build_object('smiths', coalesce((
+  select jsonb_object_agg(u.value->>'username', jsonb_build_object('t', coalesce(s.save->'hall'->>'title', ''), 'b', s.save->'hall'->>'badge'))
+  from am_state st, jsonb_each(st.blob->'users') u left join am_saves s on s.uid = u.key where st.id = 1), '{}'::jsonb)) $$;

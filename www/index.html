@@ -1017,6 +1017,21 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 /* ===== rack: long blades are cut off at the shelf unless "Full blades" is on; then they rise in front of everything ===== */
 .rackwall{overflow:hidden}.talltoggle.on{border-color:var(--straw)!important}
 .rackwall.tall{overflow:visible;position:relative;z-index:8}.rackwall.tall .vrot{pointer-events:none}
+/* ===== smith's hall, badges, titles ===== */
+.bdg{display:inline-block;font:700 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px 2px;margin-left:6px;border:2px solid var(--ink);vertical-align:middle;color:#1b1614}
+.b-bronze{background:#b9774a}.b-silver{background:#c5ccd3}.b-gold{background:#e6bd55}.b-platinum{background:#9fe3dc}
+.htitle{display:inline-block;font-size:13px;line-height:1;padding:4px 8px 3px;margin-left:6px;border:2px solid rgba(255,255,255,.18);color:var(--straw);vertical-align:middle;white-space:nowrap}
+.namelink{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(255,255,255,.25);text-underline-offset:3px}.namelink:hover{color:var(--straw)}
+.hallhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}.hallhead h1{margin:0 0 6px}.halltags{margin:0 0 6px}.halltags>*:first-child{margin-left:0}
+.hallbtns{display:flex;gap:10px;flex-wrap:wrap}.hallshowhead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}.hallshowhead h2{margin:0}.hallshowhead p{margin:0}
+.hallwall{justify-content:center;gap:10px;padding-top:26px;overflow:hidden}.hallwall .slotn{height:44px}.hallwall .slots{height:auto;flex-direction:column;gap:0;line-height:1.35}
+.hallshow,.hallstats{margin-bottom:16px}.hallstats .facts{grid-template-columns:repeat(4,minmax(0,1fr))}
+.titlegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:10px}
+.titlecard{display:grid;gap:4px;align-content:start;padding:9px 11px;background:#2c2926;border:2px solid var(--ink)}.titlecard small{color:var(--mute);font-size:13px}.titlecard.locked{opacity:.5}.titlecard.on{border-color:var(--straw)}.titlecard .btn{justify-self:start}
+.titlelist{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}.titlelist .htitle{margin:0}.titlelist .htitle.on{border-color:var(--straw)}
+.smithhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.smithhead h2{margin:0}
+.hallbtn.on{border-color:var(--straw)!important;color:var(--straw)}.hallfoot{margin-top:14px}
+@media (max-width:760px){.hallstats .facts{grid-template-columns:repeat(2,minmax(0,1fr))}.hallwall{gap:4px}}
 </style>
 </head>
 <body>
@@ -1207,7 +1222,7 @@ function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.slots)
 function writeLocal(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
 // wealth is coin in hand only (blades don't count)
 function wealthNow(){let w=0;(A.slots||[]).forEach(c=>{if(c)w+=Math.floor(c.coin||0)});return Math.round(w)}
-function save(){ENT=null;A.at=Date.now();try{A.wealth=wealthNow()}catch(e){}try{const cur=load();if(cur&&(cur.rev||0)>(A.rev||0)&&typeof mergeSaves==='function')A=mergeSaves(A,cur)}catch(e){}
+function save(){ENT=null;A.at=Date.now();try{A.wealth=wealthNow()}catch(e){}try{if(C())A.hall=hallSummary()}catch(e){}try{const cur=load();if(cur&&(cur.rev||0)>(A.rev||0)&&typeof mergeSaves==='function')A=mergeSaves(A,cur)}catch(e){}
   A.rev=(A.rev||0)+1;if(typeof queueSave==='function')queueSave();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){toast('Your progress couldn’t be saved. The device may be out of storage.')}}
 let A=load()||freshAcct();if(!DEV)A.testOdds=false;
 A.slots.forEach(c=>c&&c.blades.forEach(b=>{if(b.status==='pending')b.status=b.cracked?'salvaged':'owned'}));
@@ -1726,7 +1741,7 @@ function ensure(c){while(c.commissions.length<3)c.commissions.push(genComm(c));c
 
 // =============== RECORDS ===============
 const REC={list:null,at:0,players:0,busy:false};
-async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{if(online()&&A.pushed!==A.rev)await pushSave().catch(()=>{});const r=await apiCall('/api/x/records').catch(()=>apiCall('/api/records'));REC.list=Array.isArray(r.entries)?r.entries:[];REC.wealth=Array.isArray(r.wealth)?r.wealth:[];REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
+async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{if(online()&&A.pushed!==A.rev)await pushSave().catch(()=>{});const r=await apiCall('/api/x/records').catch(()=>apiCall('/api/records'));REC.list=Array.isArray(r.entries)?r.entries:[];REC.wealth=Array.isArray(r.wealth)?r.wealth:[];REC.smiths=r.smiths&&typeof r.smiths==='object'?r.smiths:{};REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
 function entries(){if(ENT)return ENT;const me=NET&&NET.user?NET.user.username:null;
   const local=allBlades().filter(b=>exists(b)&&!isGift(b)).map(b=>({...b,who:b.forger,user:me,mine:A.slots.some(c=>c&&(c.name===b.forger||(c.aka||[]).includes(b.forger)))})).filter(x=>!HIDE_REC.includes(x.who)),key=x=>[x.who,x.type,x.len,x.grade,x.rarity].join('|'),seen=new Set(local.map(key));
   const remote=(REC.list||[]).map(x=>({...x,who:forgerNow(x.who),mine:false})).filter(x=>!(me&&x.user===me)&&!seen.has(key(x))&&!HIDE_REC.includes(x.who)&&!HIDE_REC.includes(x.user));
@@ -1759,11 +1774,11 @@ function renderHUD(){setTimeout(renderSync,0);if(needAcct()){$('hud').innerHTML=
   $('hud').innerHTML=`<button class="who" data-action="tab" data-tab="chars" title="Your smith"><b>${c.name}</b><span class="whocls"> the ${CLASSES[c.cls].n}</span></button><span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}</span><span class="hbtns">${NET.user?`<button class="hico mailbtn" data-action="mailopen" title="Mailbox" aria-label="Mailbox, ${MAIL.list.length} unread"><i class="pxi" style="background-image:var(--ico-mail)"></i>${MAIL.list.length?`<b class="badge">${MAIL.list.length}</b>`:''}</button>`:''}<button class="hico boardbtn ${UI.board?'on':''}" data-action="boardtoggle" title="Commission board" aria-label="Commission board${boardFit()?`, ${boardFit()} you can fill`:''}" aria-pressed="${!!UI.board}"><i class="pxi" style="background-image:var(--ico-board)"></i>${boardFit()?`<b class="badge">${boardFit()}</b>`:''}</button><button class="hico ${A.tab==='records'?'on':''}" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
 function renderTabs(){const c=needAcct()?null:C();const tabs=c?[['forge','Forge'],['workshop','Workshop'],['market','Market'],['auction','Auctions'],['arena','Arena']]:[];
   if(A.tab==='rack'){UI.rack=true;A.tab='forge'}
-  if(!['chars','armory','records'].includes(A.tab)&&!tabs.some(t=>t[0]===A.tab))A.tab=c?'forge':'chars';const n=c?owned().length:0;
+  if(!['chars','armory','records','hall'].includes(A.tab)&&!tabs.some(t=>t[0]===A.tab))A.tab=c?'forge':'chars';const n=c?owned().length:0;
   $('tabs').innerHTML=tabs.map(([k,nm,sec],i)=>`${sec&&!tabs[i-1]?.[2]?'<span class="railsep" aria-hidden="true"></span>':''}<button class="railbtn ${sec?'sec':''} ${A.tab===k?'on':''}" data-action="tab" data-tab="${k}" aria-current="${A.tab===k?'page':'false'}"><i class="pxico" style="background-image:var(--ico-${k})" aria-hidden="true"></i><span>${nm}</span></button>`).join('')+(c?`<span class="railsep" aria-hidden="true"></span><button class="railbtn rackbtn ${UI.rack?'on':''}" data-action="racktoggle" aria-expanded="${!!UI.rack}"><i class="pxico" style="background-image:var(--ico-rack)" aria-hidden="true"></i><span>Rack <b class="rackn">${n}</b></span></button>`:'');
   $('opts').innerHTML=!DEV?'':`<label title="For trying things out: Tempered 1 in 10, Starforged 1 in 40, more Titans, an 8-second dig, auctions of 1 to 6 minutes, and it counts as night with Moonlit at 1 in 3. Real shine odds are 1 in 200 and 1 in 2,000."><input type="checkbox" data-action="odds" ${A.testOdds?'checked':''}> Test mode</label><button class="btn ghost small" data-action="reset" data-confirm="1">Reset all</button>`}
-function render(){if(needAcct()){A.tab='chars';UI.rack=false;UI.board=false;UI.mail=false;RACK.open=null}if(PENDING&&!F&&!revealId){const sv=PENDING;PENDING=null;if((sv.rev||0)>(A.rev||0)){const tab=A.tab;A=sv;if(!DEV)A.testOdds=false;ENT=null;A.tab=tab}}if(TOUR.on)requestAnimationFrame(tourPlace);else if(!needAcct()&&!A.tourDone&&!F&&!revealId&&C()&&!C().forged&&!A.slots.some(x=>x&&x.forged)&&A.tab==='forge'){A.tourDone=1;setTimeout(tourStart,400)}if(!F&&!revealId)claimArmory(C());renderHUD();renderTabs();renderDrawer();renderMailbox();renderBoard();if(F)return;const c=C();if(c)ensure(c);
-  if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+codeBanner()+({forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars}[A.tab]||vChars)();$('view').scrollTop=0}
+function render(){if(needAcct()){if(!(A.tab==='hall'&&HALL.user))A.tab='chars';UI.rack=false;UI.board=false;UI.mail=false;RACK.open=null}if(PENDING&&!F&&!revealId){const sv=PENDING;PENDING=null;if((sv.rev||0)>(A.rev||0)){const tab=A.tab;A=sv;if(!DEV)A.testOdds=false;ENT=null;A.tab=tab}}if(TOUR.on)requestAnimationFrame(tourPlace);else if(!needAcct()&&!A.tourDone&&!F&&!revealId&&C()&&!C().forged&&!A.slots.some(x=>x&&x.forged)&&A.tab==='forge'){A.tourDone=1;setTimeout(tourStart,400)}if(!F&&!revealId)claimArmory(C());renderHUD();renderTabs();renderDrawer();renderMailbox();renderBoard();if(F)return;const c=C();if(c)ensure(c);
+  if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+codeBanner()+({forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars,hall:vHall}[A.tab]||vChars)();$('view').scrollTop=0}
 
 const shineTag=b=>(b.moon?'<span class="tag moon">Moonlit</span>':'')+(b.shine==='star'?'<span class="tag star">Starforged</span>':b.shine==='temp'?'<span class="tag temp">Tempered</span>':'');
 const rarTxt=r=>`<span class="rar" style="--rc:${RAR[r].c}">${RAR[r].n}</span>`;
@@ -2019,7 +2034,7 @@ function renderDrawer(){const c=C(),fab=$('rackfab'),dr=$('drawer');if(!fab||!dr
        ${recN?`<p class="bwarn">${recN} record holder${recN>1?'s are':' is'} ticked. Selling ${recN>1?'them':'it'} gives up the record.</p>`:''}</div>`})():''}
     ${L.map(b=>{const big=isRecord(b)||b.shine||b.rarity>=3||b.si>=5,bs=L.length>1?bulkState(L):null,tick=bs?`<label class="bpick" title="${isGift(b)?'Keepsakes can’t be sold':b.keep?'Locked: unlock it to sell':bs.ok(b)?'Tick to include':isRecord(b)?'Record holder: tick “Include records” first':'Kept as your longest'}">${bs.ok(b)?`<input type="checkbox" data-pick="${b.id}" ${bs.sel.includes(b)?'checked':''}>`:`<span class="bwhy">${isGift(b)?'Keepsake':b.keep?'Locked':isRecord(b)?'Record':'Longest, kept'}</span>`}</label>`:'';return `<div class="sheetrow ${b.keep?'kept':''} ${bs?'hasPick':''}">${tick}<div class="sheetart">${bladeSVG(b,{minW:listW(L,440)})}</div>
       <div class="sheetinfo"><div class="tags">${tags(b)}</div><dl class="facts"><div><dt>Length</dt><dd>${b.len} cm</dd></div><div><dt>Grade</dt><dd>${b.grade}</dd></div><div><dt>${isGift(b)?'Rarity':'Worth'}</dt><dd ${isGift(b)?`style="color:${rarC(b)}"`:''}>${isGift(b)?'One of a kind':fmt(worth(b))+'c'}</dd></div><div><dt>Forged by</dt><dd>${b.forger}</dd></div></dl></div>
-      <div class="sheetact">${isGift(b)?`<p class="fine keep">One of a kind. ${giftWho(b)}, ${giftDate(b)}. It can’t be sold, salvaged or traded, but it can fight in the Arena.</p>`:`<button class="btn ghost small keepbtn ${b.keep?'on':''}" data-action="keeptoggle" data-id="${b.id}" aria-pressed="${!!b.keep}">${b.keep?'🔒 Locked':'Lock'}</button>${b.keep?'<p class="fine keepnote">Locked. It won’t be sold or salvaged until you unlock it.</p>':`<button class="btn" data-action="sell" data-id="${b.id}" ${big?'data-confirm="1"':''}>Sell ${fmt(value(b))}c</button><button class="btn ghost" data-action="salvage" data-id="${b.id}" ${big?'data-confirm="1"':''}>Salvage: ${yieldStr(salvYield(b))}</button>`}`}</div></div>`}).join('')}</div>`}
+      <div class="sheetact">${isGift(b)?`<p class="fine keep">One of a kind. ${giftWho(b)}, ${giftDate(b)}. It can’t be sold, salvaged or traded, but it can fight in the Arena.</p>`:`<button class="btn ghost small hallbtn ${b.hall?'on':''}" data-action="halltoggle" data-id="${b.id}" aria-pressed="${!!b.hall}">${b.hall?'★ In your hall':'Show in hall'}</button><button class="btn ghost small keepbtn ${b.keep?'on':''}" data-action="keeptoggle" data-id="${b.id}" aria-pressed="${!!b.keep}">${b.keep?'🔒 Locked':'Lock'}</button>${b.keep?'<p class="fine keepnote">Locked. It won’t be sold or salvaged until you unlock it.</p>':`<button class="btn" data-action="sell" data-id="${b.id}" ${big?'data-confirm="1"':''}>Sell ${fmt(value(b))}c</button><button class="btn ghost" data-action="salvage" data-id="${b.id}" ${big?'data-confirm="1"':''}>Salvage: ${yieldStr(salvYield(b))}</button>`}`}</div></div>`}).join('')}</div>`}
   const html=`<div class="drawerbg" data-action="racktoggle"></div><section class="drawer" role="dialog" aria-label="Your rack"><div class="dspace" data-action="racktoggle" aria-hidden="true"></div><div class="dpanel"><div class="platehead"><h2>Your rack</h2><button class="btn ghost small" data-action="racktoggle">Close</button></div>${bar}
     ${n?`<div class="rackwall ${A.rackTall?'tall':''}">${slots||'<p class="empty">Nothing matches these filters.</p>'}</div>`:'<p class="empty">Empty. Keep a blade after its reveal and it hangs here.</p>'}${sheet}</div></section>`;
   if(html===RACK.html)return;                       // nothing changed: leave it alone, so it never jumps
@@ -2115,7 +2130,7 @@ const REC_PAGES=[['long','Largest blade'],['runt','Runt board'],['grade','Forge 
 function vRecords(){if(SERVER&&Date.now()-REC.at>10000)setTimeout(refreshRecords,0);const e=entries(),cur=C(),me=NET.user?NET.user.username:null;
   const pg=REC_PAGES.some(x=>x[0]===UI.recPage)?UI.recPage:'long',pi=REC_PAGES.findIndex(x=>x[0]===pg);
   const one=l=>{const seen=new Set();return l.filter(x=>!seen.has(x.who)&&seen.add(x.who))};
-  const row=(x,i,val)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${x.who}${x.shine==='star'?' <span class="tag star">Starforged</span>':x.shine==='temp'?' <span class="tag temp">Tempered</span>':''}</td><td class="mute">${TYPES[x.type]?TYPES[x.type].n:''}</td><td class="n">${val}</td></tr>`;
+  const row=(x,i,val)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(x.who)}${x.shine==='star'?' <span class="tag star">Starforged</span>':x.shine==='temp'?' <span class="tag temp">Tempered</span>':''}</td><td class="mute">${TYPES[x.type]?TYPES[x.type].n:''}</td><td class="n">${val}</td></tr>`;
   const board=(note,list,fn,empty)=>`<p class="fine">${note}</p>${list.length?`<table class="ledger">${list.map((x,i)=>row(x,i,fn(x))).join('')}</table>`:`<p class="empty">${empty||'No blades yet.'}</p>`}`;
   let body='';
   if(pg==='long')body=board('Raw length. Every blade rolls size the same way, so any class can take the top spot.',one([...e].sort((a,b)=>b.len-a.len)).slice(0,10),x=>x.len+' cm','No blades yet. Forge one to claim the top spot.');
@@ -2125,9 +2140,9 @@ function vRecords(){if(SERVER&&Date.now()-REC.at>10000)setTimeout(refreshRecords
   else if(pg==='each'){const rc=UI.recCls||(cur?cur.cls:'war');const per=typesOf(rc).map(k=>{const bd=e.filter(x=>x.type===k).sort((a,b)=>b.len-a.len),top=bd[0],mine=bd.find(x=>x.mine);return `<tr class="${top&&top.mine?'cur':''}"><td>${TYPES[k].n}</td><td>${top?top.who:'Nobody yet'}</td><td class="n">${top?top.len+' cm':''}</td><td class="n mute">${mine?mine.len+' cm':''}</td></tr>`}).join('');
     body=`<p class="fine">The longest of every kind of blade, and who holds it.</p>${clsTabs(rc,'reccls')}<table class="ledger"><tr><th>Blade</th><th>Holder</th><th class="n">Length</th><th class="n">Your best</th></tr>${per}</table>`}
   else if(pg==='wealth'){let w=(REC.wealth||[]).filter(x=>x&&x.user!==me).map(x=>({user:x.user,wealth:+x.wealth||0}));if(me||!SERVER)w.push({user:me||(cur?cur.name:'You'),wealth:wealthNow(),mine:true});w=w.filter(x=>x.wealth>0).sort((a,b)=>b.wealth-a.wealth).slice(0,10);
-    body=`<p class="fine">Coin in hand. Blades don’t count.</p>${w.length?`<table class="ledger">${w.map((x,i)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${x.user}</td><td class="n">${fmt(x.wealth)}c</td></tr>`).join('')}</table>`:'<p class="empty">Nobody has a coin to their name yet.</p>'}`}
+    body=`<p class="fine">Coin in hand. Blades don’t count.</p>${w.length?`<table class="ledger">${w.map((x,i)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(x.user)}</td><td class="n">${fmt(x.wealth)}c</td></tr>`).join('')}</table>`:'<p class="empty">Nobody has a coin to their name yet.</p>'}`}
   else{if(SERVER&&!ARENA.ladder){ARENA.ladder=[];apiCall('/api/pvp/ladder').then(r=>{ARENA.ladder=r.ladder;if(A.tab==='records')render()}).catch(()=>{})}const L=ARENA.ladder||[];
-    body=`<p class="fine">Ranked duel ratings. Everyone starts at 1000.</p>${L.length?`<table class="ledger"><tr><th></th><th>Smith</th><th class="n">Rating</th><th class="n">Won–lost</th></tr>${L.slice(0,10).map((u,i)=>`<tr class="${NET.user&&u.id===NET.user.id?'cur':''}"><td class="rank">${i+1}</td><td>${u.username}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')}</table>`:'<p class="empty">No ranked duels have been fought yet.</p>'}`}
+    body=`<p class="fine">Ranked duel ratings. Everyone starts at 1000.</p>${L.length?`<table class="ledger"><tr><th></th><th>Smith</th><th class="n">Rating</th><th class="n">Won–lost</th></tr>${L.slice(0,10).map((u,i)=>`<tr class="${NET.user&&u.id===NET.user.id?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(u.username)}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')}</table>`:'<p class="empty">No ranked duels have been fought yet.</p>'}`}
   return `<section class="page"><div class="pagehead"><h1>Records</h1>${REC.list?(NET.user?'':'<p class="fine">Sign in so your own blades count for everyone else.</p>'):SERVER?(REC.err?'<p class="fine">Can’t reach the server right now, so only your blades are shown.</p>':'<p class="fine">Loading the server’s records…</p>'):'<p class="fine">This copy isn’t connected to a server, so only your own blades are shown.</p>'}</div>
    <div class="ahtabs rectabs" role="tablist">${REC_PAGES.map(([k,n])=>`<button class="ahtab ${k===pg?'on':''}" role="tab" aria-selected="${k===pg}" data-action="recpage" data-k="${k}">${n}</button>`).join('')}</div>
    <div class="plate recboard"><div class="rechead"><button class="btn small" data-action="recpage" data-k="${REC_PAGES[(pi+REC_PAGES.length-1)%REC_PAGES.length][0]}" aria-label="Previous board">◀</button><h2>${REC_PAGES[pi][1]}</h2><button class="btn small" data-action="recpage" data-k="${REC_PAGES[(pi+1)%REC_PAGES.length][0]}" aria-label="Next board">▶</button></div>${body}</div></section>`}
@@ -2148,7 +2163,7 @@ function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPic
       ${cur?'<span class="inuse">At the forge</span>':has?`<button class="btn go" data-action="clsswitch" data-k="${k}">Switch to ${CLASSES[k].n}</button>`:
         `<p class="clsneed"><span class="${o.ok?'met':'unmet'}">Armory ${Math.round(o.need*100)}% complete${o.ok?'':` (${pctNow}% now)`}</span><span class="${o.afford?'met':'unmet'}">${fmt(o.cost)} coins</span></p><button class="btn" data-action="clslearn" data-k="${k}" data-confirm="1" ${o.ok&&o.afford?'':'disabled'}>Learn for ${fmt(o.cost)}c</button>`}</article>`}).join('');
   return `<section class="page"><div class="pagehead"><h1>Your smith</h1><p class="fine">One smith, one purse and one rack. Your class decides which blades you forge, and you can switch between the classes you’ve learned at any time.</p></div>${accountPlate()}
-  <div class="plate smithone"><h2>${c.name}</h2><dl class="facts"><div><dt>Forged</dt><dd>${c.forged}</dd></div><div><dt>Coin</dt><dd>${fmt(c.coin)}</dd></div><div><dt>On rack</dt><dd>${c.blades.filter(b=>b.status==='owned').length}</dd></div><div><dt>Anvil</dt><dd>${ANVILS[c.anvil].n.replace(' Anvil','')}</dd></div><div><dt>Patterns</dt><dd>${['L','M','H','X'].filter(w=>knows(c,w)).length} of 4</dd></div><div><dt>Classes</dt><dd>${c.classes.length} of ${CK.length}</dd></div></dl></div>
+  <div class="plate smithone"><div class="smithhead"><h2>${c.name} ${(()=>{try{const h=hallSummary();return badgeChip(h.badge)+(h.title?`<span class="htitle">${esc(h.title)}</span>`:'')}catch(e){return ''}})()}</h2><button class="btn go" data-action="hall" data-u="">Open your hall</button></div><dl class="facts"><div><dt>Forged</dt><dd>${c.forged}</dd></div><div><dt>Coin</dt><dd>${fmt(c.coin)}</dd></div><div><dt>On rack</dt><dd>${c.blades.filter(b=>b.status==='owned').length}</dd></div><div><dt>Anvil</dt><dd>${ANVILS[c.anvil].n.replace(' Anvil','')}</dd></div><div><dt>Patterns</dt><dd>${['L','M','H','X'].filter(w=>knows(c,w)).length} of 4</dd></div><div><dt>Classes</dt><dd>${c.classes.length} of ${CK.length}</dd></div></dl></div>
   <h2 class="clshead">Classes</h2><div class="smiths">${cards}</div>
   `+SETTINGS_PLATE()+`</section>`}
 function SETTINGS_PLATE(){return `  <div class="plate settings"><h2>Your save</h2><p class="fine">${NET.user?'Backed up to your account. A backup code is an extra copy you can keep yourself.':'Saved on this device. Sign in, or copy a backup code, to keep it safe.'}</p>
@@ -2473,7 +2488,7 @@ async function doRecover(username,code,next){NET.busy=true;NET.authErr='';render
   catch(e){NET.authErr=e.msg}NET.busy=false;render()}
 const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const oauthBtns=(mode,verb,list)=>(list||OAUTH.providers).filter(x=>PROV[x]).map(x=>`<button type="button" class="btn prov" data-action="oauth" data-p="${x}" data-m="${mode}">${verb} ${PROV[x]}</button>`).join('');
-async function afterLogin(){openEvents();refreshAH();fetchMail();await syncSave();oneName()}
+async function afterLogin(){openEvents();refreshAH();fetchMail();await syncSave();oneName();refreshRecords()}
 // A smith no longer has a name of its own: it goes by the account's username. Blades forged under an old smith name are re-signed.
 const FORGER_AKA={'Spriggan':'Anvilmoon','Lexy':'lexy','Edda Emberly':'Stubbs38','John':'Mouflon'},HIDE_REC=[];
 const forgerNow=n=>Object.prototype.hasOwnProperty.call(FORGER_AKA,n)?FORGER_AKA[n]:n;
@@ -2658,8 +2673,63 @@ function vArena(){
       <button class="btn go big" data-action="arenago" ${ARENA.busy?'disabled':''}>Find an opponent</button>`
     :`<p class="empty">You need a blade on your rack to fight. Forge one first.</p>`}
    </div><div class="plate"><h2>Ladder</h2><p class="fine">You: rated ${NET.user.rating}, ${NET.user.wins} wins, ${NET.user.losses} losses.</p>
-    <table class="ledger">${(ARENA.ladder||[]).map((u,i)=>`<tr class="${u.id===NET.user.id?'cur':''}"><td class="rank">${i+1}</td><td>${u.username}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')||'<tr><td class="fine">No ranked duels yet. Be the first.</td></tr>'}</table></div></div></section>`}
+    <table class="ledger">${(ARENA.ladder||[]).map((u,i)=>`<tr class="${u.id===NET.user.id?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(u.username)}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')||'<tr><td class="fine">No ranked duels yet. Be the first.</td></tr>'}</table></div></div></section>`}
 document.addEventListener('change',e=>{if(e.target.id==='arenablade'){ARENA.bladeId=e.target.value;render()}if(e.target.name==='amode'){ARENA.mode=e.target.value}});
+
+// =============== SMITH'S HALL: a public page for every smith ===============
+// Chosen blades on a wall, a rank badge, an earned title and the smith's record. Anyone can open it from a link.
+const HALL={user:null,data:null,busy:false};
+const BADGES=[['bronze','Bronze',0],['silver','Silver',.1],['gold','Gold',.3],['platinum','Platinum',.6]];
+const badgeOf=p=>{let b=BADGES[0];BADGES.forEach(x=>{if((p||0)>=x[2])b=x});return b};
+const badgeChip=id=>{const b=BADGES.find(x=>x[0]===id);return b?`<span class="bdg b-${b[0]}" title="${b[1]} smith: Armory ${Math.round(b[2]*100)}% or more">${b[1]}</span>`:''};
+const FOUNDER_BEFORE=Date.UTC(2026,11,1);
+function hallCtx(){const seen=allBlades().filter(b=>b&&TYPES[b.type]&&b.status!=='pending'&&b.status!=='stock'&&!b.cracked),real=seen.filter(b=>!isGift(b)),{got,goals}=armoryProgress(),u=NET.user||{},me=u.username;
+  const found={};CK.forEach(k=>found[k]=new Set(real.filter(b=>TYPES[b.type].c===k).map(b=>b.type)).size);
+  const big=[...real].sort((a,b)=>b.len-a.len)[0];
+  return{forged:A.slots.filter(Boolean).reduce((a,x)=>a+(x.forged||0),0),pct:goals?got/goals:0,got,goals,leg:real.filter(b=>b.rarity===4).length,titan:real.some(b=>b.si>=5),star:real.some(b=>b.shine==='star'),moon:real.some(b=>b.moon),found,big,
+    coin:A.slots.filter(Boolean).reduce((a,x)=>a+Math.floor(x.coin||0),0),wins:u.wins||0,losses:u.losses||0,rating:u.rating||1000,created:u.created||0,rec:!!me&&(REC.list||[]).some(x=>x.user===me),classes:(C()&&C().classes||[]).length,onrack:C()?owned().length:0}}
+const TITLES=[
+  ['smith1','Apprentice Smith','Forge your first blade',x=>x.forged>=1],['smith2','Journeyman Smith','Forge 50 blades',x=>x.forged>=50],['smith3','Master Smith','Forge 250 blades',x=>x.forged>=250],['smith4','Grandmaster Smith','Forge 1,000 blades',x=>x.forged>=1000],
+  ['leg1','Legend-Maker','Find a Legendary blade',x=>x.leg>=1],['leg2','Keeper of Legends','Find 10 Legendary blades',x=>x.leg>=10],
+  ['titan','Titan-Forger','Find a Titan-sized blade',x=>x.titan],['star','Starforger','Find a Starforged blade',x=>x.star],['moon','Moon-Touched','Find a Moonlit blade',x=>x.moon],
+  ...CK.map(k=>['chron-'+k,`${CLASSES[k].n.replace(' Smith','')} Chronicler`,`Find every ${CLASSES[k].n} blade`,x=>x.found[k]>=typesOf(k).length]),
+  ['rec','Record Holder','Hold a place on a Records board',x=>x.rec],['duel','Duelist','Win 5 Arena duels',x=>x.wins>=5],['champ','Arena Champion','Reach an Arena rating of 1,200',x=>x.rating>=1200],
+  ['baron','Coin Baron','Hold 10,000 coins',x=>x.coin>=10000],['founder','Founding Smith','Joined during Anvilmoon’s first weeks',x=>x.created>0&&x.created<FOUNDER_BEFORE]];
+const titleDefault=earned=>{const t=['smith4','smith3','smith2','smith1'].find(k=>earned.includes(k));return t||earned[0]||null};
+const HALL_MAX=8,HALL_KEYS=['type','len','si','grade','rarity','variant','anvil','shine','moon','bog','forger','gdate','gift','q','perfect'];
+function hallBlades(){const c=C();if(!c)return[];const mine=owned().filter(b=>TYPES[b.type]);let pick=mine.filter(b=>b.hall);if(!pick.length)pick=[...mine].sort((a,b)=>(b.rarity-a.rarity)||(b.len-a.len)).slice(0,6);
+  return pick.sort((a,b)=>b.len-a.len).slice(0,HALL_MAX)}
+// worked out on this device and kept with the save, so other players' games can show it
+function hallSummary(){const x=hallCtx(),earned=TITLES.filter(t=>{try{return t[3](x)}catch(e){return false}}).map(t=>t[0]),tid=earned.includes(A.hallTitle)?A.hallTitle:titleDefault(earned),t=TITLES.find(y=>y[0]===tid);
+  return{v:1,title:t?t[1]:'',badge:badgeOf(x.pct)[0],pct:Math.round(x.pct*1000)/1000,earned,stats:{forged:x.forged,leg:x.leg,onrack:x.onrack,classes:x.classes,big:x.big?{len:x.big.len,type:x.big.type}:null},
+    blades:hallBlades().map(b=>{const o={};HALL_KEYS.forEach(k=>{if(b[k]!==undefined&&b[k]!==''&&b[k]!==false)o[k]=b[k]});return o})}}
+async function openHall(name){if(A.tab!=='hall')window.__hallFrom=A.tab;const me=NET.user&&NET.user.username;if(!name||name===me){HALL.user=null;HALL.data=null;A.tab='hall';render();return}
+  HALL.user=name;HALL.data=null;HALL.busy=true;A.tab='hall';UI.rack=false;render();
+  try{HALL.data=await apiCall('/api/x/hall?u='+encodeURIComponent(name))}catch(e){HALL.data={missing:true,err:true}}HALL.busy=false;if(A.tab==='hall')render()}
+const hallLink=name=>location.origin+'/?smith='+encodeURIComponent(name);
+// names of real players become links to their hall, with their badge beside them
+function smithName(name,plain){const sm=REC.smiths&&REC.smiths[name];if(!sm)return esc(name);return `<button class="namelink" data-action="hall" data-u="${esc(name)}" title="${sm.t?esc(sm.t)+'. ':''}Open ${esc(name)}’s hall">${esc(name)}</button>${plain?'':badgeChip(sm.b)}`}
+function hallWall(blades){if(!blades.length)return '<p class="empty">No blades on show yet.</p>';const phone=matchMedia('(max-width:760px)').matches,maxPx=phone?300:420,longest=Math.max(...blades.map(b=>bladeDims(b).W)),P=Math.min(phone?RACK_PX.phone:RACK_PX.desk,maxPx/longest),BASE=Math.round(longest*P)+14;
+  return `<div class="rackwall hallwall">${blades.map(b=>{const wpx=Math.round(bladeDims(b).W*P);return `<div class="slot ${b.shine?'sh-'+b.shine:''} ${b.moon?'sh-moon':''} ${isGift(b)?'isgift'+giftCls(b):''}" style="--rc:${rarC(b)};--base:${BASE}px">
+    <div class="vart"><div class="vrot" style="--w:${wpx}px">${bladeSVG(b,{noRuler:1,minW:0})}</div></div><span class="slotn">${isGift(b)?'The<br>'+TYPES[b.type].n:`${RAR[b.rarity].n} ${vr(b).n}<br>${TYPES[b.type].n}`}</span><span class="slots"><span>${b.len} cm</span><span>grade ${b.grade}</span></span><span class="slotsh">${b.shine||b.moon?shineTag(b):''}</span></div>`}).join('')}</div>`}
+function vHall(){const meName=NET.user&&NET.user.username,own=!HALL.user;
+  if(!own&&HALL.busy)return `<section class="page hall"><div class="pagehead"><h1>${esc(HALL.user)}</h1><p class="fine">Opening the hall…</p></div></section>`;
+  const back=needAcct()?`<button class="btn go" data-action="hallclose">Play Anvilmoon</button>`:`<button class="btn ghost" data-action="hallclose">Back</button>`;
+  if(!own&&(!HALL.data||HALL.data.missing))return `<section class="page hall"><div class="pagehead"><h1>${esc(HALL.user)}</h1><p class="fine">${HALL.data&&HALL.data.err?'Can’t reach the server right now.':'There is no smith by that name.'}</p></div><div class="row2">${back}</div></section>`;
+  let name,h,rating,wins,losses,created,x=null;
+  if(own){if(!C())return vChars();x=hallCtx();h=hallSummary();name=meName||C().name;rating=x.rating;wins=x.wins;losses=x.losses;created=x.created}
+  else{const d=HALL.data;name=d.user;h=d.hall||null;rating=d.rating;wins=d.wins;losses=d.losses;created=d.created}
+  const since=created?new Date(created).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'',blades=h?(h.blades||[]).filter(b=>b&&TYPES[b.type]):[],st=h&&h.stats||{};
+  const head=`<div class="plate hallhead"><div class="hallid"><h1>${esc(name)}</h1><p class="halltags">${h?badgeChip(h.badge):''}${h&&h.title?`<span class="htitle">${esc(h.title)}</span>`:''}</p>
+    <p class="fine">${since?`Smith since ${since}`:''}${h?`${since?' · ':''}Armory ${Math.round((h.pct||0)*100)}% complete`:''}</p></div>
+    <div class="row2 hallbtns">${SERVER&&(meName||!own)?`<button class="btn" data-action="hallcopy" data-u="${esc(name)}">Copy link</button>`:''}${own?`<button class="btn ghost" data-action="tab" data-tab="chars">Account</button>`:back}</div></div>`;
+  if(!h)return `<section class="page hall">${head}<p class="empty">${esc(name)} hasn’t opened their hall yet. It fills in the next time they play.</p></section>`;
+  const fact=(k,v)=>`<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  const facts=`<div class="plate hallstats"><h2>Record</h2><dl class="facts">${fact('Blades forged',fmt(st.forged||0))}${fact('Legendaries',fmt(st.leg||0))}${fact('Largest blade',st.big&&TYPES[st.big.type]?`${st.big.len} cm <span class="mute">${TYPES[st.big.type].n}</span>`:'None yet')}${fact('On the rack',fmt(st.onrack||0))}${fact('Classes',`${st.classes||1} of ${CK.length}`)}${fact('Arena rating',rating||1000)}${fact('Won–lost',`${wins||0}–${losses||0}`)}${fact('Titles',`${(h.earned||[]).length} of ${TITLES.length}`)}</dl></div>`;
+  const wall=`<div class="hallshow"><div class="hallshowhead"><h2>On show</h2>${own?`<p class="fine">${owned().some(b=>b.hall)?`${owned().filter(b=>b.hall).length} of ${HALL_MAX} places used.`:'Showing your finest for now.'} Choose blades with “Show in hall” on the rack.</p>`:''}</div>${hallWall(blades)}</div>`;
+  const titles=own?`<div class="plate halltitles"><h2>Titles</h2><p class="fine">The title you wear shows beside your name on your hall and in Records.</p><div class="titlegrid">${TITLES.map(t=>{const got=h.earned.includes(t[0]),on=got&&h.title===t[1];return `<div class="titlecard ${got?'got':'locked'} ${on?'on':''}"><b>${t[1]}</b><small>${t[2]}</small>${on?'<span class="inuse">Wearing</span>':got?`<button class="btn small" data-action="titleset" data-t="${t[0]}">Wear</button>`:'<span class="fine">Not earned</span>'}</div>`}).join('')}</div></div>`
+    :`<div class="plate halltitles"><h2>Titles earned</h2><p class="titlelist">${TITLES.filter(t=>(h.earned||[]).includes(t[0])).map(t=>`<span class="htitle ${h.title===t[1]?'on':''}">${t[1]}</span>`).join('')||'<span class="fine">None yet.</span>'}</p></div>`;
+  return `<section class="page hall">${head}${wall}${facts}${titles}${own?'':`<div class="row2 hallfoot">${needAcct()?back:''}</div>`}</section>`}
 
 // =============== ACCOUNT SCREENS ===============
 function accountPlate(){if(!SERVER)return '';
@@ -2717,7 +2787,7 @@ function ahBody(){const c=C();if(!c)return '';ensureCid(c);if(ahUI.view==='sell'
 function ahRow(L,c){const npc=!!L.npc,b=L.blade,left=npc?0:L.expires-Date.now(),mine=!npc&&L.seller===ME_ID(),top=!npc&&L.bidder===ME_ID(),mb=npc?0:minBid(L),fill=c.commissions.some(q=>qualifies({...b,status:'owned'},q));
   return `<article class="lot" style="--rc:${RAR[b.rarity].c}"><div class="lotart">${bladeSVG({...b,id:L.id},{noRuler:1,minW:listW((AHL||[]).map(x=>x.blade),420)})}</div>
    <div class="lotinfo"><h3>${bname(b)}</h3><div class="tags">${tags(b)}${fill?'<span class="tag want">Fills an order</span>':''}${top?'<span class="tag lead">You’re winning</span>':''}${mine?'<span class="tag yours">Your listing</span>':''}</div>
-    <p class="fine">${b.len} cm, grade ${b.grade}, forged by ${b.forger}. Sold by ${mine?'you':L.sellerSmith}. Worth ${fmt(worth(b))}c.</p></div>
+    <p class="fine">${b.len} cm, grade ${b.grade}, forged by ${b.forger}. Sold by ${mine?'you':smithName(L.sellerSmith,1)}. Worth ${fmt(worth(b))}c.</p></div>
    <dl class="lotnums">${npc?'':`<div><dt>Time left</dt><dd>${timeLeft(left)}</dd></div><div><dt>${L.bid?'Current bid':'Starting bid'}</dt><dd>${fmt(L.bid||L.start)}c</dd></div>`}<div><dt>Buyout</dt><dd>${L.buyout?fmt(L.buyout)+'c':'None'}</dd></div></dl>
    <div class="lotact">${mine?(L.bid?'<span class="fine">Has bids</span>':`<button class="btn ghost small" data-action="ahcancel" data-id="${L.id}" data-confirm="1">Cancel auction</button>`):npc?`<button class="btn go small" data-action="tbuy" data-i="${L.i}" ${c.coin>=L.buyout?'':'disabled'}>Buy for ${fmt(L.buyout)}c</button>`:
     `<div class="bidrow"><input type="number" min="${mb}" value="${mb}" aria-label="Your bid" id="bid-${L.id}"><button class="btn small" data-action="ahbid" data-id="${L.id}" ${top?'disabled':''}>${top?'Top bid':'Bid'}</button></div>${L.buyout?`<button class="btn go small" data-action="ahbuy" data-id="${L.id}" ${c.coin>=L.buyout?'':'disabled'}>Buy out for ${fmt(L.buyout)}c</button>`:''}`}</div></article>`}
@@ -2806,6 +2876,10 @@ const ACT={
   giftkeep:()=>{SFX.play('coin');closeReveal();UI.rack=true;render()},
   keep:el=>{const b=blade(el.dataset.id);(b.status='owned',b.su=Date.now());save();toast(`${bname(b)} added to your rack.`);closeReveal()},
   sell:el=>{sellBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
+  hall:el=>openHall(el.dataset.u||''),hallclose:()=>{HALL.user=null;HALL.data=null;A.tab=needAcct()?'chars':(window.__hallFrom||'records');try{history.replaceState(null,'',location.pathname)}catch(e){}render()},
+  hallcopy:async el=>{const l=hallLink(el.dataset.u);try{await navigator.clipboard.writeText(l);toast('Link copied. Anyone can open it.')}catch(e){toast(l,6000)}},
+  titleset:el=>{A.hallTitle=el.dataset.t;save();render()},
+  halltoggle:el=>{const b=blade(el.dataset.id);if(!b)return;if(!b.hall&&owned().filter(x=>x.hall).length>=HALL_MAX)return toast(`Your hall holds ${HALL_MAX} blades. Take one down first.`);b.hall=!b.hall;save();toast(b.hall?'Hung in your hall.':'Taken down from your hall.');render()},
   racktall:()=>{A.rackTall=!A.rackTall;save();render()},
   sellall:()=>{const list=rackStacks().flatMap(x=>x.list).filter(b=>!b.keep&&!isGift(b)&&!b.cracked);if(!list.length)return toast('Nothing to sell.');const c=C(),before=c.coin;SFX.play('coin');list.forEach(b=>{c.coin+=value(b);c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93);b.status='sold';b.su=Date.now()});RACK.open=null;RACK.man={};save();toast(`Sold ${list.length} blade${list.length===1?'':'s'} for ${fmt(C().coin-before)}c. Locked blades and keepsakes were kept.`,4500);render()},
   salvage:el=>{salvBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
@@ -2845,6 +2919,7 @@ setInterval(()=>{A.slots.forEach(c=>{if(c)TK.forEach(k=>c.demand[k]+=(1-c.demand
 setInterval(()=>{const c=C();if(!c)return;const k=pick(typesOf(c.cls));c.demand[k]=Math.min(1.6,c.demand[k]+.4);save();if(!F&&!revealId)toast(`Merchants are clamoring for <b>${TYPES[k].n}s</b>.`)},75000);
 setInterval(()=>{renderHUD();const c=C();if(!c)return;const el=$('digleft');if(el){const s=Math.ceil((c.digUntil-Date.now())/1000);if(s>0)el.textContent=s;else if(!F&&!revealId&&A.tab==='forge')render()}},1000);
 if(A.active<0)A.tab='chars';setTimeout(netInit,0);
+try{const sm=new URLSearchParams(location.search).get('smith');if(sm&&/^[A-Za-z0-9_]{3,20}$/.test(sm))setTimeout(()=>openHall(sm),50)}catch(e){}
 render();
 
 </script>
