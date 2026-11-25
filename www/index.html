@@ -1034,7 +1034,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 @media (max-width:760px){.hallstats .facts{grid-template-columns:repeat(2,minmax(0,1fr))}.hallwall{gap:4px}}
 /* ===== looks: portraits and the look editor ===== */
 .face{image-rendering:pixelated;image-rendering:crisp-edges;background:#241f2e;border:2px solid var(--ink);vertical-align:middle;flex:none}
-.face.sm{width:26px;height:26px;margin-right:7px}.face.big{width:128px;height:128px;border-width:3px;box-shadow:inset 3px 3px 0 var(--bev-hi)}
+.face.sm{width:26px;height:26px;margin-right:7px}img.face.logo{object-fit:contain;padding:2px}.face.logo{background:#161225}.face.big{width:128px;height:128px;border-width:3px;box-shadow:inset 3px 3px 0 var(--bev-hi)}
 .hallhead{align-items:center;justify-content:flex-start}.hallhead .hallid{flex:1;min-width:180px}
 .lookedit{display:grid;grid-template-columns:auto 1fr;gap:18px;margin-bottom:16px;align-items:start}
 .lookstage{display:grid;gap:10px;justify-items:center;position:sticky;top:90px}.lookfull{image-rendering:pixelated;image-rendering:crisp-edges;width:192px;height:276px;background:#241f2e;border:3px solid var(--ink)}
@@ -3023,8 +3023,19 @@ const FACE2=(()=>{
     dest.clearRect(0,0,N,N);for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]])dest.drawImage(mcv,dx,dy);dest.drawImage(tcv,0,0)}
   return{paint,N}})();
 const STILL=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// the official Anvilmoon account wears the game's emblem instead of a face: the blade on the anvil glows, sparks rise and the moon shimmers
+const OFFICIAL='Anvilmoon',LOGO=new Image();LOGO.src='icons/emblem.png';let logoCv=null;
+function paintLogo(c,t){const N=64,d=FIGHT.disc;c.clearRect(0,0,N,N);c.imageSmoothingEnabled=false;
+  [[6,7],[15,3],[26,9],[9,20],[57,34],[4,38],[33,4],[59,50],[20,14]].forEach(([x,y],i)=>{const k=(Math.floor(t/420)+i*3)%7;if(k<5){c.fillStyle=k<1?'#fff6d8':i%2?'#bdb8ac':'#8e86b0';c.fillRect(x,y,1,1);if(k===0&&i%3===0){c.fillStyle='rgba(255,246,216,.5)';c.fillRect(x-1,y,3,1);c.fillRect(x,y-1,1,3)}}});
+  const m=.5+.5*Math.sin(t/1300),f=.5+.5*Math.sin(t/260)*.6+.2*Math.sin(t/97);
+  for(const[r,a]of[[19,.035],[15,.05],[11,.07]])d(c,44,20,r+m*2,`rgba(243,233,198,${(a*(.7+m*.6)).toFixed(3)})`);
+  for(const[r,a]of[[22,.05],[16,.08],[10,.12]])d(c,31,36,r,`rgba(255,140,50,${(a*(.6+f*.6)).toFixed(3)})`);
+  if(LOGO.complete&&LOGO.naturalWidth){if(!logoCv)logoCv=Object.assign(document.createElement('canvas'),{width:N,height:N});const l=logoCv.getContext('2d');l.imageSmoothingEnabled=false;l.globalCompositeOperation='source-over';l.clearRect(0,0,N,N);l.drawImage(LOGO,3,7+Math.round(Math.sin(t/1100)*.6),58,52);
+    l.globalCompositeOperation='source-atop';l.fillStyle=`rgba(255,236,160,${(.1+f*.34).toFixed(3)})`;l.fillRect(26,31,24,8);l.fillStyle=`rgba(255,250,225,${(m*.22).toFixed(3)})`;l.fillRect(38,4,24,26);c.drawImage(logoCv,0,0)}
+  for(let i=0;i<11;i++){const a=((t/(1000+i*83))+i*.37)%1,x=Math.round(27+(i*7)%20+Math.sin(a*6+i)*3+a*6),y=Math.round(33-a*30);c.fillStyle=`rgba(255,${170+(i%3)*30},${80+(i%2)*40},${(1-a).toFixed(2)})`;const z=a<.35?2:1;c.fillRect(x,y,z,z)}}
+
 // every large portrait on the page is repainted a few times a second, so it breathes and blinks
-function faceTick(){const now=performance.now();document.querySelectorAll('canvas.face.live').forEach(cv=>{if(STILL&&cv.dataset.done)return;try{FACE2.paint(cv.getContext('2d'),JSON.parse(cv.dataset.look),STILL?2000:now+(+cv.dataset.seed||0));cv.dataset.done=1}catch(e){}})}
+function faceTick(){const now=performance.now();document.querySelectorAll('canvas.face.live').forEach(cv=>{if(STILL&&cv.dataset.done&&!(cv.dataset.logo&&!cv.dataset.img&&LOGO.complete))return;try{if(cv.dataset.logo){paintLogo(cv.getContext('2d'),STILL?0:now);cv.dataset.done=1;if(LOGO.complete)cv.dataset.img=1;return}FACE2.paint(cv.getContext('2d'),JSON.parse(cv.dataset.look),STILL?2000:now+(+cv.dataset.seed||0));cv.dataset.done=1}catch(e){}})}
 setInterval(()=>{if(document.visibilityState==='visible')faceTick()},120);
 // ----- looks: what a smith chose, a face for every name, and the editor on your hall
 const LOOK_KEYS=['body','skin','hair','hairC','beard','cloth','trim','trous'],LOOK_MAX={body:2,skin:6,hair:14,hairC:8,beard:3,cloth:8,trim:8,trous:5};
@@ -3040,7 +3051,7 @@ function lookImg(look,kind){const key=kind+JSON.stringify(look);if(LOOKIMG[key])
     const t=Object.assign(document.createElement('canvas'),{width:w,height:h}),tc=t.getContext('2d'),m=Object.assign(document.createElement('canvas'),{width:w,height:h}),mc=m.getContext('2d');FACE.draw(tc,look);
     mc.drawImage(t,0,0);mc.globalCompositeOperation='source-in';mc.fillStyle='#100c0b';mc.fillRect(0,0,w,h);for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]])c.drawImage(m,dx,dy);c.drawImage(t,0,0);   // dark outline
     return LOOKIMG[key]=cv.toDataURL()}catch(e){return ''}}
-const portrait=(look,name,cls)=>{if(cls==='big'){const L=lookClean(look,name);let seed=0;for(const ch of String(name||''))seed=(seed*31+ch.charCodeAt(0))%5000;return `<canvas class="face big live" width="64" height="64" data-seed="${seed}" data-look="${esc(JSON.stringify(L))}" role="img" aria-label="Portrait of ${esc(name||'this smith')}"></canvas>`}const src=lookImg(lookClean(look,name),'bust');return src?`<img class="face ${cls||''}" src="${src}" alt="" width="34" height="34">`:''};
+const portrait=(look,name,cls)=>{if(name===OFFICIAL)return cls==='big'?`<canvas class="face big live logo" width="64" height="64" data-logo="1" role="img" aria-label="The Anvilmoon emblem"></canvas>`:`<img class="face logo ${cls||''}" src="icons/emblem.png" alt="" width="29" height="26">`;if(cls==='big'){const L=lookClean(look,name);let seed=0;for(const ch of String(name||''))seed=(seed*31+ch.charCodeAt(0))%5000;return `<canvas class="face big live" width="64" height="64" data-seed="${seed}" data-look="${esc(JSON.stringify(L))}" role="img" aria-label="Portrait of ${esc(name||'this smith')}"></canvas>`}const src=lookImg(lookClean(look,name),'bust');return src?`<img class="face ${cls||''}" src="${src}" alt="" width="34" height="34">`:''};
 const SKIN_N=['Fair','Tan','Bronze','Brown','Deep','Pale'],HAIRC_N=['Black','Brown','Chestnut','Blond','Red','Grey','Steel blue','Green'],CLOTH_N=['Madder red','Woad blue','Moss green','Plum','Ochre','Undyed linen','Rust','Bark brown'],TROUS_N=['Brown','Charcoal','Hemp','Dark green','Russet'];
 const LOOK_G=[{k:'body',n:'Body',chips:FIGHT.BODIES},{k:'skin',n:'Skin',sw:FIGHT.SKIN,names:SKIN_N},{k:'hair',n:'Hair',chips:FIGHT.HAIRS,thumb:1},{k:'hairC',n:'Hair colour',sw:FIGHT.HAIRC,names:HAIRC_N},{k:'beard',n:'Beard',chips:FIGHT.BEARDS},{k:'cloth',n:'Tunic',sw:FIGHT.CLOTH,names:CLOTH_N},{k:'trous',n:'Trousers',sw:FIGHT.TROUS,names:TROUS_N},{k:'trim',n:'Cord belt',sw:FIGHT.CLOTH,names:CLOTH_N}];
 function lookEditor(){const L=myLook();return `<div class="plate lookedit"><div class="lookstage"><img class="lookfull" src="${lookImg(L,'full')}" alt="Your smith" width="64" height="92"><div class="row2"><button class="btn small" data-action="lookrand">Randomise</button><button class="btn ghost small" data-action="lookclose">Done</button></div></div>
