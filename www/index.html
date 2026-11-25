@@ -3024,14 +3024,22 @@ const FACE2=(()=>{
   return{paint,N}})();
 const STILL=matchMedia('(prefers-reduced-motion: reduce)').matches;
 // the official Anvilmoon account wears the game's emblem instead of a face: the blade on the anvil glows, sparks rise and the moon shimmers (the emblem itself stays put)
-const OFFICIAL='Anvilmoon',LOGO=new Image();LOGO.src='icons/emblem.png';let logoCv=null;
-function paintLogo(c,t){const N=64,d=FIGHT.disc;c.clearRect(0,0,N,N);c.imageSmoothingEnabled=false;
+const OFFICIAL='Anvilmoon',LOGO=new Image();LOGO.src='icons/emblem.png';let logoCv=null,snowCap=null;
+// The emblem dresses for the season by itself. Winter runs from 1 December to 5 January. (?emblem=winter shows it early.)
+function emblemSeason(d=new Date()){try{const q=new URLSearchParams(location.search).get('emblem');if(q==='winter'||q==='plain')return q==='plain'?'':q}catch(e){}const m=d.getMonth(),day=d.getDate();return m===11||(m===0&&day<=5)?'winter':''}
+function paintLogo(c,t){const N=64,d=FIGHT.disc,winter=emblemSeason()==='winter';c.clearRect(0,0,N,N);c.imageSmoothingEnabled=false;
   [[6,7],[15,3],[26,9],[9,20],[57,34],[4,38],[33,4],[59,50],[20,14]].forEach(([x,y],i)=>{const k=(Math.floor(t/420)+i*3)%7;if(k<5){c.fillStyle=k<1?'#fff6d8':i%2?'#bdb8ac':'#8e86b0';c.fillRect(x,y,1,1);if(k===0&&i%3===0){c.fillStyle='rgba(255,246,216,.5)';c.fillRect(x-1,y,3,1);c.fillRect(x,y-1,1,3)}}});
   const m=.5+.5*Math.sin(t/1300),f=.5+.5*Math.sin(t/260)*.6+.2*Math.sin(t/97);
   for(const[r,a]of[[19,.035],[15,.05],[11,.07]])d(c,44,20,r+m*2,`rgba(243,233,198,${(a*(.7+m*.6)).toFixed(3)})`);
   for(const[r,a]of[[22,.05],[16,.08],[10,.12]])d(c,31,36,r,`rgba(255,140,50,${(a*(.6+f*.6)).toFixed(3)})`);
   if(LOGO.complete&&LOGO.naturalWidth){if(!logoCv)logoCv=Object.assign(document.createElement('canvas'),{width:N,height:N});const l=logoCv.getContext('2d');l.imageSmoothingEnabled=false;l.globalCompositeOperation='source-over';l.clearRect(0,0,N,N);l.drawImage(LOGO,3,7,58,52);
-    l.globalCompositeOperation='source-atop';l.fillStyle=`rgba(255,236,160,${(.1+f*.34).toFixed(3)})`;l.fillRect(26,31,24,8);l.fillStyle=`rgba(255,250,225,${(m*.22).toFixed(3)})`;l.fillRect(38,4,24,26);c.drawImage(logoCv,0,0)}
+    l.globalCompositeOperation='source-atop';l.fillStyle=`rgba(255,236,160,${(.1+f*.34).toFixed(3)})`;l.fillRect(26,31,24,8);l.fillStyle=`rgba(255,250,225,${(m*.22).toFixed(3)})`;l.fillRect(38,4,24,26);c.drawImage(logoCv,0,0);
+    if(winter){if(!snowCap){snowCap=[];try{const px=l.getImageData(0,0,N,N).data;for(let x=0;x<N;x++)for(let y=30;y<N;y++){const i=(y*N+x)*4;if(px[i+3]>40){const hot=k=>{const j=((y+k)*N+x)*4;return px[j]>190&&px[j+1]>90&&px[j+2]<130};if(!hot(0)&&!hot(1)&&!hot(2)&&!hot(3)&&!(px[i]>200&&px[i+1]>190))snowCap.push([x,y]);break}}}catch(e){}}
+      snowCap.forEach(([x,y],i)=>{c.fillStyle='#f4f7ff';c.fillRect(x,y-1,1,2);if(i%3===0){c.fillStyle='#c9d6f2';c.fillRect(x,y+1,1,1)}})}}
+  if(winter){   // a snowdrift below, a string of lights above, and falling snow
+    for(let x=0;x<N;x++){const h=3+Math.round(Math.sin(x/7)*1.2+Math.sin(x/3+1)*.6);c.fillStyle='#e8eefc';c.fillRect(x,N-h,1,h);c.fillStyle='#ffffff';c.fillRect(x,N-h,1,1);if(x%5===2){c.fillStyle='#b9c7ea';c.fillRect(x,N-1,2,1)}}
+    const BULB=['#ff5a4a','#5fd06a','#ffd257','#6aa8ff'];for(let x=0;x<N;x++){const y=Math.round(3+5*(1-Math.pow((x-31.5)/31.5,2)));c.fillStyle='#1d3a24';c.fillRect(x,y,1,1);if(x%7===3){const k=Math.floor(x/7),on=(Math.floor(t/480)+k)%3!==0,col=BULB[k%4];c.fillStyle=on?col:'#3a3340';c.fillRect(x-1,y+1,2,3);if(on){c.fillStyle='rgba(255,255,255,.75)';c.fillRect(x-1,y+1,1,1);d(c,x,y+2.5,3.2,col+'30')}}}
+    for(let i=0;i<22;i++){const sp=2600+(i*397)%2400,a=((t/sp)+i*.173)%1,x=Math.round((i*23+11)%N+Math.sin(a*5+i)*3),y=Math.round(a*(N+4))-2;c.fillStyle=i%4?'rgba(255,255,255,.9)':'rgba(214,226,255,.75)';const z=i%7===0?2:1;c.fillRect(x,y,z,z)}}
   for(let i=0;i<11;i++){const a=((t/(1000+i*83))+i*.37)%1,x=Math.round(27+(i*7)%20+Math.sin(a*6+i)*3+a*6),y=Math.round(33-a*30);c.fillStyle=`rgba(255,${170+(i%3)*30},${80+(i%2)*40},${(1-a).toFixed(2)})`;const z=a<.35?2:1;c.fillRect(x,y,z,z)}}
 
 // every large portrait on the page is repainted a few times a second, so it breathes and blinks
@@ -3103,7 +3111,7 @@ function vHall(){const meName=NET.user&&NET.user.username,own=!HALL.user;
   const since=created?new Date(created).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'',blades=h?(h.blades||[]).filter(b=>b&&TYPES[b.type]):[],st=h&&h.stats||{};
   const head=`<div class="plate hallhead">${portrait(h?h.look:null,name,'big')}<div class="hallid"><h1>${esc(name)}</h1><p class="halltags">${h?badgeChip(h.badge):''}${h&&h.title?`<span class="htitle">${esc(h.title)}</span>`:''}</p>
     <p class="fine">${since?`Smith since ${since}`:''}${h?`${since?' · ':''}Armory ${Math.round((h.pct||0)*100)}% complete`:''}</p></div>
-    <div class="row2 hallbtns">${SERVER&&(meName||!own)?`<button class="btn" data-action="hallcopy" data-u="${esc(name)}">Copy link</button>`:''}${own?`<button class="btn ${HALL.edit?'on':''}" data-action="lookopen">Change look</button><button class="btn ghost" data-action="tab" data-tab="chars">Account</button>`:back}</div></div>${own&&HALL.edit?lookEditor():''}`;
+    <div class="row2 hallbtns">${SERVER&&(meName||!own)?`<button class="btn" data-action="hallcopy" data-u="${esc(name)}">Copy link</button>`:''}${own?`${name===OFFICIAL?'':`<button class="btn ${HALL.edit?'on':''}" data-action="lookopen">Change look</button>`}<button class="btn ghost" data-action="tab" data-tab="chars">Account</button>`:back}</div></div>${own&&HALL.edit&&name!==OFFICIAL?lookEditor():''}`;
   if(!h)return `<section class="page hall">${head}<p class="empty">${esc(name)} hasn’t opened their hall yet. It fills in the next time they play.</p></section>`;
   const fact=(k,v)=>`<div><dt>${k}</dt><dd>${v}</dd></div>`;
   const facts=`<div class="plate hallstats"><h2>Record</h2><dl class="facts">${fact('Blades forged',fmt(st.forged||0))}${fact('Legendaries',fmt(st.leg||0))}${fact('Largest blade',st.big&&TYPES[st.big.type]?`${st.big.len} cm <span class="mute">${TYPES[st.big.type].n}</span>`:'None yet')}${fact('On the rack',fmt(st.onrack||0))}${fact('Classes',`${st.classes||1} of ${CK.length}`)}${fact('Arena rating',rating||1000)}${fact('Won–lost',`${wins||0}–${losses||0}`)}${fact('Titles',`${(h.earned||[]).length} of ${TITLES.length}`)}</dl></div>`;
