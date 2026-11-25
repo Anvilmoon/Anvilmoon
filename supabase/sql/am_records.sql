@@ -36,3 +36,7 @@ select jsonb_build_object(
   'blades', (select count(*) from b));
 $fn$;
 revoke all on function public.am_records() from public, anon, authenticated;
+
+-- Records without the one-minute cache: always worked out from the latest saves (the game asks /api/x/records).
+create or replace function public.am_x_records(uid text, input jsonb) returns jsonb
+language sql stable set search_path = public as $$ select public.am_records() $$;

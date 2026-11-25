@@ -1722,7 +1722,7 @@ function ensure(c){while(c.commissions.length<3)c.commissions.push(genComm(c));c
 
 // =============== RECORDS ===============
 const REC={list:null,at:0,players:0,busy:false};
-async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{const r=await apiCall('/api/records');REC.list=Array.isArray(r.entries)?r.entries:[];REC.wealth=Array.isArray(r.wealth)?r.wealth:[];REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
+async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{if(online()&&A.pushed!==A.rev)await pushSave().catch(()=>{});const r=await apiCall('/api/x/records').catch(()=>apiCall('/api/records'));REC.list=Array.isArray(r.entries)?r.entries:[];REC.wealth=Array.isArray(r.wealth)?r.wealth:[];REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
 function entries(){if(ENT)return ENT;const me=NET&&NET.user?NET.user.username:null;
   const local=allBlades().filter(b=>exists(b)&&!isGift(b)).map(b=>({...b,who:b.forger,user:me,mine:A.slots.some(c=>c&&(c.name===b.forger||(c.aka||[]).includes(b.forger)))})).filter(x=>!HIDE_REC.includes(x.who)),key=x=>[x.who,x.type,x.len,x.grade,x.rarity].join('|'),seen=new Set(local.map(key));
   const remote=(REC.list||[]).map(x=>({...x,who:forgerNow(x.who),mine:false})).filter(x=>!(me&&x.user===me)&&!seen.has(key(x))&&!HIDE_REC.includes(x.who)&&!HIDE_REC.includes(x.user));
@@ -2105,7 +2105,7 @@ function vArmory(){const seen=allBlades().filter(b=>b.status!=='pending'&&b.stat
 
 // One board at a time, with tabs and arrows to flick between them. Each name appears once per board, with its best entry.
 const REC_PAGES=[['long','Largest blade'],['runt','Runt board'],['grade','Forge grade'],['rough','Rough anvil'],['each','Each blade'],['wealth','Wealth'],['arena','Arena']];
-function vRecords(){if(SERVER&&Date.now()-REC.at>30000)setTimeout(refreshRecords,0);const e=entries(),cur=C(),me=NET.user?NET.user.username:null;
+function vRecords(){if(SERVER&&Date.now()-REC.at>10000)setTimeout(refreshRecords,0);const e=entries(),cur=C(),me=NET.user?NET.user.username:null;
   const pg=REC_PAGES.some(x=>x[0]===UI.recPage)?UI.recPage:'long',pi=REC_PAGES.findIndex(x=>x[0]===pg);
   const one=l=>{const seen=new Set();return l.filter(x=>!seen.has(x.who)&&seen.add(x.who))};
   const row=(x,i,val)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${x.who}${x.shine==='star'?' <span class="tag star">Starforged</span>':x.shine==='temp'?' <span class="tag temp">Tempered</span>':''}</td><td class="mute">${TYPES[x.type]?TYPES[x.type].n:''}</td><td class="n">${val}</td></tr>`;
