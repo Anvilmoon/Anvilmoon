@@ -358,6 +358,7 @@ input[type=password],input[name=username]{background:#22201e;border:1px solid va
 .goal.on{border-style:solid;border-color:var(--ash);color:var(--ash)}
 .goal.on.leg{border-color:#f0c35a;color:#2a2018;background:#f0c35a}.goal.on.tmp{border-color:var(--blue);color:#bcd2f0}.goal.on.str{border-color:#9ef0ff;color:#c9f4ff}
 /* records */
+.rectabs{flex-wrap:wrap;margin-bottom:12px}.recboard{max-width:760px}.rechead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}.rechead h2{margin:0;text-align:center;flex:1}.recboard>.ledger{font-size:17px}.recboard .ahtabs{margin:8px 0}
 .recgrid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;margin-bottom:16px}
 .recgrid .hero h2{font-size:36px}
 .recgrid .hero .ledger{font-size:17px}
@@ -1179,7 +1180,8 @@ function freshAcct(){return{slots:[null,null,null,null],active:-1,serial:0,total
 function newChar(name,cls){const d={};TK.forEach(k=>d[k]=1);const c={cid:'s'+Math.random().toString(36).slice(2,10),name,cls,coin:80,iron:12,coal:8,fuel:10,damascus:0,dust:0,shards:0,fuelTs:Date.now(),anvil:0,hammer:'worn',hammers:{},blades:[],demand:d,commissions:[],trader:[],forged:0,sel:typesOf(cls)[0]};return c}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.slots)return s}catch(e){}return null}
 function writeLocal(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
-function save(){ENT=null;A.at=Date.now();try{const cur=load();if(cur&&(cur.rev||0)>(A.rev||0)&&typeof mergeSaves==='function')A=mergeSaves(A,cur)}catch(e){}
+function wealthNow(){let w=0;(A.slots||[]).forEach(c=>{if(!c)return;w+=Math.floor(c.coin||0);(c.blades||[]).forEach(b=>{if(b&&(b.status==='owned'||b.status==='listed')&&!b.cracked&&TYPES[b.type]&&!isGift(b))w+=value(b,1,1)})});return Math.round(w)}
+function save(){ENT=null;A.at=Date.now();try{A.wealth=wealthNow()}catch(e){}try{const cur=load();if(cur&&(cur.rev||0)>(A.rev||0)&&typeof mergeSaves==='function')A=mergeSaves(A,cur)}catch(e){}
   A.rev=(A.rev||0)+1;if(typeof queueSave==='function')queueSave();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){toast('Your progress couldn’t be saved. The device may be out of storage.')}}
 let A=load()||freshAcct();if(!DEV)A.testOdds=false;
 A.slots.forEach(c=>c&&c.blades.forEach(b=>{if(b.status==='pending')b.status=b.cracked?'salvaged':'owned'}));
@@ -1693,7 +1695,7 @@ function ensure(c){while(c.commissions.length<3)c.commissions.push(genComm(c));c
 
 // =============== RECORDS ===============
 const REC={list:null,at:0,players:0,busy:false};
-async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{const r=await apiCall('/api/records');REC.list=Array.isArray(r.entries)?r.entries:[];REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
+async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{const r=await apiCall('/api/records');REC.list=Array.isArray(r.entries)?r.entries:[];REC.wealth=Array.isArray(r.wealth)?r.wealth:[];REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
 function entries(){if(ENT)return ENT;const me=NET&&NET.user?NET.user.username:null;
   const local=allBlades().filter(b=>exists(b)&&!isGift(b)).map(b=>({...b,who:b.forger,user:me,mine:A.slots.some(c=>c&&(c.name===b.forger||(c.aka||[]).includes(b.forger)))})).filter(x=>!HIDE_REC.includes(x.who)),key=x=>[x.who,x.type,x.len,x.grade,x.rarity].join('|'),seen=new Set(local.map(key));
   const remote=(REC.list||[]).map(x=>({...x,who:forgerNow(x.who),mine:false})).filter(x=>!(me&&x.user===me)&&!seen.has(key(x))&&!HIDE_REC.includes(x.who)&&!HIDE_REC.includes(x.user));
@@ -2072,15 +2074,27 @@ function vArmory(){const seen=allBlades().filter(b=>b.status!=='pending'&&b.stat
    <div class="progress"><div class="bar"><i style="width:${(got/goals*100).toFixed(1)}%"></i></div><span><b>${got}</b> of ${goals} found</span></div>
    ${clsTabs(cur,'armcls')}<p class="fine">${cls.n}: ${found} of 25 blades found.${C()&&C().classes.includes(cur)?'':' You haven’t learned this class yet, so look for these in the Auction House.'}</p>${groups}</section>`}
 
-function vRecords(){if(SERVER&&Date.now()-REC.at>30000)setTimeout(refreshRecords,0);const e=entries(),cur=C();
-  const row=(x,i,val)=>`<tr class="${x.mine?(cur&&x.forger===cur.name?'cur':'me'):''}"><td class="rank">${i+1}</td><td>${x.who}${x.shine==='star'?' <span class="tag star">Starforged</span>':x.shine==='temp'?' <span class="tag temp">Tempered</span>':''}</td><td class="mute">${TYPES[x.type].n}</td><td class="n">${val}</td></tr>`;
-  const board=(title,note,list,fn)=>`<div class="plate"><h2>${title}</h2>${note?`<p class="fine">${note}</p>`:''}${list.length?`<table class="ledger">${list.map((x,i)=>row(x,i,fn(x))).join('')}</table>`:'<p class="empty">No blades yet.</p>'}</div>`;
-  const big=[...e].sort((a,b)=>b.len-a.len).slice(0,10),runt=[...e].sort((a,b)=>a.len-b.len).slice(0,6),gr=[...e].sort((a,b)=>b.grade-a.grade).slice(0,6),rough=e.filter(x=>x.anvil===0).sort((a,b)=>b.len-a.len).slice(0,6);
-  const rc=UI.recCls||(cur?cur.cls:'war');const per=typesOf(rc).map(k=>{const bd=e.filter(x=>x.type===k).sort((a,b)=>b.len-a.len),top=bd[0],mine=bd.find(x=>x.mine);return `<tr class="${top&&top.mine?'me':''}"><td>${TYPES[k].n}</td><td>${top?top.who:'Nobody yet'}</td><td class="n">${top?top.len+' cm':''}</td><td class="n mute">${mine?mine.len+' cm':''}</td></tr>`}).join('');
-  return `<section class="page"><div class="pagehead"><h1>Records</h1>${REC.list?`<p class="fine">Every smith on the server counts, ${REC.players} player${REC.players===1?'':'s'} so far.${NET.user?'':' Sign in so your own blades count for everyone else.'}</p>`:SERVER?(REC.err?'<p class="fine">Can’t reach the server right now, so only your blades are shown.</p>':'<p class="fine">Loading the server’s records…</p>'):'<p class="fine">This copy isn’t connected to a server, so only your own blades are shown.</p>'}</div>
-   <div class="recgrid"><div class="plate hero"><h2>Largest blade ever forged</h2><p class="fine">Raw length. Every blade rolls size the same way, so any class can take the top spot.</p>${big.length?`<table class="ledger">${big.map((x,i)=>row(x,i,x.len+' cm')).join('')}</table>`:'<p class="empty">No blades yet. Forge one to claim the top spot.</p>'}</div>
-   <div class="stackcol">${board('Runt board','The smallest blades in existence.',runt,x=>x.len+' cm')}${board('Forge grade','Pure skill.',gr,x=>x.grade)}${board('Rough anvil','The biggest blades forged on starter gear.',rough,x=>x.len+' cm')}</div></div>
-   <div class="plate"><h2>Biggest of each blade</h2>${clsTabs(rc,'reccls')}<table class="ledger"><tr><th>Blade</th><th>Holder</th><th class="n">Length</th><th class="n">Your best</th></tr>${per}</table></div></section>`}
+// One board at a time, with tabs and arrows to flick between them. Each name appears once per board, with its best entry.
+const REC_PAGES=[['long','Largest blade'],['runt','Runt board'],['grade','Forge grade'],['rough','Rough anvil'],['each','Each blade'],['wealth','Wealth'],['arena','Arena']];
+function vRecords(){if(SERVER&&Date.now()-REC.at>30000)setTimeout(refreshRecords,0);const e=entries(),cur=C(),me=NET.user?NET.user.username:null;
+  const pg=REC_PAGES.some(x=>x[0]===UI.recPage)?UI.recPage:'long',pi=REC_PAGES.findIndex(x=>x[0]===pg);
+  const one=l=>{const seen=new Set();return l.filter(x=>!seen.has(x.who)&&seen.add(x.who))};
+  const row=(x,i,val)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${x.who}${x.shine==='star'?' <span class="tag star">Starforged</span>':x.shine==='temp'?' <span class="tag temp">Tempered</span>':''}</td><td class="mute">${TYPES[x.type]?TYPES[x.type].n:''}</td><td class="n">${val}</td></tr>`;
+  const board=(note,list,fn,empty)=>`<p class="fine">${note}</p>${list.length?`<table class="ledger">${list.map((x,i)=>row(x,i,fn(x))).join('')}</table>`:`<p class="empty">${empty||'No blades yet.'}</p>`}`;
+  let body='';
+  if(pg==='long')body=board('Raw length. Every blade rolls size the same way, so any class can take the top spot.',one([...e].sort((a,b)=>b.len-a.len)).slice(0,10),x=>x.len+' cm','No blades yet. Forge one to claim the top spot.');
+  else if(pg==='runt')body=board('The smallest blades in existence.',one([...e].sort((a,b)=>a.len-b.len)).slice(0,10),x=>x.len+' cm');
+  else if(pg==='grade')body=board('Pure skill: the highest forge grade each smith has reached.',one([...e].sort((a,b)=>b.grade-a.grade||b.len-a.len)).slice(0,10),x=>x.grade);
+  else if(pg==='rough')body=board('The biggest blades forged on starter gear.',one(e.filter(x=>x.anvil===0).sort((a,b)=>b.len-a.len)).slice(0,10),x=>x.len+' cm');
+  else if(pg==='each'){const rc=UI.recCls||(cur?cur.cls:'war');const per=typesOf(rc).map(k=>{const bd=e.filter(x=>x.type===k).sort((a,b)=>b.len-a.len),top=bd[0],mine=bd.find(x=>x.mine);return `<tr class="${top&&top.mine?'cur':''}"><td>${TYPES[k].n}</td><td>${top?top.who:'Nobody yet'}</td><td class="n">${top?top.len+' cm':''}</td><td class="n mute">${mine?mine.len+' cm':''}</td></tr>`}).join('');
+    body=`<p class="fine">The longest of every kind of blade, and who holds it.</p>${clsTabs(rc,'reccls')}<table class="ledger"><tr><th>Blade</th><th>Holder</th><th class="n">Length</th><th class="n">Your best</th></tr>${per}</table>`}
+  else if(pg==='wealth'){let w=(REC.wealth||[]).filter(x=>x&&x.user!==me).map(x=>({user:x.user,wealth:+x.wealth||0}));if(me||!SERVER)w.push({user:me||(cur?cur.name:'You'),wealth:wealthNow(),mine:true});w=w.filter(x=>x.wealth>0).sort((a,b)=>b.wealth-a.wealth).slice(0,10);
+    body=`<p class="fine">Coin in hand plus what every blade on the rack is worth.</p>${w.length?`<table class="ledger">${w.map((x,i)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${x.user}</td><td class="n">${fmt(x.wealth)}c</td></tr>`).join('')}</table>`:'<p class="empty">Nobody has a coin to their name yet.</p>'}`}
+  else{if(SERVER&&!ARENA.ladder){ARENA.ladder=[];apiCall('/api/pvp/ladder').then(r=>{ARENA.ladder=r.ladder;if(A.tab==='records')render()}).catch(()=>{})}const L=ARENA.ladder||[];
+    body=`<p class="fine">Ranked duel ratings. Everyone starts at 1000.</p>${L.length?`<table class="ledger"><tr><th></th><th>Smith</th><th class="n">Rating</th><th class="n">Won–lost</th></tr>${L.slice(0,10).map((u,i)=>`<tr class="${NET.user&&u.id===NET.user.id?'cur':''}"><td class="rank">${i+1}</td><td>${u.username}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')}</table>`:'<p class="empty">No ranked duels have been fought yet.</p>'}`}
+  return `<section class="page"><div class="pagehead"><h1>Records</h1>${REC.list?`<p class="fine">Every smith on the server counts, ${REC.players} player${REC.players===1?'':'s'} so far. Each name appears once on a board.${NET.user?'':' Sign in so your own blades count for everyone else.'}</p>`:SERVER?(REC.err?'<p class="fine">Can’t reach the server right now, so only your blades are shown.</p>':'<p class="fine">Loading the server’s records…</p>'):'<p class="fine">This copy isn’t connected to a server, so only your own blades are shown.</p>'}</div>
+   <div class="ahtabs rectabs" role="tablist">${REC_PAGES.map(([k,n])=>`<button class="ahtab ${k===pg?'on':''}" role="tab" aria-selected="${k===pg}" data-action="recpage" data-k="${k}">${n}</button>`).join('')}</div>
+   <div class="plate recboard"><div class="rechead"><button class="btn small" data-action="recpage" data-k="${REC_PAGES[(pi+REC_PAGES.length-1)%REC_PAGES.length][0]}" aria-label="Previous board">◀</button><h2>${REC_PAGES[pi][1]}</h2><button class="btn small" data-action="recpage" data-k="${REC_PAGES[(pi+1)%REC_PAGES.length][0]}" aria-label="Next board">▶</button></div>${body}</div></section>`}
 
 function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPicked)NET.authMode=had?'signin':'create';
     return `<section class="page welcome"><div class="pagehead"><h1>Welcome to Anvilmoon</h1></div>
@@ -2386,7 +2400,7 @@ async function netInit(){if(!SERVER||!NET.token)return;
   render()}
 async function afterLogin(){openEvents();refreshAH();fetchMail();await syncSave();oneName()}
 // A smith no longer has a name of its own: it goes by the account's username. Blades forged under an old smith name are re-signed.
-const FORGER_AKA={'Spriggan':'Anvilmoon','Lexy':'lexy','Edda Emberly':'Stubbs38','John':'Mouflon'},HIDE_REC=['Anvilmoon'];
+const FORGER_AKA={'Spriggan':'Anvilmoon','Lexy':'lexy','Edda Emberly':'Stubbs38','John':'Mouflon'},HIDE_REC=[];
 const forgerNow=n=>Object.prototype.hasOwnProperty.call(FORGER_AKA,n)?FORGER_AKA[n]:n;
 function oneName(){if(!NET.user)return;const un=NET.user.username;let ch=false;
   A.slots.forEach(c=>{if(!c)return;const old=new Set([c.name,...(c.aka||[])]);old.delete(un);
@@ -2654,6 +2668,7 @@ const ACT={
   pickw:el=>{const c=C(),w=el.dataset.w;c.selW=w;const first=typesOf(c.cls).find(k=>TYPES[k].wt===w);if(TYPES[c.sel].wt!==w&&first)c.sel=first;save();render()},
   armcls:el=>{UI.armCls=el.dataset.k;render()},
   reccls:el=>{UI.recCls=el.dataset.k;render()},
+  recpage:el=>{UI.recPage=el.dataset.k;render()},
   backup:async()=>{const code=btoa(unescape(encodeURIComponent(JSON.stringify(A))));try{await navigator.clipboard.writeText(code);toast('Backup code copied. Keep it somewhere safe.')}catch(e){const b=$('restorebox'),t=$('restoretxt');b.classList.remove('hidden');t.value=code;t.select();toast('Copy the code from the box below.')}},
   restoreopen:()=>{$('restorebox').classList.remove('hidden');$('restoretxt').focus()},
   restore:()=>{try{const s2=JSON.parse(decodeURIComponent(escape(atob($('restoretxt').value.trim()))));if(!s2||!s2.slots)throw 0;A=s2;save();toast('Save restored.');render()}catch(e){toast('That code didn’t work. Check that you copied all of it.')}},

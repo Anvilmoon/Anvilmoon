@@ -63,36 +63,11 @@ function sendMail(to, body) {
 }
 
 // ---------------------------------------------------------------- records (global leaderboards)
-const REC_LIVE = ['owned', 'sold', 'commission', 'listed'];
+// The boards themselves are worked out in the database (function am_records), so they can change without republishing this file.
 async function records(tx) {
-  if (db.rec && db.rec.data && now() - db.rec.at < 5 * 60e3) return db.rec.data;
-  const rows = await tx`select uid, save from am_saves`;
-  // accounts listed in config.hideFromRecords (the official account, for one) never appear on the boards
-  const hide = new Set(((db.config && db.config.hideFromRecords) || []).map((n) => String(n).toLowerCase()));
-  const seen = new Set(), all = [];
-  for (const r of rows) {
-    const u = db.users[r.uid]; if (!u || hide.has(u.username.toLowerCase())) continue;
-    const slots = (r.save && Array.isArray(r.save.slots)) ? r.save.slots : [];
-    for (const c of slots) {
-      if (!c || !Array.isArray(c.blades)) continue;
-      for (const b of c.blades) {
-        if (!b || !REC_LIVE.includes(b.status) || b.cracked || typeof b.len !== 'number' || !b.type || isGift(b.type)) continue;
-        const key = [b.forger, b.type, b.len, b.grade, b.rarity].join('|');
-        if (seen.has(key)) continue; seen.add(key);
-        all.push({ who: cleanName(b.forger || c.name, '?'), user: u.username, type: String(b.type), len: b.len, si: b.si | 0, grade: b.grade | 0,
-          rarity: b.rarity | 0, anvil: b.anvil | 0, shine: b.shine === 'star' || b.shine === 'temp' ? b.shine : '', moon: b.moon ? 1 : 0, id: b.id });
-      }
-    }
-  }
-  const pick = new Set();
-  const top = (arr, n) => arr.slice(0, n).forEach((x) => pick.add(x));
-  top([...all].sort((a, b) => b.len - a.len), 10);
-  top([...all].sort((a, b) => a.len - b.len), 6);
-  top([...all].sort((a, b) => b.grade - a.grade), 6);
-  top(all.filter((x) => x.anvil === 0).sort((a, b) => b.len - a.len), 6);
-  const best = {}; for (const x of all) if (!best[x.type] || x.len > best[x.type].len) best[x.type] = x;
-  Object.values(best).forEach((x) => pick.add(x));
-  db.rec = { at: now(), data: { entries: [...pick], players: Object.keys(db.users).length, blades: all.length } }; markDirty();
+  if (db.rec && db.rec.data && now() - db.rec.at < 60e3) return db.rec.data;
+  const [r] = await tx`select public.am_records() as r`;
+  db.rec = { at: now(), data: r.r }; markDirty();
   return db.rec.data;
 }
 
@@ -487,6 +462,17 @@ async function api(tx, R) {
     if (!M) return ok({ ok: true });
     M.p.find((x) => x.uid === u.id).f.hp = 0; M.log.push(`${M.p.find((x) => x.uid === u.id).smith} yields.`); finishMatch(M);
     return ok({ match: matchView(M, u.id) });
+  }
+  // Extra requests can be added as database functions named am_x_<name>(uid text, input jsonb) returning jsonb.
+  // They must not change am_state: this file writes that row itself at the end of the request.
+  const xm = p.match(/^\/api\/x\/([a-z0-9_]{1,40})$/);
+  if (xm && (m === 'GET' || m === 'POST')) {
+    const fn = 'am_x_' + xm[1];
+    const [f] = await tx`select 1 as ok from pg_proc pr join pg_namespace n on n.oid = pr.pronamespace where n.nspname = 'public' and pr.proname = ${fn}`;
+    if (!f) return fail(404, 'Unknown request.');
+    const input = m === 'GET' ? Object.fromEntries(R.query) : q;
+    const [r] = await tx.unsafe(`select public.${fn}($1, $2::jsonb) as r`, [u ? u.id : null, input]);
+    return ok(r.r === null || r.r === undefined ? {} : r.r);
   }
   return fail(404, 'Unknown request.');
 }
