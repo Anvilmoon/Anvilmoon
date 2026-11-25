@@ -1,0 +1,17 @@
+{
+  "name": "Anvilmoon",
+  "short_name": "Anvilmoon",
+  "description": "Forge blades, chase rare shines, and fill your Armory. Every quench is a roll.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#292624",
+  "theme_color": "#292624",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
