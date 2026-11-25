@@ -67,14 +67,16 @@ const REC_LIVE = ['owned', 'sold', 'commission', 'listed'];
 async function records(tx) {
   if (db.rec && db.rec.data && now() - db.rec.at < 5 * 60e3) return db.rec.data;
   const rows = await tx`select uid, save from am_saves`;
+  // accounts listed in config.hideFromRecords (the official account, for one) never appear on the boards
+  const hide = new Set(((db.config && db.config.hideFromRecords) || []).map((n) => String(n).toLowerCase()));
   const seen = new Set(), all = [];
   for (const r of rows) {
-    const u = db.users[r.uid]; if (!u) continue;
+    const u = db.users[r.uid]; if (!u || hide.has(u.username.toLowerCase())) continue;
     const slots = (r.save && Array.isArray(r.save.slots)) ? r.save.slots : [];
     for (const c of slots) {
       if (!c || !Array.isArray(c.blades)) continue;
       for (const b of c.blades) {
-        if (!b || !REC_LIVE.includes(b.status) || b.cracked || typeof b.len !== 'number' || !b.type || GIFT_TYPES.has(b.type)) continue;
+        if (!b || !REC_LIVE.includes(b.status) || b.cracked || typeof b.len !== 'number' || !b.type || isGift(b.type)) continue;
         const key = [b.forger, b.type, b.len, b.grade, b.rarity].join('|');
         if (seen.has(key)) continue; seen.add(key);
         all.push({ who: cleanName(b.forger || c.name, '?'), user: u.username, type: String(b.type), len: b.len, si: b.si | 0, grade: b.grade | 0,
@@ -117,11 +119,15 @@ const PERSONAL = [
   { id: 'testsword-mouflon-2026-11-24', username: 'mouflon', note: 'Thank you for testing Anvilmoon, John. This one is yours to keep: The Test Sword, 24/11/2026.',
     blade: { type: 'testsword', len: 181.1, si: 4, grade: 100, rarity: 4, variant: 0, anvil: 4, shine: '', forger: 'Anvilmoon', gift: 'test-2026-11-24', gdate: '24/11/2026' } },
 ];
+// More can be added without touching this file: config.personal (same shape as PERSONAL) and config.giftTypes in the am_state row.
+const cfg = (k) => (db && db.config && Array.isArray(db.config[k]) ? db.config[k] : []);
+const personalAll = () => [...PERSONAL, ...cfg('personal')];
+const isGift = (t) => GIFT_TYPES.has(t) || cfg('giftTypes').includes(t);
 const GIFT_IDS = [...CAMPAIGNS, ...EXTRA_GIFTS, ...PERSONAL].map((g) => g.id);
-const personalFor = (u) => PERSONAL.filter((g) => u && u.username.toLowerCase() === g.username);
+const personalFor = (u) => personalAll().filter((g) => u && u.username.toLowerCase() === g.username);
 function runCampaigns() {
   db.campaigns = db.campaigns || {};
-  if (GIFT_IDS.every((g) => db.campaigns[g])) return;
+  if ([...GIFT_IDS, ...cfg('personal').map((g) => g.id)].every((g) => db.campaigns[g])) return;
   for (const c of CAMPAIGNS) {
     if (db.campaigns[c.id]) continue;
     const users = Object.values(db.users);
@@ -135,7 +141,7 @@ function runCampaigns() {
     sendMail(u.id, { cid: null, blade: { ...c.blade }, note: c.note, gift: x.id });
     db.campaigns[x.id] = { at: now(), sent: 1 }; markDirty();
   }
-  for (const g of PERSONAL) {
+  for (const g of personalAll()) {
     if (db.campaigns[g.id]) continue;
     const u = Object.values(db.users).find((v) => v.username.toLowerCase() === g.username);
     if (!u) continue;
@@ -396,7 +402,7 @@ async function api(tx, R) {
     if (!u) return NEED;
     const blade = cleanBlade(q.blade);
     if (!blade) return fail(400, 'That blade can’t be listed.');
-    if (GIFT_TYPES.has(blade.type)) return fail(400, 'Keepsakes can’t be sold or traded.');
+    if (isGift(blade.type)) return fail(400, 'Keepsakes can’t be sold or traded.');
     const start = Math.floor(+q.start), buyout = Math.floor(+q.buyout || 0), dur = DURATIONS[q.dur];
     if (!(start >= 1) || !dur || (buyout && buyout < start)) return fail(400, 'Check the starting bid, buyout and duration.');
     if (Object.values(db.ah).filter((L) => L.seller === u.id).length >= MAX_LISTINGS_PER_USER) return fail(400, `You can have up to ${MAX_LISTINGS_PER_USER} auctions at once.`);
@@ -443,7 +449,7 @@ async function api(tx, R) {
     if (db.playerMatch[u.id] && db.matches[db.playerMatch[u.id]]) return fail(400, 'You’re already in a duel.');
     const blade = cleanBlade(q.blade), mode = q.mode === 'wager' ? 'wager' : 'ranked';
     if (!blade) return fail(400, 'Choose a blade to carry.');
-    if (mode === 'wager' && GIFT_TYPES.has(blade.type)) return fail(400, 'Keepsakes can only fight in ranked duels.');
+    if (mode === 'wager' && isGift(blade.type)) return fail(400, 'Keepsakes can only fight in ranked duels.');
     for (const k of Object.keys(db.queue)) db.queue[k] = db.queue[k].filter((x) => x.uid !== u.id);
     const me = { uid: u.id, name: u.username, smith: cleanName(q.smith || u.username), cid: q.cid || null, clientBladeId: q.bladeId, blade, rating: u.rating, since: now(), seen: now() };
     const foe = db.queue[mode].shift(); markDirty();
@@ -488,7 +494,7 @@ async function api(tx, R) {
 // ---------------------------------------------------------------- request handling
 const HEAD = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
 const reply = (code, obj) => new Response(JSON.stringify(obj), { status: code, headers: HEAD });
-const blank = () => ({ users: {}, names: {}, sessions: {}, ah: {}, mail: {}, seq: 0, campaigns: {}, limits: {}, queue: { ranked: [], wager: [] }, matches: {}, playerMatch: {}, ahRev: 0 });
+const blank = () => ({ users: {}, names: {}, sessions: {}, ah: {}, mail: {}, seq: 0, campaigns: {}, limits: {}, queue: { ranked: [], wager: [] }, matches: {}, playerMatch: {}, ahRev: 0, config: {} });
 
 async function handle(req) {
   const url = new URL(req.url), i = url.pathname.indexOf('/api');
