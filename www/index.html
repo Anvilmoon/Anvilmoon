@@ -1014,6 +1014,13 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 }
 @media (min-width:761px) and (max-width:940px){.mark{font-size:26px}.hbtns{gap:1px}.hbtns .pxi{width:20px;height:20px;background-size:20px 20px}
  .stocks{flex:1 1 0!important;min-width:0;flex-wrap:wrap!important;justify-content:flex-end;gap:3px 9px!important}button.who{max-width:110px}}
+/* ===== rack: filters open from a button and sit above the blades; long blades may rise over the closed bar ===== */
+.rackbar{position:relative;z-index:1;align-items:flex-end}.rackwall{position:relative;z-index:2}
+.rackmorebtn{display:inline-block!important}.rackmorebtn.on{border-color:var(--straw)!important}
+.rackmore{display:none}.rackwall .vrot{pointer-events:none}
+.rackbar.open{z-index:6;background:var(--plate);box-shadow:0 0 0 12px var(--plate)}
+.rackbar.open .rackmore{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;position:absolute;left:-8px;right:-8px;top:calc(100% + 8px);padding:12px 14px;background:var(--plate);border:3px solid var(--ink);box-shadow:inset 3px 3px 0 var(--bev-hi),inset -3px -3px 0 var(--bev-lo),0 8px 0 rgba(0,0,0,.35)}
+@media (max-width:760px){.rackbar.open .rackmore{display:grid;grid-template-columns:1fr 1fr;position:static;grid-column:1/-1;box-shadow:none;border:0;padding:0;background:none}.rackmore .rsearch{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -1967,7 +1974,7 @@ function renderBoard(){const el=$('boardpop');if(!el)return;const on=!!(UI.board
 
 // ---- rack: a slide-up weapon rack with upright blades, stacks, filters and bulk sell/salvage
 const RACK={sort:'worth',minR:0,minS:0,q:'',wt:'',fx:'',minL:'',open:null,html:''};
-const RACK_FX={rec:['Records',b=>isRecord(b)],temp:['Tempered',b=>b.shine==='temp'],star:['Starforged',b=>b.shine==='star'],moon:['Moonlit',b=>!!b.moon],rare:['Rare variants',b=>!!vr(b).rare],kept:['Kept',b=>!!b.keep],gift:['Gifts',b=>isGift(b)],dup:['Duplicates',null]};
+const RACK_FX={rec:['Records',b=>isRecord(b)],temp:['Tempered',b=>b.shine==='temp'],star:['Starforged',b=>b.shine==='star'],moon:['Moonlit',b=>!!b.moon],rare:['Rare variants',b=>!!vr(b).rare],kept:['Locked',b=>!!b.keep],gift:['Gifts',b=>isGift(b)],dup:['Duplicates',null]};
 const rackFiltered=()=>!!(RACK.q||RACK.wt||RACK.fx||RACK.minL||RACK.minR||RACK.minS);
 const rackName=b=>isGift(b)?'The '+TYPES[b.type].n:`${RAR[b.rarity].n} ${vr(b).n} ${TYPES[b.type].n}`;
 const stackKey=b=>[b.type,b.rarity,b.variant||0,b.shine||'',b.moon?1:0].join('|');
@@ -1983,16 +1990,19 @@ function renderDrawer(){const c=C(),fab=$('rackfab'),dr=$('drawer');if(!fab||!dr
   const phone=matchMedia('(max-width:760px)').matches,P=phone?RACK_PX.phone:RACK_PX.desk,BASE=phone?RACK_PX.baseP:RACK_PX.baseD;
   const st=rackStacks(),plain=owned().filter(b=>b.rarity===0&&!b.shine&&b.si>0&&b.si<4&&!vr(b).rare&&!isRecord(b)&&!b.keep);
   const sel=(k,opts,cur)=>`<select data-rack="${k}">${opts.map(([v,t])=>`<option value="${v}" ${cur==v?'selected':''}>${t}</option>`).join('')}</select>`;
-  const bar=`<div class="rackbar"><label class="fld">Sort${sel('sort',[['worth','Worth'],['len','Size'],['rar','Rarity'],['grade','Grade'],['new','Newest']],RACK.sort)}</label>
-    <button class="btn ghost small rackmorebtn ${RACK.more?'on':''}" data-action="rackmore" aria-expanded="${!!RACK.more}">Filters${(()=>{const n2=[RACK.minR,RACK.minS,RACK.wt,RACK.fx,RACK.minL].filter(Boolean).length;return n2?` (${n2})`:''})()}</button><div class="rackmore ${RACK.more?'on':''}">
+  const shown=st.flatMap(x=>x.list),sellable=shown.filter(b=>!b.keep&&!isGift(b)&&!b.cracked),sellRec=sellable.filter(isRecord).length,sellCoin=sellAllTotal(sellable),nf=[RACK.minR,RACK.minS,RACK.wt,RACK.fx,RACK.minL,RACK.q].filter(Boolean).length;
+  const bar=`<div class="rackbar ${RACK.more?'open':''}"><label class="fld">Sort${sel('sort',[['worth','Worth'],['len','Size'],['rar','Rarity'],['grade','Grade'],['new','Newest']],RACK.sort)}</label>
+    <button class="btn ghost small rackmorebtn ${RACK.more?'on':''}" data-action="rackmore" aria-expanded="${!!RACK.more}">${RACK.more?'Hide filters':'Filters'}${nf?` (${nf})`:''}</button>
+    ${sellable.length?`<button class="btn ghost small" data-action="sellall" data-confirm="1" data-sure="Sell ${sellable.length}${sellRec?`, ${sellRec} record${sellRec>1?'s':''}`:''}? Click again" title="Sells every blade shown except locked blades and keepsakes">Sell all ${sellable.length} for ${fmt(sellCoin)}c</button>`:''}
+    ${plain.length?`<button class="btn ghost small" data-action="salvplain" data-confirm="1">Salvage ${plain.length} plain Commons</button>`:''}
+    <span class="rackshow fine">${rackFiltered()?`Showing ${shown.length} of ${n}`:`${n} blade${n===1?'':'s'}`}</span>
+    <div class="rackmore ${RACK.more?'on':''}">
     <label class="fld">Rarity${sel('minR',RAR.map((r,i)=>[i,i?r.n+'+':'All']),RACK.minR)}</label><label class="fld">Size${sel('minS',[[0,'All'],[3,'Large+'],[4,'Huge+'],[5,'Titan+']],RACK.minS)}</label>
     <label class="fld">Weight${sel('wt',[['','All'],['L','Light'],['M','Medium'],['H','Heavy'],['X','Massive']],RACK.wt)}</label>
     <label class="fld">Special${sel('fx',[['','Any'],...Object.entries(RACK_FX).map(([k,v])=>[k,v[0]])],RACK.fx)}</label>
-    <label class="fld">Longer than<span class="bin"><input type="number" min="0" inputmode="decimal" data-rack="minL" placeholder="any" value="${RACK.minL}"> cm</span></label></div>
+    <label class="fld">Longer than<span class="bin"><input type="number" min="0" inputmode="decimal" data-rack="minL" placeholder="any" value="${RACK.minL}"> cm</span></label>
     <label class="fld rsearch">Search<input type="search" data-rack="q" placeholder="Name, variant or smith" value="${RACK.q.replace(/"/g,'&quot;')}" autocomplete="off"></label>
-    <button class="btn ghost small" data-action="rackclear" ${rackFiltered()?'':'disabled'}>Clear filters</button>
-    ${plain.length?`<button class="btn ghost small" data-action="salvplain" data-confirm="1">Salvage ${plain.length} plain Commons</button>`:''}
-    <span class="rackshow fine">${rackFiltered()?`Showing ${st.reduce((a,x)=>a+x.list.length,0)} of ${n}`:`${n} blade${n===1?'':'s'}`}</span></div>`;
+    <button class="btn ghost small" data-action="rackclear" ${rackFiltered()?'':'disabled'}>Clear filters</button></div></div>`;
   const slots=st.map(({k,list})=>{const b=list[0],rec=list.some(isRecord),wpx=Math.round(bladeDims(b).W*P),pop=Math.max(0,wpx-BASE+6);return `<div class="slot ${b.shine?'sh-'+b.shine:''} ${b.moon?'sh-moon':''} ${isGift(b)?'isgift'+giftCls(b):''} ${pop?'pops':''}" style="--rc:${rarC(b)};--base:${BASE}px">
       ${list.length>1?`<span class="count"><i class="cx">×</i>${list.length}</span>`:''}<div class="vart"><div class="vrot" style="--w:${wpx}px">${bladeSVG(b,{noRuler:1,minW:0})}</div></div>
       <span class="slotn">${isGift(b)?'The<br>'+TYPES[b.type].n:`${RAR[b.rarity].n} ${vr(b).n}<br>${TYPES[b.type].n}`}</span><span class="slots">${b.len} cm${rec?' <i class="recico" title="Record holder" aria-label="Record holder"></i>':''}</span><span class="slotsh">${b.shine||b.moon?shineTag(b):''}</span>
@@ -2011,9 +2021,9 @@ function renderDrawer(){const c=C(),fab=$('rackfab'),dr=$('drawer');if(!fab||!dr
         <span class="bbtns"><button class="btn ghost small" data-action="bulkall" data-k="${open.k}">Tick all</button><button class="btn ghost small" data-action="bulknone" data-k="${open.k}">Untick all</button>
         <button class="btn go" data-action="bulksell" data-k="${open.k}" data-confirm="1" ${sel.length?'':'disabled'}>Sell ${sel.length||''}</button><button class="btn" data-action="bulksalv" data-k="${open.k}" data-confirm="1" ${sel.length?'':'disabled'}>Salvage ${sel.length||''}</button></span></div>
        ${recN?`<p class="bwarn">${recN} record holder${recN>1?'s are':' is'} ticked. Selling ${recN>1?'them':'it'} gives up the record.</p>`:''}</div>`})():''}
-    ${L.map(b=>{const big=isRecord(b)||b.shine||b.rarity>=3||b.si>=5,bs=L.length>1?bulkState(L):null,tick=bs?`<label class="bpick" title="${isGift(b)?'Keepsakes can’t be sold':b.keep?'Kept: unlock it to sell':bs.ok(b)?'Tick to include':isRecord(b)?'Record holder: tick “Include records” first':'Kept as your longest'}">${bs.ok(b)?`<input type="checkbox" data-pick="${b.id}" ${bs.sel.includes(b)?'checked':''}>`:`<span class="bwhy">${isGift(b)?'Keepsake':b.keep?'Kept':isRecord(b)?'Record':'Longest, kept'}</span>`}</label>`:'';return `<div class="sheetrow ${b.keep?'kept':''} ${bs?'hasPick':''}">${tick}<div class="sheetart">${bladeSVG(b,{minW:listW(L,440)})}</div>
+    ${L.map(b=>{const big=isRecord(b)||b.shine||b.rarity>=3||b.si>=5,bs=L.length>1?bulkState(L):null,tick=bs?`<label class="bpick" title="${isGift(b)?'Keepsakes can’t be sold':b.keep?'Locked: unlock it to sell':bs.ok(b)?'Tick to include':isRecord(b)?'Record holder: tick “Include records” first':'Kept as your longest'}">${bs.ok(b)?`<input type="checkbox" data-pick="${b.id}" ${bs.sel.includes(b)?'checked':''}>`:`<span class="bwhy">${isGift(b)?'Keepsake':b.keep?'Locked':isRecord(b)?'Record':'Longest, kept'}</span>`}</label>`:'';return `<div class="sheetrow ${b.keep?'kept':''} ${bs?'hasPick':''}">${tick}<div class="sheetart">${bladeSVG(b,{minW:listW(L,440)})}</div>
       <div class="sheetinfo"><div class="tags">${tags(b)}</div><dl class="facts"><div><dt>Length</dt><dd>${b.len} cm</dd></div><div><dt>Grade</dt><dd>${b.grade}</dd></div><div><dt>${isGift(b)?'Rarity':'Worth'}</dt><dd ${isGift(b)?`style="color:${rarC(b)}"`:''}>${isGift(b)?'One of a kind':fmt(worth(b))+'c'}</dd></div><div><dt>Forged by</dt><dd>${b.forger}</dd></div></dl></div>
-      <div class="sheetact">${isGift(b)?`<p class="fine keep">One of a kind. ${giftWho(b)}, ${giftDate(b)}. It can’t be sold, salvaged or traded, but it can fight in the Arena.</p>`:`<button class="btn ghost small keepbtn ${b.keep?'on':''}" data-action="keeptoggle" data-id="${b.id}" aria-pressed="${!!b.keep}">${b.keep?'🔒 Kept':'Keep'}</button>${b.keep?'<p class="fine keepnote">Kept. It won’t be sold or salvaged until you unlock it.</p>':`<button class="btn" data-action="sell" data-id="${b.id}" ${big?'data-confirm="1"':''}>Sell ${fmt(value(b))}c</button><button class="btn ghost" data-action="salvage" data-id="${b.id}" ${big?'data-confirm="1"':''}>Salvage: ${yieldStr(salvYield(b))}</button>`}`}</div></div>`}).join('')}</div>`}
+      <div class="sheetact">${isGift(b)?`<p class="fine keep">One of a kind. ${giftWho(b)}, ${giftDate(b)}. It can’t be sold, salvaged or traded, but it can fight in the Arena.</p>`:`<button class="btn ghost small keepbtn ${b.keep?'on':''}" data-action="keeptoggle" data-id="${b.id}" aria-pressed="${!!b.keep}">${b.keep?'🔒 Locked':'Lock'}</button>${b.keep?'<p class="fine keepnote">Locked. It won’t be sold or salvaged until you unlock it.</p>':`<button class="btn" data-action="sell" data-id="${b.id}" ${big?'data-confirm="1"':''}>Sell ${fmt(value(b))}c</button><button class="btn ghost" data-action="salvage" data-id="${b.id}" ${big?'data-confirm="1"':''}>Salvage: ${yieldStr(salvYield(b))}</button>`}`}</div></div>`}).join('')}</div>`}
   const html=`<div class="drawerbg" data-action="racktoggle"></div><section class="drawer" role="dialog" aria-label="Your rack"><div class="dspace" data-action="racktoggle" aria-hidden="true"></div><div class="dpanel"><div class="platehead"><h2>Your rack</h2><button class="btn ghost small" data-action="racktoggle">Close</button></div>${bar}
     ${n?`<div class="rackwall">${slots||'<p class="empty">Nothing matches these filters.</p>'}</div>`:'<p class="empty">Empty. Keep a blade after its reveal and it hangs here.</p>'}${sheet}</div></section>`;
   if(html===RACK.html)return;                       // nothing changed: leave it alone, so it never jumps
@@ -2405,6 +2415,8 @@ function closeReveal(){revealTok++;revealId=null;$('overlay').classList.add('hid
 
 // =============== ACTIONS ===============
 const blade=id=>C().blades.find(b=>String(b.id)===String(id));
+// what selling these one after another pays (each sale of a type lowers its price a little)
+function sellAllTotal(list){const c=C(),keep={...c.demand};let t=0;list.forEach(b=>{t+=value(b);c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93)});c.demand=keep;return t}
 function sellBlade(b){if(b.cracked)return;if(isGift(b))return toast('Keepsakes can’t be sold.');SFX.play('coin');const c=C(),v=value(b);c.coin+=v;c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93);(b.status='sold',b.su=Date.now());toast(`Sold ${bname(b)} for <b>${v}c</b>.`)}
 function salvBlade(b){if(isGift(b))return toast('Keepsakes can’t be salvaged.');const c=C(),y=salvYield(b),rec=isRecord(b);gainXP(c,2);for(const[k,v]of Object.entries(y))c[k]=k==='fuel'?Math.min(ENERGY_CAP,c[k]+v):c[k]+v;(b.status='salvaged',b.su=Date.now());toast(`Salvaged into ${yieldStr(y)}.${rec?' Its record is gone.':''}`)}
 // =============== ONLINE: SERVER, ACCOUNTS, CLOUD SAVE ===============
@@ -2785,7 +2797,7 @@ const ACT={
   pick:el=>{C().sel=el.dataset.type;save();render()},
   supopen:()=>{UI.sup=true;render()},supclose:()=>{UI.sup=false;render()},
   rackopen:el=>{RACK.open=el.dataset.k;render()},rackclose:()=>{RACK.open=null;render()},
-  racktoggle:()=>{UI.rack=!UI.rack;RACK.open=null;RACK.man={};render()},bulksell:el=>bulkDo(el.dataset.k,'sell'),bulksalv:el=>bulkDo(el.dataset.k,'salv'),bfreset:()=>{RACK.f={...BF0};RACK.man={};render()},keeptoggle:el=>{const b=blade(el.dataset.id);if(!b)return;b.keep=!b.keep;if(RACK.man)delete RACK.man[b.id];save();toast(b.keep?'Kept. Bulk selling will skip it.':'Unlocked.');render()},bulkall:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;const{ok}=bulkState(st.list);st.list.forEach(b=>{if(ok(b))RACK.man[b.id]=true});render()},bulknone:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;st.list.forEach(b=>RACK.man[b.id]=false);render()},
+  racktoggle:()=>{UI.rack=!UI.rack;RACK.open=null;RACK.man={};render()},bulksell:el=>bulkDo(el.dataset.k,'sell'),bulksalv:el=>bulkDo(el.dataset.k,'salv'),bfreset:()=>{RACK.f={...BF0};RACK.man={};render()},keeptoggle:el=>{const b=blade(el.dataset.id);if(!b)return;b.keep=!b.keep;if(RACK.man)delete RACK.man[b.id];save();toast(b.keep?'Locked. Selling will skip it.':'Unlocked.');render()},bulkall:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;const{ok}=bulkState(st.list);st.list.forEach(b=>{if(ok(b))RACK.man[b.id]=true});render()},bulknone:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;st.list.forEach(b=>RACK.man[b.id]=false);render()},
   begin:()=>startForge(),
   quick:()=>quickForge(),
   tdq:el=>tourQuench(el.dataset.q),rackmore:()=>{RACK.more=!RACK.more;render()},rackclear:()=>{Object.assign(RACK,{minR:0,minS:0,q:'',wt:'',fx:'',minL:''});render()},tutdone:()=>{A.tutDone=1;UI.tut=false;save();render()},tutopen:()=>tourStart(),boardtoggle:()=>{UI.board=!UI.board;if(UI.board){UI.mail=false;UI.rack=false;RACK.open=null}render()},tournext:()=>{if(TOUR.i>=TOUR_STEPS.length-1)tourEnd();else tourStep(1)},tourback:()=>tourStep(-1),tourend:()=>tourEnd(),
@@ -2798,6 +2810,7 @@ const ACT={
   giftkeep:()=>{SFX.play('coin');closeReveal();UI.rack=true;render()},
   keep:el=>{const b=blade(el.dataset.id);(b.status='owned',b.su=Date.now());save();toast(`${bname(b)} added to your rack.`);closeReveal()},
   sell:el=>{sellBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
+  sellall:()=>{const list=rackStacks().flatMap(x=>x.list).filter(b=>!b.keep&&!isGift(b)&&!b.cracked);if(!list.length)return toast('Nothing to sell.');const c=C(),before=c.coin;SFX.play('coin');list.forEach(b=>{c.coin+=value(b);c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93);b.status='sold';b.su=Date.now()});RACK.open=null;RACK.man={};save();toast(`Sold ${list.length} blade${list.length===1?'':'s'} for ${fmt(C().coin-before)}c. Locked blades and keepsakes were kept.`,4500);render()},
   salvage:el=>{salvBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
   salvplain:()=>{const c=C(),list=owned().filter(b=>b.rarity===0&&!b.shine&&b.si>0&&b.si<4&&!vr(b).rare&&!isRecord(b)&&!b.keep),tot={};list.forEach(b=>{const y=salvYield(b);for(const[k,v]of Object.entries(y)){const add=k==='fuel'?Math.max(0,Math.min(ENERGY_CAP,c[k]+v)-c[k]):v;c[k]+=add;tot[k]=(tot[k]||0)+add}(b.status='salvaged',b.su=Date.now())});save();toast(`Salvaged ${list.length} blades into ${yieldStr(tot)}.`);render()},
   qstep:el=>{const row=el.closest('.qrow'),cur=+row.querySelector('input').value||1,d=el.dataset.d;qSync(row,d==='max'?+row.dataset.max:cur+ +d)},
@@ -2820,7 +2833,7 @@ const ACT={
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&UI.board){UI.board=false;render()}});
 document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!el||el.tagName==='LABEL')return;
   if(el.type==='checkbox'){ACT[el.dataset.action]?.(el);return}
-  if(el.dataset.confirm&&!el.dataset.armed){el.dataset.armed='1';el.dataset.orig=el.innerHTML;el.style.width=el.offsetWidth+'px';el.textContent='Sure?';el.title='Click again to confirm';setTimeout(()=>{if(el.isConnected&&el.dataset.armed){delete el.dataset.armed;el.innerHTML=el.dataset.orig;el.style.width=''}},2500);return}
+  if(el.dataset.confirm&&!el.dataset.armed){el.dataset.armed='1';el.dataset.orig=el.innerHTML;if(!el.dataset.sure)el.style.width=el.offsetWidth+'px';el.textContent=el.dataset.sure||'Sure?';el.title='Click again to confirm';setTimeout(()=>{if(el.isConnected&&el.dataset.armed){delete el.dataset.armed;el.innerHTML=el.dataset.orig;el.style.width=''}},2500);return}
   ACT[el.dataset.action]?.(el)});
 document.addEventListener('submit',e=>{const f=e.target.closest('form[data-slot]');if(!f)return;e.preventDefault();const i=+f.dataset.slot;if(i!==0||A.slots.some(Boolean))return;
   const name=NET.user?NET.user.username:pick(NAMES)+' '+pick(['Ashford','Coldwater','Emberly','Harth','Steelwick','Vane']),cls='war';
