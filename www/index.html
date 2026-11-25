@@ -1198,12 +1198,16 @@ function unify(sv){if(!sv||!Array.isArray(sv.slots))return sv;const all=sv.slots
     sv.serial=sv.serial||0;const ids=new Set((m.blades||[]).map(b=>b.id));for(const b of o.blades||[]){if(ids.has(b.id))b.id=++sv.serial;ids.add(b.id);m.blades.push(b)}
     m.classes=[...new Set([...(m.classes||[m.cls]),...(o.classes||[o.cls])])];m.merged=[...new Set([...(m.merged||[]),o.cid,...(o.merged||[])])];m.aka=[...new Set([...(m.aka||[]),o.name,...(o.aka||[])])]}
   if(!Array.isArray(m.classes)||!m.classes.includes(m.cls))m.classes=[...new Set([m.cls,...(m.classes||[])])];
+  // Every smith now starts as a Warsmith. A smith from before that change keeps its classes and is given Warsmith for free.
+  if(!m.classes.includes('war')){m.classes.push('war');m.freeWar=1}
   m.selBy=m.selBy||{};
   if(sv.slots[0]!==m||all.length>1){sv.slots=[m,null,null,null]}sv.active=0;return sv}
-const needsUnify=sv=>{const all=(sv.slots||[]).filter(Boolean);return all.length>1||(all.length===1&&(sv.slots[0]!==all[0]||sv.active!==0||!Array.isArray(all[0].classes)))};
+const needsUnify=sv=>{const all=(sv.slots||[]).filter(Boolean);return all.length>1||(all.length===1&&(sv.slots[0]!==all[0]||sv.active!==0||!Array.isArray(all[0].classes)||!all[0].classes.includes('war')))};
+// classes that count towards the price of the next one (the free Warsmith doesn't)
+const clsN=c=>(c.classes||[c.cls]).length-(c.freeWar?1:0);
 const C=()=>{if(needsUnify(A))unify(A);return A.slots[A.active]};
 // A further class opens when the Armory is far enough along, and costs coins to learn.
-function classOffer(c){const n=(c.classes||[c.cls]).length;if(n>=CK.length)return null;const{got,goals}=armoryProgress(),pct=got/goals;return{pct,need:SLOT_PCT[n],cost:CLASS_COST[n],ok:pct>=SLOT_PCT[n],afford:c.coin>=CLASS_COST[n]}}
+function classOffer(c){const n=clsN(c);if((c.classes||[c.cls]).length>=CK.length)return null;const{got,goals}=armoryProgress(),pct=got/goals;return{pct,need:SLOT_PCT[n],cost:CLASS_COST[n],ok:pct>=SLOT_PCT[n],afford:c.coin>=CLASS_COST[n]}}
 function switchClass(k){const c=C();if(!c||F||revealId||!c.classes.includes(k)||c.cls===k)return;c.selBy[c.cls]=c.sel;c.cls=k;c.sel=c.selBy[k]&&TYPES[c.selBy[k]]?c.selBy[k]:typesOf(k)[0];c.selW=TYPES[c.sel].wt;if(!knows(c,c.selW)){c.sel=typesOf(k)[0];c.selW=TYPES[c.sel].wt}
   UI.armCls=null;UI.recCls=null;A.tab='forge';save();toast(`${c.name} takes up the ${CLASSES[k].n}’s craft.`);render()}
 function learnClass(k){const c=C(),o=c&&classOffer(c);if(!o||c.classes.includes(k)||!CLASSES[k])return;if(!o.ok)return toast(`Your Armory needs to be ${Math.round(o.need*100)}% complete first.`);if(!o.afford)return toast(`You need ${fmt(o.cost)} coins.`);
@@ -2102,9 +2106,9 @@ function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPic
       ${had?'<p class="wnote">The smiths and blades already on this device will be added to your account when you sign in or create one.</p>':''}
       <div class="wacct">${accountPlate()}</div></section>`}
   const c=C();
-  if(!c)return `<section class="page"><div class="pagehead"><h1>Your smith</h1><p class="fine">Pick the class to start with. You can learn the other classes later. Your smith goes by your account name${NET.user?', <b>'+NET.user.username+'</b>':''}.</p></div>${accountPlate()}<div class="smiths">
+  if(!c)return `<section class="page"><div class="pagehead"><h1>Your smith</h1><p class="fine">Every smith starts as a Warsmith and learns the other classes later. Your smith goes by your account name${NET.user?', <b>'+NET.user.username+'</b>':''}.</p></div>${accountPlate()}<div class="smiths">
     <form class="smith new" data-slot="0"><h2>${NET.user?NET.user.username:'New smith'}</h2>
-      <fieldset class="classes"><legend>Starting class</legend>${CK.map((k,j)=>`<label><input type="radio" name="cls" value="${k}" ${j===0?'checked':''}><span><b>${CLASSES[k].n}</b><small>${CLASSES[k].d}</small></span></label>`).join('')}</fieldset>
+      <p class="cls"><b>${CLASSES.war.n}</b>: ${CLASSES.war.d}</p>
       <button class="btn go" type="submit">Create smith</button></form></div>`+SETTINGS_PLATE()+`</section>`;
   const o=classOffer(c),pctNow=Math.floor(armoryProgress().got/armoryProgress().goals*100);
   const cards=CK.map(k=>{const has=c.classes.includes(k),cur=c.cls===k,n=typesOf(k).length,found=new Set(allBlades().filter(b=>b.status!=='pending'&&b.status!=='stock'&&TYPES[b.type]&&TYPES[b.type].c===k).map(b=>b.type)).size;
@@ -2473,7 +2477,7 @@ function mergeSaves(a,b){const[nw,old]=(b.at||0)>(a.at||0)?[b,a]:[a,b];const m=J
       // same blade in both saves: whichever changed last wins (sold, salvaged, delivered, listed or back on the rack)
       if(mine){if((bl.su||0)>(mine.su||0)||(!bl.su&&!mine.su&&mine.status==='owned'&&bl.status!=='owned')){const id=mine.id;Object.assign(mine,bl,{id})}return}
       if(bl.status!=='owned')return;const c={...bl};if(ids.has(c.id))c.id=++m.serial;ids.add(c.id);ms.blades.push(c)});
-    if(ms.cid===os.cid)ms.forged=Math.max(ms.forged||0,os.forged||0);ms.classes=[...new Set([...(ms.classes||[ms.cls]),...(os.classes||[])])]});
+    if(ms.cid===os.cid)ms.forged=Math.max(ms.forged||0,os.forged||0);ms.classes=[...new Set([...(ms.classes||[ms.cls]),...(os.classes||[])])];if(os.freeWar)ms.freeWar=1});
   m.rev=Math.max(a.rev||0,b.rev||0);return m}
 const SYNC={state:'local'};
 function renderSync(){const el=$('syncst');if(!el)return;const st=!SERVER||!NET.user?'local':SYNC.state;
@@ -2787,7 +2791,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-action]')
   if(el.dataset.confirm&&!el.dataset.armed){el.dataset.armed='1';el.dataset.orig=el.innerHTML;el.style.width=el.offsetWidth+'px';el.textContent='Sure?';el.title='Click again to confirm';setTimeout(()=>{if(el.isConnected&&el.dataset.armed){delete el.dataset.armed;el.innerHTML=el.dataset.orig;el.style.width=''}},2500);return}
   ACT[el.dataset.action]?.(el)});
 document.addEventListener('submit',e=>{const f=e.target.closest('form[data-slot]');if(!f)return;e.preventDefault();const i=+f.dataset.slot;if(i!==0||A.slots.some(Boolean))return;
-  const name=NET.user?NET.user.username:pick(NAMES)+' '+pick(['Ashford','Coldwater','Emberly','Harth','Steelwick','Vane']),cls=f.elements.namedItem('cls').value;
+  const name=NET.user?NET.user.username:pick(NAMES)+' '+pick(['Ashford','Coldwater','Emberly','Harth','Steelwick','Vane']),cls='war';
   const c=newChar(name,cls);c.classes=[cls];c.selBy={};A.slots[i]=c;ensure(c);A.active=i;A.tab='forge';save();toast(`${name} the ${CLASSES[cls].n} lights the forge.`);render()});
 document.addEventListener('keydown',e=>{if(!F||F.done)return;if(e.code==='Space'){e.preventDefault();if(!e.repeat)strike()}if(e.code==='KeyF'){F.bell=true;$('bellows')?.classList.add('on')}});
 document.addEventListener('keyup',e=>{if(e.code==='KeyF'&&F){F.bell=false;$('bellows')?.classList.remove('on')}});
@@ -2795,7 +2799,7 @@ document.addEventListener('keyup',e=>{if(e.code==='KeyF'&&F){F.bell=false;$('bel
 try{const AppP=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;if(AppP)AppP.addListener('backButton',()=>{if(F||revealId)return;if(A.tab!=='forge'&&C()){A.tab='forge';save();render()}else AppP.minimizeApp()})}catch(e){}
 try{const native=window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform();if(!native&&'serviceWorker'in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
 let prevOpen=slotsOpen();
-setInterval(()=>{A.slots.forEach(c=>{if(c)TK.forEach(k=>c.demand[k]+=(1-c.demand[k])*.03)});save();const o=slotsOpen();if(o>prevOpen){prevOpen=o;const cc=C();if(cc&&cc.classes.length<CK.length&&o>cc.classes.length)toast('You can learn a new class now. Tap your name to see it.',4000)}},5000);
+setInterval(()=>{A.slots.forEach(c=>{if(c)TK.forEach(k=>c.demand[k]+=(1-c.demand[k])*.03)});save();const o=slotsOpen();if(o>prevOpen){prevOpen=o;const cc=C();if(cc&&cc.classes.length<CK.length&&o>clsN(cc))toast('You can learn a new class now. Tap your name to see it.',4000)}},5000);
 setInterval(()=>{const c=C();if(!c)return;const k=pick(typesOf(c.cls));c.demand[k]=Math.min(1.6,c.demand[k]+.4);save();if(!F&&!revealId)toast(`Merchants are clamoring for <b>${TYPES[k].n}s</b>.`)},75000);
 setInterval(()=>{renderHUD();const c=C();if(!c)return;const el=$('digleft');if(el){const s=Math.ceil((c.digUntil-Date.now())/1000);if(s>0)el.textContent=s;else if(!F&&!revealId&&A.tab==='forge')render()}},1000);
 if(A.active<0)A.tab='chars';setTimeout(netInit,0);
