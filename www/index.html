@@ -315,7 +315,7 @@ select,input[type=text],input[type=number]{background:#22201e;border:1px solid v
 @media (max-width:1050px){.lot{grid-template-columns:180px 1fr}.lotnums,.lotact{grid-column:2}.sellgrid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:760px){.lot{grid-template-columns:1fr}.lotnums,.lotact{grid-column:1}}
 /* accounts & arena */
-.acct{margin-bottom:16px}.orline{display:flex;align-items:center;gap:10px;max-width:380px;margin:14px 0 10px;color:var(--mute,#8a8172);font-size:14px}.orline::before,.orline::after{content:'';flex:1;border-top:2px solid rgba(255,255,255,.1)}.provrow{display:grid;gap:8px;max-width:380px}.btn.prov{width:100%;text-align:center}.linkbtn{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}.forgot{margin-top:12px}.forgotbox{max-width:380px;margin-top:6px;padding:10px 12px;border:2px dashed rgba(255,255,255,.14)}.forgotbox .provrow{margin:8px 0}.linkh{margin:18px 0 6px;font-size:16px}.links{list-style:none;margin:0 0 10px;padding:0;max-width:380px}.links li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)}.btn.sm{padding:3px 10px;font-size:13px}.authform{display:grid;gap:10px;max-width:380px;margin-top:8px}.authform input{width:100%}
+.acct{margin-bottom:16px}.codeplate{margin-bottom:16px;border-color:var(--gold,#e0bd6e)}.rcode{font-size:26px;letter-spacing:.08em;margin:10px 0 12px;padding:10px 14px;background:rgba(0,0,0,.35);border:2px dashed rgba(255,255,255,.2);display:inline-block;user-select:all;word-break:break-all}.codeplate .row2{display:flex;gap:10px;flex-wrap:wrap}.orline{display:flex;align-items:center;gap:10px;max-width:380px;margin:14px 0 10px;color:var(--mute,#8a8172);font-size:14px}.orline::before,.orline::after{content:'';flex:1;border-top:2px solid rgba(255,255,255,.1)}.provrow{display:grid;gap:8px;max-width:380px}.btn.prov{width:100%;text-align:center}.linkbtn{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}.forgot{margin-top:12px}.forgotbox{max-width:380px;margin-top:6px;padding:10px 12px;border:2px dashed rgba(255,255,255,.14)}.forgotbox .provrow{margin:8px 0}.linkh{margin:18px 0 6px;font-size:16px}.links{list-style:none;margin:0 0 10px;padding:0;max-width:380px}.links li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)}.btn.sm{padding:3px 10px;font-size:13px}.authform{display:grid;gap:10px;max-width:380px;margin-top:8px}.authform input{width:100%}
 input[type=password],input[name=username]{background:#22201e;border:1px solid var(--rule2);border-radius:3px;padding:8px 10px;font-size:15px;color:var(--ash)}
 .conflict{margin-bottom:18px}
 .arenagrid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}.arenagrid .plate+.plate{margin-top:0}
@@ -1730,7 +1730,7 @@ function renderTabs(){const c=needAcct()?null:C();const tabs=c?[['forge','Forge'
   $('tabs').innerHTML=tabs.map(([k,nm,sec],i)=>`${sec&&!tabs[i-1]?.[2]?'<span class="railsep" aria-hidden="true"></span>':''}<button class="railbtn ${sec?'sec':''} ${A.tab===k?'on':''}" data-action="tab" data-tab="${k}" aria-current="${A.tab===k?'page':'false'}"><i class="pxico" style="background-image:var(--ico-${k})" aria-hidden="true"></i><span>${nm}</span></button>`).join('')+(c?`<span class="railsep" aria-hidden="true"></span><button class="railbtn rackbtn ${UI.rack?'on':''}" data-action="racktoggle" aria-expanded="${!!UI.rack}"><i class="pxico" style="background-image:var(--ico-rack)" aria-hidden="true"></i><span>Rack <b class="rackn">${n}</b></span></button>`:'');
   $('opts').innerHTML=!DEV?'':`<label title="For trying things out: Tempered 1 in 10, Starforged 1 in 40, more Titans, an 8-second dig, auctions of 1 to 6 minutes, and it counts as night with Moonlit at 1 in 3. Real shine odds are 1 in 200 and 1 in 2,000."><input type="checkbox" data-action="odds" ${A.testOdds?'checked':''}> Test mode</label><button class="btn ghost small" data-action="reset" data-confirm="1">Reset all</button>`}
 function render(){if(needAcct()){A.tab='chars';UI.rack=false;UI.board=false;UI.mail=false;RACK.open=null}if(PENDING&&!F&&!revealId){const sv=PENDING;PENDING=null;if((sv.rev||0)>(A.rev||0)){const tab=A.tab;A=sv;if(!DEV)A.testOdds=false;ENT=null;A.tab=tab}}if(TOUR.on)requestAnimationFrame(tourPlace);else if(!needAcct()&&!A.tourDone&&!F&&!revealId&&C()&&!C().forged&&!A.slots.some(x=>x&&x.forged)&&A.tab==='forge'){A.tourDone=1;setTimeout(tourStart,400)}if(!F&&!revealId)claimArmory(C());renderHUD();renderTabs();renderDrawer();renderMailbox();renderBoard();if(F)return;const c=C();if(c)ensure(c);
-  if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+({forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars}[A.tab]||vChars)();$('view').scrollTop=0}
+  if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+codeBanner()+({forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars}[A.tab]||vChars)();$('view').scrollTop=0}
 
 const shineTag=b=>(b.moon?'<span class="tag moon">Moonlit</span>':'')+(b.shine==='star'?'<span class="tag star">Starforged</span>':b.shine==='temp'?'<span class="tag temp">Tempered</span>':'');
 const rarTxt=r=>`<span class="rar" style="--rc:${RAR[r].c}">${RAR[r].n}</span>`;
@@ -2390,7 +2390,7 @@ async function apiCall(path,opts={}){let r;
   try{r=await fetch(SERVER+path,{method:opts.method||'GET',headers:{'Content-Type':'application/json',...(NET.token?{Authorization:'Bearer '+NET.token}:{})},body:opts.body!==undefined?JSON.stringify(opts.body):undefined,keepalive:!!opts.keepalive})}
   catch(e){NET.offline=true;throw{status:0,msg:'Can’t reach the Anvilmoon server. Check your connection, or try again in a moment.'}}
   NET.offline=false;let j={};try{j=scrub(await r.json())}catch(e){}
-  if(r.status===401&&NET.user&&!['/api/login','/api/password','/api/oauth'].includes(path)){signedOut('Your session ended. Sign in again.')}
+  if(r.status===401&&NET.user&&!['/api/login','/api/password','/api/oauth','/api/recovery','/api/recover'].includes(path)){signedOut('Your session ended. Sign in again.')}
   if(!r.ok)throw{status:r.status,msg:j.error||'The server couldn’t do that. Try again.',body:j};return j}
 const online=()=>!!(SERVER&&NET.user);
 const needAcct=()=>!!(SERVER&&!NET.user&&(!NET.token||NET.oauth));
@@ -2419,8 +2419,16 @@ async function oauthFinish(b){
     NET.token=r.token;NET.user=r.user;storeToken();if(b.mode==='reset'){NET.resetTok=b.tok;A.tab='chars'}else toast(`Signed in as ${r.user.username}.`);await afterLogin()}
   catch(e){NET.authErr=e.msg||'That sign-in didn’t work. Try again.';if(NET.user)toast(NET.authErr)}}
 async function oauthName(username){NET.busy=true;NET.authErr='';render();
-  try{const r=await apiCall('/api/oauth',{method:'POST',body:{access_token:NET.oauth.tok,username}});NET.token=r.token;NET.user=r.user;NET.oauth=null;storeToken();toast(`Welcome to Anvilmoon, ${r.user.username}.`);await afterLogin()}
+  try{const r=await apiCall('/api/oauth',{method:'POST',body:{access_token:NET.oauth.tok,username}});NET.token=r.token;NET.user=r.user;NET.oauth=null;storeToken();if(r.code)showCode(r.code);toast(`Welcome to Anvilmoon, ${r.user.username}.`);await afterLogin()}
   catch(e){NET.authErr=e.status===401?'That took too long. Start the sign-in again.':e.msg;if(e.status===401)NET.oauth=null}NET.busy=false;render()}
+// ----- recovery code: shown once, the player keeps it; username + code sets a new password
+try{NET.newCode=sessionStorage.getItem('anvilmoon-code')||null}catch(e){}
+function showCode(c){NET.newCode=c;try{c?sessionStorage.setItem('anvilmoon-code',c):sessionStorage.removeItem('anvilmoon-code')}catch(e){}}
+function codeBanner(){if(!NET.newCode||!NET.user)return '';return `<div class="plate codeplate" role="alert"><h2>Save your recovery code</h2><p class="fine">If you ever forget your password, this code and your username get you back in. Write it down or save it somewhere safe. It is shown only this once.</p>
+  <p class="rcode">${NET.newCode}</p><div class="row2"><button class="btn" data-action="codecopy">Copy</button><button class="btn go" data-action="codedone">I’ve saved it</button></div></div>`}
+async function doRecover(username,code,next){NET.busy=true;NET.authErr='';render();
+  try{const r=await apiCall('/api/recover',{method:'POST',body:{username,code,next}});NET.token=r.token;NET.user=r.user;NET.forgot=false;storeToken();showCode(r.code);toast('New password saved. Here is a new recovery code.');await afterLogin()}
+  catch(e){NET.authErr=e.msg}NET.busy=false;render()}
 const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const oauthBtns=(mode,verb,list)=>(list||OAUTH.providers).filter(x=>PROV[x]).map(x=>`<button type="button" class="btn prov" data-action="oauth" data-p="${x}" data-m="${mode}">${verb} ${PROV[x]}</button>`).join('');
 async function afterLogin(){openEvents();refreshAH();fetchMail();await syncSave();oneName()}
@@ -2433,7 +2441,7 @@ function oneName(){if(!NET.user)return;const un=NET.user.username;let ch=false;
     const fix=b=>{if(!b||b.forger===un)return;const f=old.has(b.forger)?un:forgerNow(b.forger);if(f!==b.forger){b.forger=f;ch=true}};
     (c.blades||[]).forEach(fix);(c.trader||[]).forEach(fix)});
   if(ch){ENT=null;save();render()}}
-function signedOut(msg){NET.resetTok=null;NET.oauth=null;clearTimeout(NET.pt);NET.pv=0;NET.pm=NET.pa=undefined;NET.user=null;NET.token=null;storeToken();AHL=[];ARENA.match=null;ARENA.queued=null;if(msg)toast(msg);render()}
+function signedOut(msg){showCode(null);NET.resetTok=null;NET.oauth=null;clearTimeout(NET.pt);NET.pv=0;NET.pm=NET.pa=undefined;NET.user=null;NET.token=null;storeToken();AHL=[];ARENA.match=null;ARENA.queued=null;if(msg)toast(msg);render()}
 
 // Live updates: the game asks the server every few seconds what has changed (faster while a duel is on, not at all while the tab is hidden).
 function openEvents(){NET.pv=0;NET.pm=NET.pa=undefined;NET.pp='';pollLoop()}
@@ -2496,7 +2504,7 @@ addEventListener('storage',e=>{if(e.key!==KEY||!e.newValue)return;let sv;try{sv=
 
 async function doAuth(mode,username,password){NET.busy=true;NET.authErr='';render();
   try{const r=await apiCall(mode==='create'?'/api/register':'/api/login',{method:'POST',body:{username,password}});
-    NET.token=r.token;NET.user=r.user;storeToken();toast(mode==='create'?`Welcome to Anvilmoon, ${r.user.username}.`:`Signed in as ${r.user.username}.`);await afterLogin()}
+    NET.token=r.token;NET.user=r.user;storeToken();if(r.code)showCode(r.code);toast(mode==='create'?`Welcome to Anvilmoon, ${r.user.username}.`:`Signed in as ${r.user.username}.`);await afterLogin()}
   catch(e){NET.authErr=e.msg}NET.busy=false;render()}
 
 // =============== AUCTION HOUSE (online) ===============
@@ -2620,6 +2628,9 @@ function accountPlate(){if(!SERVER)return '';
     return `<div class="plate acct"><h2>Signed in as ${u.username}</h2><p class="fine">Your save is backed up to your account${NET.saveAt?`, last at ${new Date(NET.saveAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`:''}. Sign in on any device to pick up where you left off.</p>
     <div class="row2"><button class="btn" data-action="pwopen">${u.hasPw===false?'Set a password':'Change password'}</button><button class="btn ghost" data-action="signout">Sign out</button></div>
     <form id="pwform" class="authform hidden" data-auth="password">${u.hasPw===false?'':'<label class="fld">Current password<input type="password" name="current" autocomplete="current-password" required></label>'}<label class="fld">New password<input type="password" name="next" autocomplete="new-password" minlength="8" required></label><button class="btn go" type="submit">Save new password</button></form>
+    <h3 class="linkh">Recovery code</h3><p class="fine">${u.hasCode?'You have a recovery code. Lost it? Get a new one and the old one stops working.':'You don’t have a recovery code yet. Get one so you can reset your password if you forget it.'}</p>
+    ${u.hasPw===false?`<button class="btn" data-action="codeget">${u.hasCode?'Get a new code':'Get a recovery code'}</button>`:`<button class="btn" data-action="codeopen">${u.hasCode?'Get a new code':'Get a recovery code'}</button>
+    <form id="codeform" class="authform hidden" data-auth="code"><label class="fld">Your password<input type="password" name="password" autocomplete="current-password" required></label><button class="btn go" type="submit">Show my code</button></form>`}
     ${(links.length||more.length)?`<h3 class="linkh">Linked sign-ins</h3>${links.length?`<ul class="links">${links.map(l=>`<li><span><b>${(l.providers||[]).map(x=>PROV[x]||x).join(' / ')}</b> ${esc(l.name||'')}</span><button class="btn ghost sm" data-action="unlink" data-id="${esc(l.id)}">Unlink</button></li>`).join('')}</ul>`:`<p class="fine">Link Discord or Google to sign in with one click, and to get back in if you forget your password.</p>`}
     ${more.length?`<div class="provrow">${oauthBtns('link','Link',more)}</div>`:''}`:''}</div>`}
   if(NET.oauth)return `<div class="plate acct"><h2>Choose a username</h2><p class="fine">No Anvilmoon account is linked to that ${NET.oauth.provider} account yet. Pick a username to start a new one. If you already play, go back, sign in with your password and link ${NET.oauth.provider} from the Account page instead.</p>
@@ -2633,12 +2644,18 @@ function accountPlate(){if(!SERVER)return '';
     ${create?'<label class="fld">Confirm password<input type="password" name="confirm" autocomplete="new-password" required></label>':''}
     ${NET.authErr?`<p class="warn" role="alert">${NET.authErr}</p>`:''}<button class="btn go" type="submit" ${NET.busy?'disabled':''}>${create?'Create account':'Sign in'}</button></form>
     ${prov?`<p class="orline">or</p><div class="provrow">${oauthBtns('login','Continue with')}</div>`:''}
-    ${prov&&!create?`<p class="fine forgot"><button type="button" class="linkbtn" data-action="forgot">Forgot your password?</button></p>${NET.forgot?`<div class="forgotbox"><p class="fine">If you linked Discord or Google to your account, sign in with it here and you’ll be asked for a new password.</p><div class="provrow">${oauthBtns('reset','Reset with')}</div><p class="fine">If you never linked one, the password can’t be reset from here.</p></div>`:''}`:''}
+    ${!create?`<p class="fine forgot"><button type="button" class="linkbtn" data-action="forgot">Forgot your password?</button></p>${NET.forgot?`<div class="forgotbox"><p class="fine">Enter your username and the recovery code you saved, then choose a new password.</p>
+    <form class="authform" data-auth="recover"><label class="fld">Username<input name="username" autocomplete="username" required></label><label class="fld">Recovery code<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="XXXX-XXXX-XXXX-XXXX"></label>
+    <label class="fld">New password<input type="password" name="next" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></label><label class="fld">Confirm password<input type="password" name="confirm" autocomplete="new-password" required></label>
+    <button class="btn go" type="submit" ${NET.busy?'disabled':''}>Save new password</button></form>
+    ${prov?`<p class="fine">Or, if you linked Discord or Google, sign in with it and you’ll be asked for a new password.</p><div class="provrow">${oauthBtns('reset','Reset with')}</div>`:''}</div>`:''}`:''}
     ${NET.offline?'<p class="warn">Can’t reach the Anvilmoon server right now.</p>':''}</div>`}
 document.addEventListener('submit',async e=>{const f=e.target.closest('form.authform');if(!f)return;e.preventDefault();const v=n=>(f.elements.namedItem(n)||{}).value||'';
   if(f.dataset.auth==='password'){try{const r=await apiCall('/api/password',{method:'POST',body:{current:v('current'),next:v('next')}});if(r.user)NET.user=r.user;toast('Password saved.');render()}catch(x){toast(x.msg)}return}
   if(f.dataset.auth==='reset'){if(v('next')!==v('confirm')){NET.authErr='The two passwords don’t match.';render();return}
     try{const r=await apiCall('/api/password',{method:'POST',body:{access_token:NET.resetTok,next:v('next')}});if(r.user)NET.user=r.user;NET.resetTok=null;NET.authErr='';toast('New password saved.')}catch(x){NET.authErr=x.status===401?'That took too long. Start the reset again.':x.msg;if(x.status===401)NET.resetTok=null}render();return}
+  if(f.dataset.auth==='recover'){if(v('next')!==v('confirm')){NET.authErr='The two passwords don’t match.';render();return}doRecover(v('username').trim(),v('code'),v('next'));return}
+  if(f.dataset.auth==='code'){try{const r=await apiCall('/api/recovery',{method:'POST',body:{password:v('password')}});NET.user=r.user;showCode(r.code);window.scrollTo(0,0)}catch(x){toast(x.msg)}render();return}
   if(f.dataset.auth==='oauthname'){oauthName(v('username').trim());return}
   if(f.dataset.auth==='create'&&v('password')!==v('confirm')){NET.authErr='The two passwords don’t match.';render();return}
   doAuth(f.dataset.auth,v('username').trim(),v('password'))});
@@ -2697,6 +2714,8 @@ const ACT={
   authmode:el=>{NET.authPicked=true;NET.authMode=el.dataset.m;NET.authErr='';render()},
   signout:async()=>{await pushSave();try{await apiCall('/api/logout',{method:'POST'})}catch(e){}signedOut('Signed out. You can keep playing on this device.')},
   pwopen:()=>{const f=$('pwform');if(f)f.classList.toggle('hidden')},
+  codeopen:()=>{const f=$('codeform');if(f)f.classList.toggle('hidden')},codeget:async()=>{try{const r=await apiCall('/api/recovery',{method:'POST',body:{}});NET.user=r.user;showCode(r.code);window.scrollTo(0,0)}catch(x){toast(x.msg)}render()},
+  codecopy:async()=>{try{await navigator.clipboard.writeText(NET.newCode);toast('Copied.')}catch(e){toast('Couldn’t copy. Select the code and copy it by hand.')}},codedone:()=>{showCode(null);render()},
   oauth:el=>oauthGo(el.dataset.p,el.dataset.m),forgot:()=>{NET.forgot=!NET.forgot;render()},oauthcancel:()=>{NET.oauth=null;NET.authErr='';render()},resetskip:()=>{NET.resetTok=null;NET.authErr='';render()},
   unlink:async el=>{try{const r=await apiCall('/api/unlink',{method:'POST',body:{id:el.dataset.id}});NET.user=r.user;toast('Unlinked.')}catch(x){toast(x.msg)}render()},
   keeplocal:async()=>{NET.conflict=null;await pushSave();toast('Kept this device’s save. Your account now has it too.');render()},

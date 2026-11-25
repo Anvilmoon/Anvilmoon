@@ -41,7 +41,23 @@ function userFrom(R) {
 const cleanName = (v, fallback = 'Unknown') => (String(v || '').normalize('NFC').replace(/[^\p{L}\p{N} .\-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 24) || fallback);
 const publicUser = (u) => ({ id: u.id, username: u.username, rating: u.rating, wins: u.wins, losses: u.losses, created: u.created });
 // what an account sees about itself: also whether it has a password and which Discord / Google sign-ins are linked
-const selfUser = (u) => ({ ...publicUser(u), hasPw: !!u.pass, links: Object.entries(u.links || {}).map(([k, l]) => ({ id: k, providers: l.providers, name: l.name })) });
+const selfUser = (u) => ({ ...publicUser(u), hasPw: !!u.pass, hasCode: !!u.rc, links: Object.entries(u.links || {}).map(([k, l]) => ({ id: k, providers: l.providers, name: l.name })) });
+
+// ---------------------------------------------------------------- recovery codes
+// A one-off code the player keeps somewhere safe. Username + code lets them choose a new password. Only a hash is stored.
+const RC_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const codeNorm = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+function newCode(u) {
+  const b = crypto.randomBytes(16); let c = '';
+  for (let i = 0; i < 16; i++) c += RC_ABC[b[i] % RC_ABC.length] + (i % 4 === 3 && i < 15 ? '-' : '');
+  u.rc = tokenHash(codeNorm(c)); markDirty();
+  return c;
+}
+function checkCode(code, stored) {
+  if (!stored) return false;
+  const a = Buffer.from(tokenHash(codeNorm(code)), 'hex'), b = Buffer.from(String(stored), 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 // ---------------------------------------------------------------- Discord and Google sign-in
 // Supabase Auth runs the Discord / Google sign-in and hands the browser a signed token. Here that token is checked and
@@ -332,7 +348,8 @@ async function api(tx, R) {
     if (db.names[name.toLowerCase()]) return fail(409, 'That username is taken.');
     const user = { id: id('u'), username: name, pass: hashPw(String(password)), created: now(), rating: 1000, wins: 0, losses: 0 };
     db.users[user.id] = user; db.names[name.toLowerCase()] = user.id; markDirty();
-    return ok({ token: newSession(user.id), user: selfUser(user) });
+    const code = newCode(user);
+    return ok({ token: newSession(user.id), user: selfUser(user), code });
   }
   if (p === '/api/login' && m === 'POST') {
     if (throttled(ip)) return fail(429, 'Too many attempts. Wait a minute and try again.');
@@ -365,6 +382,25 @@ async function api(tx, R) {
     }
     return ok({ ok: true, user: selfUser(u) });
   }
+  // a new recovery code for the signed-in account (the old one stops working)
+  if (p === '/api/recovery' && m === 'POST') {
+    if (!u) return NEED;
+    if (u.pass && !checkPw(String(q.password || ''), u.pass)) return fail(401, 'Your password isn’t right.');
+    const code = newCode(u);
+    return ok({ code, user: selfUser(u) });
+  }
+  // forgot the password: username + recovery code sets a new one
+  if (p === '/api/recover' && m === 'POST') {
+    if (throttled(ip)) return fail(429, 'Too many attempts. Wait a minute and try again.');
+    const key = String(q.username || '').trim().toLowerCase(), user = db.users[db.names[key]];
+    if (!TESTING && limited('rc:' + key, 5, 3600e3)) return fail(429, 'Too many attempts on this account. Wait an hour and try again.');
+    if (!user || !checkCode(q.code, user.rc)) return fail(401, 'That username and recovery code don’t match.');
+    if (String(q.next || '').length < 8) return fail(400, 'Passwords need at least 8 characters.');
+    user.pass = hashPw(String(q.next));
+    for (const [k, v] of Object.entries(db.sessions)) if (v.uid === user.id) delete db.sessions[k];
+    const code = newCode(user);   // each code works once, so a fresh one is handed back
+    return ok({ token: newSession(user.id), user: selfUser(user), code });
+  }
   if (p === '/api/oauth' && m === 'POST') {
     if (throttled(ip)) return fail(429, 'Too many attempts. Wait a minute and try again.');
     const who = await oauthWho(q.access_token);
@@ -386,7 +422,8 @@ async function api(tx, R) {
     if (!TESTING && (limited('reg:' + ip, 3, 3600e3) || limited('reg:all', 60, 3600e3))) return fail(429, 'Too many new accounts from here. Try again later.');
     const user = { id: id('u'), username: name, pass: null, created: now(), rating: 1000, wins: 0, losses: 0 };
     db.users[user.id] = user; db.names[name.toLowerCase()] = user.id; note(user);
-    return ok({ token: newSession(user.id), user: selfUser(user), created: true });
+    const code = newCode(user);
+    return ok({ token: newSession(user.id), user: selfUser(user), created: true, code });
   }
   if (p === '/api/unlink' && m === 'POST') {
     if (!u) return NEED;
