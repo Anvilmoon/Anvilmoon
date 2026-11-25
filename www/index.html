@@ -2111,7 +2111,7 @@ function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPic
       <p class="cls"><b>${CLASSES.war.n}</b>: ${CLASSES.war.d}</p>
       <button class="btn go" type="submit">Create smith</button></form></div>`+SETTINGS_PLATE()+`</section>`;
   const o=classOffer(c),pctNow=Math.floor(armoryProgress().got/armoryProgress().goals*100);
-  const cards=CK.map(k=>{const has=c.classes.includes(k),cur=c.cls===k,n=typesOf(k).length,found=new Set(allBlades().filter(b=>b.status!=='pending'&&b.status!=='stock'&&TYPES[b.type]&&TYPES[b.type].c===k).map(b=>b.type)).size;
+  const cards=[c.cls,...CK.filter(k=>k!==c.cls)].map(k=>{const has=c.classes.includes(k),cur=c.cls===k,n=typesOf(k).length,found=new Set(allBlades().filter(b=>b.status!=='pending'&&b.status!=='stock'&&TYPES[b.type]&&TYPES[b.type].c===k).map(b=>b.type)).size;
     return `<article class="smith clscard ${cur?'cur':''} ${has?'':'locked'}"><h2>${CLASSES[k].n}</h2><p class="cls">${CLASSES[k].d}</p><p class="fine clsfound">${found} of ${n} blades found</p>
       ${cur?'<span class="inuse">At the forge</span>':has?`<button class="btn go" data-action="clsswitch" data-k="${k}">Switch to ${CLASSES[k].n}</button>`:
         `<p class="clsneed"><span class="${o.ok?'met':'unmet'}">Armory ${Math.round(o.need*100)}% complete${o.ok?'':` (${pctNow}% now)`}</span><span class="${o.afford?'met':'unmet'}">${fmt(o.cost)} coins</span></p><button class="btn" data-action="clslearn" data-k="${k}" data-confirm="1" ${o.ok&&o.afford?'':'disabled'}>Learn for ${fmt(o.cost)}c</button>`}</article>`}).join('');
