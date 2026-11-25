@@ -1065,7 +1065,8 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 .rackhandle{display:none}
 @media (min-width:761px){.rackhandle{display:flex;align-items:center;gap:8px;position:fixed;bottom:0;left:calc(186px + (100vw - 186px)/2);transform:translateX(-50%);z-index:9;background:var(--plate2);color:var(--ash);font:700 18px var(--body);padding:9px 44px 10px 36px;border:3px solid var(--ink);border-bottom:0;box-shadow:inset 3px 3px 0 var(--bev-hi);cursor:pointer}
   .rackhandle:hover{color:var(--straw)}.rackhandle .pxico{width:26px;height:26px;background-size:26px 26px;filter:none}.rackhandle .rackn{color:var(--straw)}.rharrow{color:var(--straw);font-size:13px}
-  .drawerbg,.drawer{left:186px!important}main{padding-bottom:64px}}
+  .drawerbg,.drawer{left:186px!important;top:var(--hh,74px)!important}main{padding-bottom:64px}
+  .dspace{flex-basis:8vh}.dpanel{padding:8px 22px 14px}.dpanel .rackbar{margin-bottom:8px;row-gap:6px}.dpanel>.platehead{position:absolute;right:22px;top:10px;margin:0;z-index:2}.dpanel>.platehead h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.dpanel>.rackbar{padding-right:84px}.dpanel .slotn{height:34px}.dpanel .slot{gap:1px;padding-bottom:8px}}
 @media (max-width:760px){header{min-height:0!important;align-items:flex-start!important}.mark{margin-top:2px!important}button.who{max-width:138px;top:calc(max(6px,env(safe-area-inset-top)) + 36px)!important}#hud{padding:0 40px 0 0!important}}
 .homenext{display:flex;gap:16px;align-items:center;background:var(--plate);border:3px solid var(--straw);padding:16px 18px;margin:14px 0 8px}
 .homenext>.pxico{width:48px;height:48px;background-size:48px 48px;filter:none;flex:none}.homenext>div{flex:1;min-width:0}.homenext h2{margin:2px 0 4px;font-size:22px}.homenext p{margin:0;color:var(--mute)}.homenext .btn{flex:none}
@@ -1830,7 +1831,7 @@ const stock=(k,v,extra='')=>`<span class="stock" title="${MATN[k]}"><i class="px
 function renderHUD(){setTimeout(renderSync,0);if(needAcct()){$('hud').innerHTML='<span class="who">Not signed in</span><span class="stocks"></span>';return}const c=C();if(!c){$('hud').innerHTML=`<span class="who">No smith yet</span><span class="stocks"></span><span class="hbtns"><button class="hico" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button></span>`;return}tickFuel();
   const ft=c.fuel<FUEL_MAX?`<span class="tick" title="Time until your next energy">${(()=>{const r=Math.ceil((FUEL_MS-(Date.now()-c.fuelTs))/1000);return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
   $('hud').innerHTML=`<button class="who" data-action="tab" data-tab="chars" title="Your smith"><b>${c.name}</b><span class="whocls"> the ${CLASSES[c.cls].n}</span></button><span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}</span><span class="hbtns"><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
-function renderTabs(){const c=needAcct()?null:C();
+function renderTabs(){try{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px')}catch(e){}const c=needAcct()?null:C();
   if(A.tab==='rack'){UI.rack=true;A.tab='forge'}
   if(!['home','forge','workshop','market','auction','arena','chars','armory','records','hall','tasks'].includes(A.tab)||(!c&&!['chars','hall'].includes(A.tab)))A.tab=c?(gsOn()?'home':'forge'):'chars';if(!c)UI.more=false;
   $('tabs').innerHTML=c?navHTML():'';
@@ -2076,7 +2077,7 @@ function renderDrawer(){const c=C(),fab=$('rackfab'),dr=$('drawer');if(!fab||!dr
   RACK.html=html;dr.innerHTML=html;const nd=dr.querySelector('.drawer');if(fresh)nd.classList.add('opening');else{const dp=nd.querySelector('.dpanel');if(dp&&oldH)dp.style.minHeight=oldH+'px';nd.scrollTop=top}
   if(foc){const f=nd.querySelector(`[data-rack="${foc}"]`);if(f){f.focus({preventScroll:true});if(f.type==='search'){try{f.setSelectionRange(f.value.length,f.value.length)}catch(e){}}}}else if(focId&&focId.startsWith('bf-')){const f=$(focId);if(f)f.focus({preventScroll:true})}}
 // Rack drawing scale: pixels per drawing unit (2 units = 1 cm), and the shelf height a blade has to clear before it pokes out.
-const RACK_PX={desk:.66,phone:.5,baseD:230,baseP:190};
+const RACK_PX={desk:.4,phone:.5,baseD:138,baseP:190,hallD:.66,hallB:230};
 function vRack(){UI.rack=true;return vForge()}
 // Bulk selling: filters choose which blades in a stack are ticked; the player can tick or untick any of them.
 // Kept (locked) blades and keepsakes are never included. Records only when the player asks for them.
@@ -3218,7 +3219,7 @@ async function openHall(name){if(A.tab!=='hall')window.__hallFrom=A.tab;const me
 const hallLink=name=>location.origin+'/?smith='+encodeURIComponent(name);
 // names of real players become links to their hall, with their badge beside them
 function smithName(name,plain){const sm=REC.smiths&&REC.smiths[name];if(!sm)return esc(name);return `${plain?'':portrait(sm.l,name,'sm')}<button class="namelink" data-action="hall" data-u="${esc(name)}" title="${sm.t?esc(sm.t)+'. ':''}Open ${esc(name)}’s hall">${esc(name)}</button>${plain?'':badgeChip(sm.b)}`}
-function hallWall(blades){if(!blades.length)return '<p class="empty">No blades on show yet.</p>';const phone=matchMedia('(max-width:760px)').matches,maxPx=phone?300:420,longest=Math.max(...blades.map(b=>bladeDims(b).W)),P=Math.min(phone?RACK_PX.phone:RACK_PX.desk,maxPx/longest),BASE=Math.round(longest*P)+14;
+function hallWall(blades){if(!blades.length)return '<p class="empty">No blades on show yet.</p>';const phone=matchMedia('(max-width:760px)').matches,maxPx=phone?300:420,longest=Math.max(...blades.map(b=>bladeDims(b).W)),P=Math.min(phone?RACK_PX.phone:RACK_PX.hallD,maxPx/longest),BASE=Math.round(longest*P)+14;
   return `<div class="rackwall hallwall">${blades.map(b=>{const wpx=Math.round(bladeDims(b).W*P);return `<div class="slot ${b.shine?'sh-'+b.shine:''} ${b.moon?'sh-moon':''} ${isGift(b)?'isgift'+giftCls(b):''}" style="--rc:${rarC(b)};--base:${BASE}px">
     <div class="vart"><div class="vrot" style="--w:${wpx}px">${bladeSVG(b,{noRuler:1,minW:0})}</div></div><span class="slotn">${isGift(b)?'The<br>'+TYPES[b.type].n:`${RAR[b.rarity].n} ${vr(b).n}<br>${TYPES[b.type].n}`}</span><span class="slots"><span>${b.len} cm</span><span>grade ${b.grade}</span></span><span class="slotsh">${b.shine||b.moon?shineTag(b):''}</span></div>`}).join('')}</div>`}
 function vHall(){const meName=NET.user&&NET.user.username,own=!HALL.user;
