@@ -1183,40 +1183,216 @@ body.rackopen{overflow:visible!important}.drawer{overscroll-behavior:contain}
 <div id="rackfab"></div><div id="drawer"></div><div id="mailbox"></div><div id="boardpop"></div>
 <div id="overlay" class="hidden"></div>
 <div id="toast" aria-live="polite"></div>
-<script src="js/rules.js"></script>
 <script>
 // =============== DATA ===============
-// The game's numbers and rules live in js/rules.js, which the server uses too (it is the referee). Their names:
-const {CLASSES,CK,TYPES,TK,GIFTS,WT,RAR,ANVILS,HAMMERS,SIZES,SHINE,QUENCH,PRICES,SELLMAT,MERCHANT,TRADER,MATN,FUEL_MAX,FUEL_MS,BASE_COIN,SLOT_UNLOCK,PATRONS,NAMES,
-  mulberry,sizeIdx,typesOf,isGift,GIFT_C,GIFT_DATE,giftDate,giftWho,giftCls,GIFT_PAL,rarN,rarC,CLASS_COST,SLOT_PCT,LABOR_MAX,DIG_MS,RECIPES,knows,MEALS,ENERGY_CAP,FIND,
-  gradeMult,sizeMult,vr,bname,salvYield,yieldStr,exists}=AMR;
+const CLASSES={
+  war:{n:'Warsmith',d:'Heavy straight steel. Seax to Zweihänder.',vars:[{n:'Iron',c:'#8a8f96'},{n:'Bronze',c:'#c58b4a'},{n:'Blackened',c:'#26252b',rare:1}]},
+  shadow:{n:'Shadowsmith',d:'Quiet, curved and wicked. Stiletto to reaping scythe.',vars:[{n:'Smoked',c:'#5a5560'},{n:'Serrated',c:'#9a9aa5'},{n:'Bone-handled',c:'#e8dcc0',rare:1}]},
+  arcane:{n:'Arcanesmith',d:'Rune-carved blades with an element. Rune dagger to staff-blade.',vars:[{n:'Fire',c:'#ff6a2a',glow:1},{n:'Frost',c:'#7fd8ff',glow:1},{n:'Storm',c:'#c7b8ff',glow:1},{n:'Void',c:'#b04cff',glow:1,rare:1}]},
+  sanct:{n:'Sanctum Smith',d:'Holy and ceremonial blades. Relic dagger to cathedral sword.',vars:[{n:'Silver',c:'#dfe6ee'},{n:'Gold',c:'#e9c35a'},{n:'Relic-wrapped',c:'#b98c62',rare:1}]},
+};
+const CK=Object.keys(CLASSES);
+// 100 blades: 25 per class (7 Light, 7 Medium, 6 Heavy, 5 Massive). Every blade has its own silhouette:
+// blade shape + guard + pommel + grip, plus width (w), grip length (g), fullers and curve (cv).
+const TYPES=(()=>{const T={};const add=(c,rows)=>rows.forEach(([k,n,wt,shape,w,g,guard,pommel,grip,fuller=0,cv])=>{T[k]={n,c,wt,shape,w,g,guard,pommel,grip,fuller,...(cv!=null?{cv}:{})}});
+add('war',[
+ ['seax','Seax','L','seax',16,.38,'bolster','cap','wood'],
+ ['brokenseax','Broken-back Seax','L','clip',15,.36,'bolster','nut','wood'],
+ ['scramasax','Scramasax','L','messer',17,.34,'bolster','disc','leather'],
+ ['warknife','War Knife','L','clip',13,.4,'cross','wheel','leather'],
+ ['rondel','Rondel Dagger','L','spike',9,.5,'disc','disc','wood'],
+ ['baselard','Baselard','L','straight',12,.42,'lugs','fishtail','leather',1],
+ ['dirk','Highland Dirk','L','needle',10,.45,'bolster','orb','wood'],
+ ['broadsword','Broadsword','M','broad',15,.22,'cross','wheel','leather',1],
+ ['armingsword','Arming Sword','M','straight',12,.22,'cross','nut','leather',1],
+ ['vikingsword','Viking Sword','M','broad',15,.2,'collar','bell','wrap',1],
+ ['spatha','Spatha','M','rounded',13,.2,'collar','orb','wood',1],
+ ['gladius','Gladius','M','waisted',16,.25,'tsuba','orb','bone'],
+ ['falchion','Falchion','M','falchion',18,.22,'cross','disc','leather'],
+ ['messer','Messer','M','messer',14,.28,'cross','cap','wood'],
+ ['claymore','Claymore','H','straight',16,.3,'quillons','wheel','leather',1],
+ ['longsword','Longsword','H','straight',13,.3,'cross','wheel','wrap',1],
+ ['bastard','Bastard Sword','H','broad',14,.28,'cross','fishtail','leather',1],
+ ['greatmesser','Great Messer','H','messer',15,.32,'cross','cap','wood'],
+ ['warsword','War Sword','H','waisted',15,.3,'cross','nut','leather',1],
+ ['executioner','Executioner’s Sword','H','rounded',19,.3,'cross','disc','leather'],
+ ['zwei','Zweihänder','X','straight',18,.32,'big','nut','leather',1],
+ ['flamberge','Flamberge','X','flame',15,.32,'big','wheel','leather'],
+ ['greatsword','Greatsword','X','broad',18,.3,'big','bell','wrap',1],
+ ['montante','Montante','X','straight',15,.34,'ring','orb','leather',1],
+ ['highland','Highland Greatsword','X','waisted',16,.32,'big','orb','wrap',1],
+]);
+add('shadow',[
+ ['stiletto','Stiletto','L','spike',9,.45,'disc','orb','leather'],
+ ['kris','Kris','L','kris',11,.4,'lugs','cap','wood'],
+ ['karambit','Karambit','L','karambit',12,.45,'none','ring','wrap'],
+ ['tanto','Tanto','L','tanto',11,.42,'tsuba','cap','wrap'],
+ ['misericorde','Misericorde','L','needle',9,.45,'cross','star','leather'],
+ ['throwingknife','Throwing Knife','L','leaf',11,.35,'none','ring','leather'],
+ ['fang','Fang Dagger','L','clip',12,.4,'talon','fishtail','bone'],
+ ['hookblade','Hookblade','M','kukri',15,.32,'bolster','cap','wood'],
+ ['wakizashi','Wakizashi','M','katana',10,.36,'tsuba','cap','wrap',0,.6],
+ ['khopesh','Khopesh','M','khopesh',14,.28,'collar','bell','wood'],
+ ['shotel','Shotel','M','shotel',10,.3,'none','nut','wood'],
+ ['sicklesword','Sickle Sword','M','khopesh',12,.3,'bolster','orb','bone',0,.6],
+ ['kopis','Kopis','M','falchion',16,.26,'talon','nut','leather'],
+ ['talwar','Talwar','M','saber',12,.24,'cross','disc','wrap',1,.7],
+ ['nightsaber','Nightsaber','H','saber',13,.26,'sguard','cap','leather',1,.9],
+ ['scimitar','Scimitar','H','saber',15,.22,'crescent','nut','leather',0,1.3],
+ ['shamshir','Shamshir','H','saber',11,.24,'quillons','fishtail','leather',0,1.7],
+ ['dao','Dao','H','falchion',17,.26,'tsuba','ring','wrap',0,.5],
+ ['yatagan','Yatagan','H','kukri',11,.24,'none','fishtail','bone',0,.8],
+ ['katana','Katana','H','katana',10,.32,'tsuba','nut','wrap',0,.8],
+ ['scythe','Reaping Scythe','X','crescent',22,.75,'collar','cap','shaft'],
+ ['odachi','Ōdachi','X','katana',11,.34,'tsuba','orb','wrap',0,.9],
+ ['zanbato','Zanbatō','X','cleaver',20,.38,'collar','cap','wrap'],
+ ['nagamaki','Nagamaki','X','katana',11,.7,'collar','ring','shaft',0,.7],
+ ['grimcrescent','Grim Crescent','X','shotel',18,.55,'talon','gem','shaft',0,1.2],
+]);
+add('arcane',[
+ ['runedagger','Rune Dagger','L','leaf',11,.42,'crescent','orb','leather'],
+ ['athame','Athame','L','straight',10,.42,'crescent','crystal','bone'],
+ ['spellknife','Spellknife','L','clip',11,.4,'star','crystal','leather'],
+ ['crystalshiv','Crystal Shiv','L','crystal',9,.45,'none','gem','wrap'],
+ ['sigildagger','Sigil Dagger','L','kris',10,.42,'star','orb','leather'],
+ ['wandblade','Wandblade','L','needle',9,.6,'collar','crystal','wood'],
+ ['wardknife','Ward Knife','L','leaf',12,.4,'ring','star','bone'],
+ ['spellsword','Spellsword','M','straight',11,.24,'swept','crystal','leather',1],
+ ['glyphblade','Glyphblade','M','waisted',12,.24,'swept','gem','wrap'],
+ ['leyblade','Leyblade','M','lightning',11,.24,'crescent','crystal','wrap'],
+ ['starsaber','Star Saber','M','saber',11,.24,'star','star','leather',0,.8],
+ ['arcsword','Arc Sword','M','lightning',12,.22,'star','orb','leather'],
+ ['hexblade','Hexblade','M','kris',12,.26,'crescent','gem','bone'],
+ ['moonfang','Moonfang','M','shotel',11,.28,'crescent','orb','wrap',0,.7],
+ ['runeblade','Runeblade','H','flame',15,.27,'crescent','crystal','leather',1],
+ ['stormbrand','Stormbrand','H','lightning',14,.27,'quillons','crystal','leather'],
+ ['voidcleaver','Voidcleaver','H','cleaver',19,.3,'crescent','gem','wrap'],
+ ['prismsword','Prism Sword','H','crystal',15,.28,'star','crystal','wrap'],
+ ['aetherblade','Aether Blade','H','leaf',15,.27,'swept','orb','leather'],
+ ['wyrmtongue','Wyrmtongue','H','flame',14,.28,'talon','gem','bone'],
+ ['staffblade','Staff-blade','X','leaf',13,1,'collar','crystal','shaft'],
+ ['archmage','Archmage Greatsword','X','straight',16,.32,'star','gem','leather',1],
+ ['sunderstaff','Sunderstaff','X','glaive',15,.9,'collar','gem','shaft'],
+ ['obelisk','Obelisk Blade','X','crystal',19,.32,'big','crystal','leather'],
+ ['astralglaive','Astral Glaive','X','glaive',14,.8,'star','crystal','shaft'],
+]);
+add('sanct',[
+ ['relicdagger','Relic Dagger','L','straight',12,.4,'cross','disc','leather',1],
+ ['pilgrimknife','Pilgrim’s Knife','L','leaf',11,.42,'cross','cross','wood'],
+ ['vowdagger','Vow Dagger','L','spike',10,.45,'cross','bell','leather'],
+ ['rosarystiletto','Rosary Stiletto','L','needle',7,.48,'ring','cross','leather'],
+ ['chapelknife','Chapel Knife','L','clip',12,.4,'cross','orb','bone'],
+ ['seraphfang','Seraph Fang','L','leaf',11,.42,'wings','gem','wrap'],
+ ['martyrdirk','Martyr’s Dirk','L','spike',9,.45,'halo','disc','wrap'],
+ ['holyblade','Holy Blade','M','waisted',13,.25,'cross','cross','leather',1],
+ ['templar','Templar Sword','M','broad',14,.22,'cross','cross','wrap',1],
+ ['paladin','Paladin’s Blade','M','straight',13,.24,'wings','cross','leather',1],
+ ['oathsword','Oath Sword','M','straight',12,.24,'halo','cross','wrap',2],
+ ['vigilsword','Vigil Sword','M','rounded',13,.22,'cross','bell','leather',1],
+ ['cherubblade','Cherub Blade','M','leaf',14,.24,'wings','orb','leather'],
+ ['lanternsword','Lantern Sword','M','waisted',13,.24,'ring','bell','wrap'],
+ ['crusader','Crusader Sword','H','broad',16,.27,'cross','disc','leather',1],
+ ['mercy','Sword of Mercy','H','blunt',15,.27,'cross','disc','wrap',1],
+ ['inquisitor','Inquisitor’s Blade','H','straight',14,.28,'star','cross','bone',1],
+ ['archangel','Archangel Sword','H','straight',15,.28,'wings','gem','wrap',2],
+ ['reliquary','Reliquary Sword','H','broad',15,.28,'halo','bell','leather',1],
+ ['judgment','Judgment Blade','H','rounded',17,.28,'wings','cross','leather'],
+ ['cathedral','Cathedral Sword','X','straight',19,.32,'halo','disc','leather',2],
+ ['seraphgreat','Seraph Greatsword','X','flame',16,.32,'wings','cross','leather'],
+ ['sanctifier','Sanctifier','X','broad',18,.32,'big','cross','leather',2],
+ ['pontiff','Pontiff’s Greatsword','X','straight',17,.33,'big','gem','wrap',2],
+ ['dawnbringer','Dawnbringer','X','waisted',17,.33,'halo','star','leather',2],
+]);
+T.crusader.wide=1;return T})();
+
+const TK=Object.keys(TYPES);
+// Commemorative gift blades: not forgeable, not part of any class or the Armory.
+const GIFTS={testsword:{n:'Test Sword',c:'gift',wt:'M',shape:'straight',w:23,g:.26,guard:'wings',pommel:'gem',grip:'wrap',fuller:1,gift:'TEST 18/11/2026',d:'Given to everyone who tested Anvilmoon, 18 November 2026.'},
+  sweetchilli:{n:'Sweet Chilli',c:'gift',wt:'M',shape:'flame',w:24,g:.24,guard:'talon',pommel:'orb',grip:'wrap',fuller:0,gift:'CHILLI',date:'19/11/2026',who:'Made for sweetchilli',
+    pal:{st:['#ff7a3c','#b3170f','#e0401f'],metal:'#5aa83c',grip:'#5c2a14',gem:'#ffd23f',glow:[255,110,40],c:'#ff6a3d',ink:[255,214,90],shadow:[70,8,6],rgb:'255,106,61'}}};
+Object.assign(TYPES,GIFTS);
+const typesOf=c=>TK.filter(k=>TYPES[k].c===c);
+const isGift=b=>!!(b&&TYPES[b.type]&&TYPES[b.type].gift);
+const GIFT_C='#5fd0b8',GIFT_DATE='18/11/2026';
+const giftDate=b=>b.gdate||TYPES[b.type].date||GIFT_DATE,giftWho=b=>TYPES[b.type].who||'Given to everyone who tested Anvilmoon',giftCls=b=>isGift(b)?' g-'+b.type:'';
+const GIFT_PAL={st:['#d9f2ea','#3f8f86','#9fd9cc'],metal:'#e8bf52',grip:'#24423f',gem:'#7ff5d8',glow:[95,220,190],c:'#5fd0b8'};
+const rarN=b=>isGift(b)?'One of a kind':RAR[b.rarity].n,rarC=b=>isGift(b)?((TYPES[b.type].pal||GIFT_PAL).c):RAR[b.rarity].c;
+const WT={L:{n:'Light',iron:1,coal:1,strikes:4,v:1},M:{n:'Medium',iron:2,coal:1,strikes:6,v:1.8},H:{n:'Heavy',iron:4,coal:2,strikes:8,v:3},X:{n:'Massive',iron:6,coal:3,strikes:10,v:4.5}};
+const RAR=[
+  {n:'Common',c:'#b7ada0',vb:0,salv:{}},
+  {n:'Fine',c:'#8fbf7a',vb:1,salv:{coal:1}},
+  {n:'Masterwork',c:'#6ea0d8',vb:3,salv:{damascus:1}},
+  {n:'Heirloom',c:'#b08ad8',vb:8,salv:{damascus:2,dust:1}},
+  {n:'Legendary',c:'#f0c35a',vb:25,salv:{damascus:3,dust:3}},
+];
+const ANVILS=[
+  {n:'Rough Anvil',t:[70,22,6,1.8,.2],d:'Where everyone starts.'},
+  {n:'Iron Anvil',t:[60,25,10,4,1],cost:{coin:80,iron:15},d:'A proper anvil. Reachable in your first session.'},
+  {n:'Steel Anvil',t:[48,30,15,5.5,1.5],cost:{coin:400,iron:30,damascus:4},d:'Fewer Commons, more Masterworks.'},
+  {n:'Damascus Anvil',t:[38,32,19,8.5,2.5],cost:{coin:1500,damascus:12,shards:2},d:'Pattern-welded and heavy.'},
+  {n:'Dragonbone Anvil',t:[30,33,22,11,4],cost:{coin:5000,damascus:30,shards:8},d:'The best rarity table in the game.'},
+];
+const HAMMERS={
+  worn:{n:'Worn Hammer',zone:1,cool:1,d:'Basic timing window. Never breaks.'},
+  smith:{n:"Smith's Hammer",zone:1.3,cool:.85,dur:50,cost:{coin:120,iron:10,damascus:1},repair:{coin:30},d:'30% wider sweet spot. Each strike cools the metal 15% less.'},
+  master:{n:'Master Hammer',zone:1.6,cool:.7,dur:50,cost:{coin:900,damascus:6,shards:1},repair:{coin:150},d:'60% wider sweet spot. Each strike cools the metal 30% less.'},
+};
+const SIZES=[
+  {n:'Runt',p:1,a:8,b:30,vb:1.5},{n:'Small',p:20,a:30,b:70,vb:0},{n:'Standard',p:55,a:70,b:120,vb:0},{n:'Large',p:20,a:120,b:160,vb:.3},
+  {n:'Huge',p:3.49,a:160,b:220,vb:1},{n:'Titan',p:.5,a:220,b:300,vb:4},{n:'Colossal',p:.01,a:300,b:null,vb:30},
+];
+const SHINE={temp:{n:'Tempered',p:200,test:10,vb:3},star:{n:'Starforged',p:2000,test:40,vb:40}};
+const QUENCH={oil:{n:'Oil',d:'Safe: 3% crack risk, no bonus',risk:.03,bonus:0},brine:{n:'Brine',d:'10% crack risk, +6 grade',risk:.10,bonus:6},water:{n:'Water',d:'22% crack risk, +12 grade',risk:.22,bonus:12}};
+const PRICES={iron:4,coal:3,fuel:3,damascus:45};
+const SELLMAT={damascus:22,shards:100};const MERCHANT=.75,TRADER=1.2;
+const MATN={iron:'Iron',coal:'Coal',fuel:'Energy',damascus:'Damascus',dust:'Star-dust',shards:'Star-shards',coin:'Coin'};
+const FUEL_MAX=10,FUEL_MS=180000,BASE_COIN=6;
+const SLOT_UNLOCK=[0,30,100,250];
+const PATRONS=['Lady Wrenfield','Captain Orsk','The Gilded Guild','Brother Aldous','Quartermaster Vey','Duke Harrow','Mira of the Docks','The Iron Abbey'];
+const NAMES=['Edda','Rowan','Hal','Brin','Maren','Tobin','Senna','Garrick','Wren','Ostra'];
+
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function sizeIdx(len){for(let i=SIZES.length-1;i>=0;i--)if(len>=SIZES[i].a)return i;return 0}
 
 // =============== STATE ===============
-// A is this device's copy of the save. When signed in, the real save is on the server: A is rebuilt from the server's
-// copy after each answer (see "the save on the server"), plus a few things only this device decides (LOCAL_KEYS).
 const KEY='anvilmoon-save-v1';const DEV=!!window.ANVILMOON_DEV;let ENT=null;
-const LOCAL_KEYS=['tab','testOdds','tourDone','tutDone','tipsOff','rackTall'],SMITH_LOCAL=['sel','selW','selBy'];
-function freshAcct(){return{...AMR.freshAcct(),testOdds:false,tab:'chars'}}
+function freshAcct(){return{slots:[null,null,null,null],active:-1,serial:0,totalForged:0,testOdds:false,tab:'chars'}}
+function newChar(name,cls){const d={};TK.forEach(k=>d[k]=1);const c={cid:'s'+Math.random().toString(36).slice(2,10),name,cls,coin:80,iron:12,coal:8,fuel:10,damascus:0,dust:0,shards:0,fuelTs:Date.now(),anvil:0,hammer:'worn',hammers:{},blades:[],demand:d,commissions:[],trader:[],forged:0,sel:typesOf(cls)[0]};return c}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.slots)return s}catch(e){}return null}
 function writeLocal(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
 // wealth is coin in hand only (blades don't count)
 function wealthNow(){let w=0;(A.slots||[]).forEach(c=>{if(c)w+=Math.floor(c.coin||0)});return Math.round(w)}
-// keeps this device's copy in local storage, so the game opens instantly next time. Nothing is uploaded: changes reach
-// the server as actions.
-function save(){ENT=null;try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){toast('Your progress couldn’t be saved on this device. It may be out of storage.')}}
+function save(){ENT=null;A.at=Date.now();try{A.wealth=wealthNow()}catch(e){}try{if(C())A.hall=hallSummary()}catch(e){}try{const cur=load();if(cur&&(cur.rev||0)>(A.rev||0)&&typeof mergeSaves==='function')A=mergeSaves(A,cur)}catch(e){}
+  A.rev=(A.rev||0)+1;if(typeof queueSave==='function')queueSave();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){toast('Your progress couldn’t be saved. The device may be out of storage.')}}
 let A=load()||freshAcct();if(!DEV)A.testOdds=false;
 A.slots.forEach(c=>c&&c.blades.forEach(b=>{if(b.status==='pending')b.status=b.cracked?'salvaged':'owned'}));
 let F=null,UID=0,revealTok=0,revealId=null;
-const C=()=>AMR.smithOf(A);
-const clsN=AMR.clsN;
-function classOffer(c){return AMR.classOffer(A,c)}
-// switching class is an action; which blade you had picked for each class is remembered on this device
-function switchClass(k,learned){const c=C();if(!c||F||revealId||!c.classes.includes(k)||(c.cls===k&&!learned))return;c.selBy=c.selBy||{};c.selBy[c.cls]=c.sel;
-  if(!learned&&!actSync('classSwitch',{k}))return;
-  const c2=C();c2.selBy=c2.selBy||{};c2.sel=c2.selBy[k]&&TYPES[c2.selBy[k]]?c2.selBy[k]:typesOf(k)[0];c2.selW=TYPES[c2.sel].wt;if(!knows(c2,c2.selW)){c2.sel=typesOf(k)[0];c2.selW=TYPES[c2.sel].wt}
-  UI.armCls=null;UI.recCls=null;A.tab='forge';save();toast(`${c2.name} takes up the ${CLASSES[k].n}’s craft.`);render()}
+// One smith per account. Older saves could hold up to four; they are folded into the one in use, and every class they had stays unlocked.
+const CLASS_COST=[0,150,600,2000];
+function unify(sv){if(!sv||!Array.isArray(sv.slots))return sv;const all=sv.slots.filter(Boolean);if(!all.length){sv.active=-1;return sv}
+  const m=sv.slots[sv.active]||all[0];
+  for(const o of all){if(o===m)continue;
+    for(const k of['coin','iron','coal','damascus','dust','shards','bog','forged'])m[k]=(m[k]||0)+(o[k]||0);
+    m.fuel=Math.max(m.fuel||0,o.fuel||0);m.anvil=Math.max(m.anvil||0,o.anvil||0);
+    m.recipes={...(o.recipes||{}),...(m.recipes||{})};m.hammers=m.hammers||{};for(const[k,h]of Object.entries(o.hammers||{}))if(!m.hammers[k]||(h.dur||0)>(m.hammers[k].dur||0))m.hammers[k]=h;
+    for(const k of Object.keys(m.demand||{}))if(o.demand&&o.demand[k]!=null)m.demand[k]=Math.min(m.demand[k],o.demand[k]);
+    sv.serial=sv.serial||0;const ids=new Set((m.blades||[]).map(b=>b.id));for(const b of o.blades||[]){if(ids.has(b.id))b.id=++sv.serial;ids.add(b.id);m.blades.push(b)}
+    m.classes=[...new Set([...(m.classes||[m.cls]),...(o.classes||[o.cls])])];m.merged=[...new Set([...(m.merged||[]),o.cid,...(o.merged||[])])];m.aka=[...new Set([...(m.aka||[]),o.name,...(o.aka||[])])]}
+  if(!Array.isArray(m.classes)||!m.classes.includes(m.cls))m.classes=[...new Set([m.cls,...(m.classes||[])])];
+  // Every smith now starts as a Warsmith. A smith from before that change keeps its classes and is given Warsmith for free.
+  if(!m.classes.includes('war')){m.classes.push('war');m.freeWar=1}
+  m.selBy=m.selBy||{};
+  if(sv.slots[0]!==m||all.length>1){sv.slots=[m,null,null,null]}sv.active=0;return sv}
+const needsUnify=sv=>{const all=(sv.slots||[]).filter(Boolean);return all.length>1||(all.length===1&&(sv.slots[0]!==all[0]||sv.active!==0||!Array.isArray(all[0].classes)||!all[0].classes.includes('war')))};
+// classes that count towards the price of the next one (the free Warsmith doesn't)
+const clsN=c=>(c.classes||[c.cls]).length-(c.freeWar?1:0);
+const C=()=>{if(needsUnify(A))unify(A);return A.slots[A.active]};
+// A further class opens when the Armory is far enough along, and costs coins to learn.
+function classOffer(c){const n=clsN(c);if((c.classes||[c.cls]).length>=CK.length)return null;const{got,goals}=armoryProgress(),pct=got/goals;return{pct,need:SLOT_PCT[n],cost:CLASS_COST[n],ok:pct>=SLOT_PCT[n],afford:c.coin>=CLASS_COST[n]}}
+function switchClass(k){const c=C();if(!c||F||revealId||!c.classes.includes(k)||c.cls===k)return;c.selBy[c.cls]=c.sel;c.cls=k;c.sel=c.selBy[k]&&TYPES[c.selBy[k]]?c.selBy[k]:typesOf(k)[0];c.selW=TYPES[c.sel].wt;if(!knows(c,c.selW)){c.sel=typesOf(k)[0];c.selW=TYPES[c.sel].wt}
+  UI.armCls=null;UI.recCls=null;A.tab='forge';save();toast(`${c.name} takes up the ${CLASSES[k].n}’s craft.`);render()}
 function learnClass(k){const c=C(),o=c&&classOffer(c);if(!o||c.classes.includes(k)||!CLASSES[k])return;if(!o.ok)return toast(`Your Armory needs to be ${Math.round(o.need*100)}% complete first.`);if(!o.afford)return toast(`You need ${fmt(o.cost)} coins.`);
-  if(!actSync('classLearn',{k}))return;toast(`${CLASSES[k].n} learned.`);switchClass(k,true)}
+  c.coin-=o.cost;c.classes.push(k);save();toast(`${CLASSES[k].n} learned.`);switchClass(k)}
 
 // =============== HELPERS ===============
 const $=id=>document.getElementById(id);
@@ -1224,30 +1400,71 @@ const fmt=n=>Math.round(n).toLocaleString();
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 function toast(m,ms=2800){const t=document.createElement('div');t.className='t';t.innerHTML=m;t.onclick=()=>t.remove();$('toast').appendChild(t);setTimeout(()=>t.remove(),ms)}
 document.addEventListener('focusin',e=>{if(e.target.matches&&e.target.matches('input:not([type=checkbox]):not([type=radio]),textarea'))$('toast').replaceChildren()});
-// the server's clock, as well as this device knows it (every answer from the server carries its time), and the device's time zone
-let SKEW=0;const nowS=()=>Date.now()+SKEW,tzNow=()=>new Date().getTimezoneOffset(),dayNow=()=>AMR.localDay(nowS(),tzNow());
-const today=dayNow;
-// The functions below ask js/rules.js about this save.
-const reqProgress=(c,key)=>AMR.reqProgress(A,c,key),reqMet=(c,r)=>AMR.reqMet(A,c,r);
+const LABOR_MAX=5,DIG_MS=45000,SLOT_PCT=[0,.05,.15,.3];
+const RECIPES={
+  M:{n:'Medium blade pattern',d:'Lets you forge your class’s Medium blade.',cost:{coin:150,iron:10}},
+  H:{n:'Heavy blade pattern',d:'Lets you forge your class’s Heavy blade.',cost:{coin:600,damascus:3},req:'comm',need:5,rt:'Deliver 5 blades you forged to commissions'},
+  X:{n:'Massive blade pattern',d:'Lets you forge your class’s Massive blade.',cost:{coin:2000,damascus:8,shards:1},req:'mw',need:1,rt:'Forge a Masterwork or better yourself'},
+  brine:{n:'Brine quench',d:'10% crack risk, +6 grade.',cost:{coin:100}},
+  water:{n:'Water quench',d:'22% crack risk, +12 grade.',cost:{coin:400},req:'g70',need:10,rt:'Forge 10 blades with a grade of 70 or higher'},
+};
+const knows=(c,k)=>k==='L'||k==='oil'||!!(c.recipes&&c.recipes[k]);
+function reqProgress(c,key){const mine=c.blades.filter(b=>b.forger===c.name&&b.status!=='pending'&&b.status!=='stock');
+  if(key==='comm')return mine.filter(b=>b.status==='commission').length;if(key==='mw')return mine.filter(b=>!b.cracked&&b.rarity>=2).length;if(key==='g70')return mine.filter(b=>!b.cracked&&b.grade>=70).length;return 0}
+const reqMet=(c,r)=>!r.req||reqProgress(c,r.req)>=r.need;
 function gainXP(){}
-function mealsToday(c){return AMR.mealsToday(c,dayNow())}
-function mealPrice(c,k){return AMR.mealPrice(c,k,dayNow())}
-function isNight(){return AMR.isNight(nowS(),tzNow(),A.testOdds)}
-function armoryProgress(){return AMR.armoryProgress(A)}
-function slotsOpen(){return AMR.slotsOpen(A)}
-function laborLeft(c){return AMR.laborLeft(c,dayNow())}
-function isBroke(c){return AMR.isBroke(c)}
-function allBlades(){return AMR.allBlades(A)}
+const MEALS={bread:{n:'Rye bread',e:1,p:4,d:'A heel of dark bread.'},pottage:{n:'Pottage',e:3,p:10,d:'A bowl of thick vegetable stew.'},pie:{n:'Meat pie',e:6,p:18,d:'Mutton and onion under a hard crust.'},feast:{n:'Feast',e:12,p:30,d:'Roast fowl, bread, cheese and a jug of ale.'}};
+const ENERGY_CAP=30;
+function mealsToday(c){return c.meals&&c.meals.d===today()?c.meals.n:0}
+function mealPrice(c,k){return Math.round(MEALS[k].p*(1+.05*mealsToday(c)))}
+function isNight(){if(A.testOdds)return true;const h=new Date().getHours();return h>=20||h<6}
+function rollMoon(){return isNight()&&Math.random()<(A.testOdds?1/3:1/15)}
+function armoryProgress(){const seen=allBlades().filter(b=>b.status!=='pending'&&b.status!=='stock'&&!b.cracked);let goals=0,got=0;
+  CK.forEach(ck=>{const cl=CLASSES[ck];typesOf(ck).forEach(k=>{const bs=seen.filter(b=>b.type===k);goals+=6;got+=[bs.length>0,bs.some(b=>b.rarity===4),bs.some(b=>b.si>=5),bs.some(b=>b.shine==='temp'),bs.some(b=>b.shine==='star'),bs.some(b=>b.moon)].filter(Boolean).length})});return{got,goals}}
+const FIND={found:{n:'first find',r:w=>({coin:Math.round(20*w)})},leg:{n:'first Legendary',r:()=>({damascus:2})},big:{n:'first Titan',r:()=>({damascus:1})},temp:{n:'first Tempered',r:()=>({dust:5})},star:{n:'first Starforged',r:()=>({shards:1})},moon:{n:'first Moonlit',r:()=>({coin:25})}};
+function claimArmory(c){if(!c)return;A.claimed=A.claimed||{};const seen=allBlades().filter(b=>b.status!=='pending'&&b.status!=='stock'&&!b.cracked),got=[];
+  TK.forEach(k=>{const bs=seen.filter(b=>b.type===k);if(!bs.length)return;const w=WT[TYPES[k].wt].v,keys=[['found',1]];
+    if(bs.some(b=>b.rarity===4))keys.push(['leg']);if(bs.some(b=>b.si>=5))keys.push(['big']);if(bs.some(b=>b.shine==='temp'))keys.push(['temp']);if(bs.some(b=>b.shine==='star'))keys.push(['star']);if(bs.some(b=>b.moon))keys.push(['moon']);
+    keys.forEach(([g,i])=>{const key=`${k}:${g}${i??''}`;if(A.claimed[key])return;A.claimed[key]=1;const rw=FIND[g].r(w);for(const[m,v]of Object.entries(rw))c[m]+=v;got.push(`${TYPES[k].n} ${FIND[g].n}: ${yieldStr(rw)}`)})});
+  if(got.length){save();got.slice(0,3).forEach(t=>toast(`Armory reward. ${t}.`,4000));if(got.length>3)toast(`…and ${got.length-3} more Armory rewards.`,4000)}}
+function slotsOpen(){const{got,goals}=armoryProgress(),p=got/goals;return SLOT_PCT.filter(x=>p>=x).length}
+const today=()=>new Date().toDateString();
+function laborLeft(c){if(!c.labor||c.labor.d!==today())return LABOR_MAX;return LABOR_MAX-c.labor.n}
+function isBroke(c){const lightIron=1,lightCoal=1,haveIron=c.iron+(c.bog||0);if(haveIron>=lightIron&&c.coal>=lightCoal)return false;
+  const need=(haveIron<lightIron?PRICES.iron*5:0)+(c.coal<lightCoal?PRICES.coal*5:0);if(c.coin>=need)return false;
+  return c.coin+owned().reduce((a,b)=>a+value(b),0)<need}
+function allBlades(){return A.slots.filter(Boolean).flatMap(c=>c.blades)}
+function exists(b){return['owned','sold','commission','listed'].includes(b.status)&&!b.cracked}
 function owned(){return C().blades.filter(b=>b.status==='owned')}
-function canPay(cost){return AMR.canPay(C(),cost)}
-function costStr(cost){return AMR.costStr(cost)}
-function worth(b){return AMR.worth(b)}
-function value(b,dem,mult=MERCHANT){return AMR.value(b,dem??(C()?C().demand[b.type]:1),mult)}
-// energy refills with time; this only updates the number on screen (the server does the same sum)
-function tickFuel(){const c=C();if(c)AMR.tickFuel(c,nowS())}
+function vr(b){const c=CLASSES[TYPES[b.type].c];return c?c.vars[b.variant||0]:{n:'Commemorative',c:'#5fd0b8'}}
+function bname(b){if(TYPES[b.type]&&TYPES[b.type].gift)return `The ${TYPES[b.type].n}`;return `${b.moon?'Moonlit ':''}${b.shine==='star'?'Starforged ':b.shine==='temp'?'Tempered ':''}${RAR[b.rarity].n} ${vr(b).n} ${TYPES[b.type].n}`}
+function canPay(cost){const c=C();return Object.entries(cost).every(([k,v])=>c[k]>=v)}
+function pay(cost){const c=C();for(const[k,v]of Object.entries(cost))c[k]-=v}
+function costStr(cost){return Object.entries(cost).map(([k,v])=>k==='coin'?`${fmt(v)}c`:`${v} ${MATN[k]}`).join(' + ')}
+function worth(b){return value(b,1,1)}
+// Forge grade scales the whole price: grade 72 is the baseline, a great hand forge (88) is worth about 35% more than a quick forge (55).
+const gradeMult=g=>Math.max(.6,1+((g??60)-72)/55*.5);
+// Length scales the price too: a 50 cm blade is worth about 70% of a 100 cm one, 250 cm about 160%. Runts keep their own bonus.
+const sizeMult=b=>b.si===0||!b.len?1:Math.sqrt(Math.max(10,b.len)/100);
+function value(b,dem,mult=MERCHANT){if(b.cracked)return 1;const t=TYPES[b.type];const bonus=1.72+RAR[b.rarity].vb+SIZES[b.si].vb+(b.shine?SHINE[b.shine].vb:0)+(vr(b).rare?1:0)+(b.moon?.5:0);
+  const d=dem??(C()?C().demand[b.type]:1);return Math.max(1,Math.round(BASE_COIN*WT[t.wt].v*bonus*gradeMult(b.grade)*sizeMult(b)*d*mult))}
+function salvYield(b){const t=WT[TYPES[b.type].wt],y={};const iron=Math.round(t.iron*b.len/100*(b.cracked?.3:.6));if(iron>0)y.iron=iron;if(b.cracked)return Object.keys(y).length?y:{fuel:1};
+  for(const[k,v]of Object.entries(RAR[b.rarity].salv))y[k]=(y[k]||0)+v;if(b.shine==='temp')y.dust=(y.dust||0)+5;if(b.shine==='star')y.shards=3;return Object.keys(y).length?y:{fuel:1}}
+function yieldStr(y){const s=Object.entries(y).filter(([,v])=>v>0).map(([k,v])=>`${v} ${MATN[k]}`).join(', ');return s||'scraps'}
+function tickFuel(){const c=C();if(!c)return;const now=Date.now();if(c.fuel>=FUEL_MAX){c.fuelTs=now;return}const n=Math.floor((now-c.fuelTs)/FUEL_MS);if(n>0){c.fuel=Math.min(FUEL_MAX,c.fuel+n);c.fuelTs+=n*FUEL_MS;if(c.fuel>=FUEL_MAX)c.fuelTs=now;save()}}
 let HEAT_ARC=false;
 function heatColor(T){const st=HEAT_ARC==='shd'?[[0,[58,56,66]],[.22,[52,40,92]],[.4,[84,54,160]],[.58,[128,96,235]],[.75,[176,156,255]],[.9,[226,218,255]],[1,[255,255,255]]]:HEAT_ARC?[[0,[46,44,58]],[.22,[62,42,112]],[.4,[104,60,190]],[.58,[150,110,255]],[.75,[192,172,255]],[.9,[232,226,255]],[1,[255,255,255]]]:[[0,[52,48,46]],[.22,[92,26,16]],[.4,[170,30,14]],[.58,[255,100,10]],[.75,[255,190,50]],[.9,[255,240,200]],[1,[255,255,245]]];for(let i=1;i<st.length;i++){if(T<=st[i][0]){const a=st[i-1],b=st[i],f=(T-a[0])/(b[0]-a[0]);return a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*f))}}return st[6][1]}
-function hammerFx(){return AMR.hammerFx(C())}
+function hammerFx(){const c=C(),h=HAMMERS[c.hammer];if(c.hammer!=='worn'&&(!c.hammers[c.hammer]||c.hammers[c.hammer].dur<=0))return HAMMERS.worn;return h}
+
+// =============== ROLLS ===============
+function rollIdx(weights){let r=Math.random()*weights.reduce((a,b)=>a+b,0);for(let i=0;i<weights.length;i++){if((r-=weights[i])<0)return i}return 0}
+function rollSize(){const w=SIZES.map(s=>s.p);if(A.testOdds){w[5]=5;w[6]=1;w[2]=49.5}const i=rollIdx(w),s=SIZES[i];let len;
+  if(s.b===null)len=s.a-60*Math.log(Math.random()||.001);else if(i===2)len=s.a+(s.b-s.a)*(Math.random()+Math.random())/2;else len=s.a+(s.b-s.a)*Math.random();
+  len=+len.toFixed(1);return{len,si:sizeIdx(len)}}
+function rollShine(){const s=Math.random(),st=1/(A.testOdds?SHINE.star.test:SHINE.star.p),tp=1/(A.testOdds?SHINE.temp.test:SHINE.temp.p);return s<st?'star':s<st+tp?'temp':''}
+function rollVariant(cls){const v=CLASSES[cls].vars,nr=v.filter(x=>!x.rare).length;return rollIdx(v.map(x=>x.rare?5:95/nr))}
+function makeBlade(type,anvilTier,grade,forger,cracked,capR=4){const t=TYPES[type],{len,si}=rollSize();
+  return{id:++A.serial,type,rarity:Math.min(capR,rollIdx(ANVILS[anvilTier].t)),variant:rollVariant(t.c),len,si,shine:rollShine(),moon:rollMoon(),grade,cracked:!!cracked,anvil:anvilTier,forger,status:'pending',t:Date.now()}}
 
 // =============== BLADE ART ===============
 function hexMix(a,b,f){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*f).toString(16).padStart(2,'0')).join('')}
@@ -1653,14 +1870,18 @@ function bladeSVG(b, o = {}) {
 function pxWarm(b,o={}){if(o.heat||PX.off)return Promise.resolve();const key=PX.keyOf(b,o);if(PX.cache.get(key))return Promise.resolve();bladeSVG(b,o);return (PXQ.get(key)||Promise.resolve()).catch(()=>{})}
 const ANVIL_SVG=`<svg class="anvilsvg" viewBox="0 0 600 120" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path d="M70 18 H470 Q540 20 590 34 Q530 46 470 48 H420 L400 70 H380 L390 98 H430 V112 H170 V98 H210 L220 70 H200 L160 48 H110 Q80 46 70 30 Z" fill="#3a3531" stroke="#4f4841" stroke-width="2"/><path d="M80 20 H468" stroke="#7a6f63" stroke-width="3"/></svg>`;
 
-// =============== COMMISSIONS ===============
-// New orders are random, so the server writes them; which blades fit an order is in js/rules.js.
+// =============== COMMISSIONS & TRADER ===============
 const isOn=()=>{try{return online()}catch(e){return false}};
-const qualifies=AMR.qualifies;
+function genComm(c){const ownAll=typesOf(c.cls),own=ownAll.filter(k=>knows(c,TYPES[k].wt)),imp=!own.length||(isOn()&&!(c.commissions||[]).some(q=>q&&q.imp)&&Math.random()<.12),type=imp?pick(TK.filter(k=>!ownAll.includes(k))):pick(own);
+  const maxR=c.anvil<1?1:c.anvil<3?2:3,minR=Math.min(maxR,rollIdx([35,35,22,8])),minS=Math.random()<.35?(Math.random()<.75?3:4):0,minG=Math.random()<.35?55+Math.floor(Math.random()*5)*5:0;
+  const payv=Math.round([15,40,100,280][minR]*WT[TYPES[type].wt].v*(minS===3?1.6:minS===4?3:1)*(minG?1.3:1)*(imp?1.8:1));
+  return{id:String(Date.now())+Math.floor(Math.random()*1e6),type,minR,minS,minG,pay:payv,imp,patron:pick(PATRONS)}}
+function qualifies(b,q){return b.status==='owned'&&!b.cracked&&b.type===q.type&&b.rarity>=q.minR&&b.si>=q.minS&&b.grade>=q.minG}
+function ensure(c){while(c.commissions.length<3)c.commissions.push(genComm(c));c.trader=[]}
 
 // =============== RECORDS ===============
 const REC={list:null,at:0,players:0,busy:false};
-async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{const r=await apiCall('/api/x/records').catch(()=>apiCall('/api/records'));REC.list=Array.isArray(r.entries)?r.entries:[];REC.wealth=Array.isArray(r.wealth)?r.wealth:[];REC.smiths=r.smiths&&typeof r.smiths==='object'?r.smiths:{};REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
+async function refreshRecords(){if(!SERVER||REC.busy)return;REC.busy=true;try{if(online()&&A.pushed!==A.rev)await pushSave().catch(()=>{});const r=await apiCall('/api/x/records').catch(()=>apiCall('/api/records'));REC.list=Array.isArray(r.entries)?r.entries:[];REC.wealth=Array.isArray(r.wealth)?r.wealth:[];REC.smiths=r.smiths&&typeof r.smiths==='object'?r.smiths:{};REC.players=r.players||0;REC.at=Date.now();ENT=null;if(A.tab==='records'&&!F&&!revealId)render()}catch(e){REC.err=true;REC.at=Date.now();if(A.tab==='records'&&!F&&!revealId)render()}REC.busy=false}
 function entries(){if(ENT)return ENT;const me=NET&&NET.user?NET.user.username:null;
   const local=allBlades().filter(b=>exists(b)&&!isGift(b)).map(b=>({...b,who:b.forger,user:me,mine:A.slots.some(c=>c&&(c.name===b.forger||(c.aka||[]).includes(b.forger)))})).filter(x=>!HIDE_REC.includes(x.who)),key=x=>[x.who,x.type,x.len,x.grade,x.rarity].join('|'),seen=new Set(local.map(key));
   const remote=(REC.list||[]).map(x=>({...x,who:forgerNow(x.who),mine:false})).filter(x=>!(me&&x.user===me)&&!seen.has(key(x))&&!HIDE_REC.includes(x.who)&&!HIDE_REC.includes(x.user));
@@ -1699,7 +1920,7 @@ function renderTabs(){setHH();const c=needAcct()?null:C();
   $('tabs').innerHTML=c?navHTML():'';
   let rh=$('rackhandle');if(!rh){rh=document.createElement('div');rh.id='rackhandle';document.body.appendChild(rh)}rh.innerHTML=c&&!F?`<button class="rackhandle" data-action="nav" data-k="rack" aria-expanded="${!!UI.rack}"><span class="rharrow" aria-hidden="true">▲</span><i class="pxico" style="background-image:var(--ico-rack)" aria-hidden="true"></i>Rack <b class="rackn">${owned().length}</b></button>`:'';
   $('opts').innerHTML=!DEV?'':`<label title="For trying things out: Tempered 1 in 10, Starforged 1 in 40, more Titans, an 8-second dig, auctions of 1 to 6 minutes, and it counts as night with Moonlit at 1 in 3. Real shine odds are 1 in 200 and 1 in 2,000."><input type="checkbox" data-action="odds" ${A.testOdds?'checked':''}> Test mode</label><button class="btn ghost small" data-action="reset" data-confirm="1">Reset all</button>`}
-function render(){if(needAcct()){if(!(A.tab==='hall'&&HALL.user))A.tab='chars';UI.rack=false;UI.board=false;UI.mail=false;RACK.open=null}if(TOUR.on)requestAnimationFrame(tourPlace);else if(!needAcct()&&!A.tourDone&&!F&&!revealId&&C()&&!C().forged&&!A.slots.some(x=>x&&x.forged)&&A.tab==='forge'){A.tourDone=1;setTimeout(tourStart,400)}gsVisit();renderHUD();renderTabs();renderDrawer();renderMailbox();renderBoard();if(F)return;
+function render(){if(needAcct()){if(!(A.tab==='hall'&&HALL.user))A.tab='chars';UI.rack=false;UI.board=false;UI.mail=false;RACK.open=null}if(PENDING&&!F&&!revealId){const sv=PENDING;PENDING=null;if((sv.rev||0)>(A.rev||0)){const tab=A.tab;A=sv;if(!DEV)A.testOdds=false;ENT=null;A.tab=tab}}if(TOUR.on)requestAnimationFrame(tourPlace);else if(!needAcct()&&!A.tourDone&&!F&&!revealId&&C()&&!C().forged&&!A.slots.some(x=>x&&x.forged)&&A.tab==='forge'){A.tourDone=1;setTimeout(tourStart,400)}if(!F&&!revealId)claimArmory(C());gsVisit();renderHUD();renderTabs();renderDrawer();renderMailbox();renderBoard();if(F)return;const c=C();if(c)ensure(c);
   if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+codeBanner()+tipHTML()+({home:vHome,forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars,hall:vHall,tasks:vTasks}[A.tab]||vChars)();$('view').scrollTop=0;faceTick()}
 
 const shineTag=b=>(b.moon?'<span class="tag moon">Moonlit</span>':'')+(b.shine==='star'?'<span class="tag star">Starforged</span>':b.shine==='temp'?'<span class="tag temp">Tempered</span>':'');
@@ -1717,7 +1938,7 @@ function hardTimes(c){const broke=isBroke(c),digging=c.digUntil&&Date.now()<c.di
     <div><h3>Dig the slag heap</h3><p class="fine" title="Bog iron blades can never be better than Fine.">Free but slow · 1 bog iron + 1 coal</p>${dig}</div></div></div>`}
 const bookBtn=(extra='')=>`<div class="ptools">${extra}<button class="bookbtn" data-action="tab" data-tab="armory" title="Your Armory: every blade you’ve found"><i class="pxi" style="background-image:var(--ico-armory)"></i>Armory</button></div>`;
 function costChip(k,need,have){const short=have<need;return `<span class="cost ${short?'short':''}" title="${MATN[k]}: you have ${have}, this needs ${need}"><i class="pxi" style="background-image:var(--ico-${k})" aria-hidden="true"></i><b>${need}</b><small>${have}</small><em>${MATN[k]}</em></span>`}
-const refreshCost=AMR.refreshCost;
+function refreshCost(c){const n=c.commissions.filter(q=>q.lock).length;return n>=c.commissions.length?null:10*2**n}
 function pinRow(c){const pins=c.commissions.filter(q=>q.pin);if(!pins.length)return '';const own=owned(),mine=typesOf(c.cls);
   return `<div class="pinrow" aria-label="Pinned commissions">${pins.map(q=>{const t=TYPES[q.type],fit=own.filter(b=>deliverable(b,q)).length,foreign=!mine.includes(q.type),lk=!foreign&&!knows(c,t.wt);
     const req=[`<b style="color:${RAR[q.minR].c}">${RAR[q.minR].n}</b> or better`];if(q.minS)req.push(`${SIZES[q.minS].n} or bigger`);if(q.minG)req.push(`grade ${q.minG}+`);
@@ -1831,7 +2052,7 @@ function tourPoll(){clearInterval(TOUR.poll);TOUR.poll=setInterval(()=>{if(!TOUR
 const tourNew=()=>!A.slots.some(x=>x&&x.forged);
 // The tour always ends in a real forge: pick a blade the smith can make, and stake a brand-new smith the materials for it.
 function tourEnsure(){const c=C();if(!c||F)return;if(!knows(c,TYPES[c.sel].wt)){c.sel=typesOf(c.cls).find(k=>knows(c,TYPES[k].wt))||c.sel;c.selW=TYPES[c.sel].wt}
-  if(!tourCanForge()&&tourNew())actSync('tourGift',{type:c.sel},{silent:true})}
+  if(!tourCanForge()&&tourNew()){const w=WT[TYPES[c.sel].wt];c.fuel=Math.max(c.fuel,1);c.iron=Math.max(c.iron,w.iron);c.coal=Math.max(c.coal,w.coal);save()}}
 function tourStart(){if(!C())return;tourEnsure();if(!F&&!tourCanForge()){UI.sup=true;A.tab='forge';render();return toast('The tour has you forge a real blade. Stock up for one forge, then press <b>How to forge</b> again.',5200)}TOUR.on=true;TOUR.i=0;TD.fin={};TOUR.noForge=null;tourShow();tourPoll()}
 function tourEnd(){TOUR.on=false;clearInterval(TOUR.poll);if(F||revealId||document.querySelector('.qseq')){A.tourDone=1;A.tutDone=1;save();const el=$('tour');if(el)el.innerHTML='';return}tourDemoRun(null);A.tourDone=1;A.tutDone=1;save();const el=$('tour');if(el)el.innerHTML='';UI.rack=false;UI.sup=false;A.tab=gsOn()?'home':'forge';render()}
 function tourStep(d){let i=TOUR.i+d;while(i>0&&i<TOUR_STEPS.length-1&&TOUR_STEPS[i].skipIf&&TOUR_STEPS[i].skipIf())i+=d;TOUR.i=Math.max(0,Math.min(TOUR_STEPS.length-1,i));tourShow()}
@@ -1965,8 +2186,8 @@ function bulkState(L){const F=RACK.f||(RACK.f={...BF0}),man=RACK.man||(RACK.man=
   const hit=b=>(F.short===''||b.len<+F.short)&&(F.grade===''||b.grade<+F.grade)&&(F.worth===''||worth(b)<+F.worth);
   const sel=L.filter(b=>ok(b)&&(b.id in man?man[b.id]:hit(b)));return{F,ok,sel,longest}}
 function bulkDo(k,mode){const st=rackStacks().find(x=>x.k===k);if(!st)return;const{sel}=bulkState(st.list);if(!sel.length)return toast('Nothing is ticked.');
-  const r=actSync(mode==='sell'?'sell':'salvage',{ids:sel.map(b=>b.id)});if(!r)return;if(mode==='sell')SFX.play('coin');
-  RACK.man={};save();toast(mode==='sell'?`Sold ${r.n} for <b>${fmt(r.coin)}c</b>.`:`Salvaged ${r.n}: ${yieldStr(r.y)}.`);render()}
+  let coin=0;const tot={};sel.forEach(b=>{if(mode==='sell'){coin+=value(b);sellBlade(b)}else{const y=salvYield(b);for(const[m,v]of Object.entries(y))tot[m]=(tot[m]||0)+v;salvBlade(b)}});
+  RACK.man={};save();toast(mode==='sell'?`Sold ${sel.length} for <b>${fmt(coin)}c</b>.`:`Salvaged ${sel.length}: ${yieldStr(tot)}.`);render()}
 
 function vWorkshop(){const c=C();UI.wsOpen=UI.wsOpen||{};
   const bar=(n,of)=>`<div class="minibar"><i style="width:${Math.min(100,n/of*100)}%"></i></div><span class="fine">${n}/${of}</span>`;
@@ -2163,12 +2384,12 @@ function shdDraw(ts){const cv=$('shdmoon');if(cv){const W=240,H=96,c=cv.getConte
     c.fillStyle=`rgba(190,180,240,${(.14*(1-Math.min(1,T/.88))+.035).toFixed(3)})`;c.beginPath();c.moveTo(108,41);c.lineTo(132,41);c.lineTo(182,66);c.lineTo(58,66);c.fill();
     ell(120,72,106,16,'#15121c');ell(120,69,106,16,'#2a2634');ell(120,67,106,16,'#3a3546');ell(120,66,98,13,'#2f2b3a');
     if(T>.88){c.fillStyle=`rgba(0,0,0,${Math.min(.6,(T-.88)*5).toFixed(2)})`;c.fillRect(0,0,W,H)}}}
-function startForge(labor){const c=C(),tk=labor?typesOf(c.cls)[1]:c.sel,t=TYPES[tk],w=WT[t.wt];let bog=0;
+function startForge(labor){const c=C(),t=TYPES[labor?typesOf(c.cls)[1]:c.sel],w=WT[t.wt];let bog=0;
   if(!labor){if(!knows(c,t.wt))return toast(`Learn the ${WT[t.wt].n.toLowerCase()} blade pattern in the Workshop first.`);if(c.fuel<1||c.iron+(c.bog||0)<w.iron||c.coal<w.coal)return toast('You need more materials. Buy supplies at the Market.');
-    bog=Math.max(0,w.iron-c.iron)}
-  // paying for the forge is an action; the strikes are scored by the server when the blade is quenched (forgeEnd)
-  const h=hammerFx(),arc=!labor&&!PX.off&&t.c==='arcane',shd=!labor&&!PX.off&&t.c==='shadow';if(!actSync('forgeStart',{type:tk,labor:!!labor,arc}))return;HEAT_ARC=shd?'shd':arc;
-  F={arc,shd,ang:-Math.PI/2,target:-1,runes:arc?Array.from({length:w.strikes},(_,i)=>({a:i*2*Math.PI/w.strikes-Math.PI/2+.3,g:Math.floor(Math.random()*ARC.GLYPH.length),s:null})):[],type:tk,labor:!!labor,bog,need:w.strikes,zone:h.zone,cool:h.cool,T:.15,strikes:[],raw:[],burns:0,cold:0,t0:performance.now(),last:performance.now(),bell:false,mx:0,done:false};
+    bog=Math.max(0,w.iron-c.iron);if(c.fuel>=FUEL_MAX)c.fuelTs=Date.now();c.fuel--;c.iron-=w.iron-bog;c.bog=(c.bog||0)-bog;c.coal-=w.coal}
+  const h=hammerFx();if(!labor&&c.hammer!=='worn'&&c.hammers[c.hammer]&&c.hammers[c.hammer].dur>0)c.hammers[c.hammer].dur--;save();
+  const arc=!labor&&!PX.off&&t.c==='arcane',shd=!labor&&!PX.off&&t.c==='shadow';HEAT_ARC=shd?'shd':arc;
+  F={arc,shd,ang:-Math.PI/2,target:-1,runes:arc?Array.from({length:w.strikes},(_,i)=>({a:i*2*Math.PI/w.strikes-Math.PI/2+.3,g:Math.floor(Math.random()*ARC.GLYPH.length),s:null})):[],type:labor?typesOf(c.cls)[1]:c.sel,labor:!!labor,bog,need:w.strikes,zone:h.zone,cool:h.cool,T:.15,strikes:[],burns:0,cold:0,t0:performance.now(),last:performance.now(),bell:false,mx:0,done:false};
   if(arc)arcNext();renderHUD();renderTabs();
   $('view').innerHTML=`<section class="page forging${arc?' arcforge':''}${shd?' shdforge':''}"><div class="pagehead"><h1>${labor?'A shift at the foreman’s forge':arc?`Enchanting a ${t.n}`:shd?`Forging a ${t.n} under the eclipse`:`Forging a ${t.n}`}</h1><p class="fine">${labor?'His iron, his blade, his coin. ':''}${arc?'Hold to channel mana until it says <b>Inscribe now</b>, then inscribe as the spark crosses the glowing rune.':shd?'Hold to draw the dark across the moon until it says <b>Strike now</b>, then strike as the marker crosses the bright centre.':'Hold the bellows until it says <b>Strike now</b>, then strike as the marker crosses the bright centre.'}</p></div>
    <div class="hearth${PX.off?'':' px'}${arc?' arc':''}${shd?' shd':''}" id="anvil">${shd?'<canvas id="shdmoon" class="shdmoon" width="240" height="96"></canvas>':''}<div class="hearthblade">${PX.off?bladeSVG({type:F.type,len:100,rarity:0,si:2},{heat:'rgb(52,48,46)',heatId:'hot',noRuler:1,minW:330}):'<canvas id="hotpx" class="pxcv"></canvas>'}</div>${PX.off?ANVIL_SVG:arc?`<canvas id="arcring" class="pxanvil arcring" width="${ARC.W}" height="${ARC.H}"></canvas>`:'<img id="pxanvil" class="pxanvil" alt="">'}<div id="sparks"></div><div class="heatind" id="heatind" aria-live="polite"></div></div>
@@ -2192,7 +2413,7 @@ function loop(ts){if(!F||F.done)return;const dt=Math.min(.05,(ts-F.last)/1000);F
   const hi=$('heatind');if(hi){const st=F.T<.48?'cold':F.T>.88?'hot':'ok';if(hi.dataset.s!==st){hi.dataset.s=st;const cs=$('ctrls');if(cs)cs.dataset.s=st;const fs=$('fsteps');if(fs&&fs.dataset.s!=='3')fs.dataset.s=st==='cold'?'1':'2';hi.className='heatind '+st;hi.innerHTML=F.arc?(st==='cold'?'<b>▼</b> Too faint':st==='hot'?'<b>▲</b> Overloading':'<b>✓</b> Inscribe now'):F.shd?(st==='cold'?'<b>▼</b> Too bright':st==='hot'?'<b>▲</b> Too dark':'<b>✓</b> Strike now'):st==='cold'?'<b>▼</b> Too cold':st==='hot'?'<b>▲</b> Too hot':'<b>✓</b> Strike now'}}
   if(F.arc){F.ang+=dt*2*Math.PI/ARC.orbit;const rc=$('arcring');if(rc)arcRing(rc,ts);F.mx=F.target<0?.5:.5+arcWrap(F.ang-F.runes[F.target].a)/(2*Math.PI)}else
   F.mx=(Math.sin((ts-F.t0)/1000*3.4)+1)/2;const mk=$('mk');if(mk)mk.style.left=(F.mx*100)+'%';requestAnimationFrame(loop)}
-function strike(){if(!F||F.done||F.strikes.length>=F.need)return;const T=F.T,arc=F.arc,dd=arc?arcWrap(F.ang-F.runes[F.target].a):F.mx-.5,timing=AMR.strikeScore(F,dd,T).timing;F.raw.push([dd,T]);let hf=1,note='',col='var(--ash)';
+function strike(){if(!F||F.done||F.strikes.length>=F.need)return;const T=F.T,arc=F.arc,timing=arc?Math.max(0,1-Math.abs(arcWrap(F.ang-F.runes[F.target].a))/(.72*F.zone)):Math.max(0,1-Math.abs(F.mx-.5)*3.2/F.zone);let hf=1,note='',col='var(--ash)';
   if(T<.3){hf=.35;F.cold+=.09;note=arc?'Far too faint. The rune gutters.':F.shd?'Far too bright. The shadow won’t take.':'Far too cold. The metal groans.';col='var(--red)'}else if(T<.48){hf=.65;F.cold+=.04;note=arc?'A little faint.':F.shd?'A little bright.':'A little cold.';col='var(--bronze)'}else if(T>.88){hf=.6;F.burns++;note=arc?'Overloaded. The rune scorches.':F.shd?'Too dark. You can’t see the edge.':'Too hot. Scale burns away.';col='var(--red)'}
   const sc=timing*hf;F.strikes.push(sc);shapeHit(F,F.strikes.length/F.need,performance.now());const hcv=$('hotpx');if(hcv&&!arc){hcv.classList.remove('thud');void hcv.offsetWidth;hcv.classList.add('thud')}let rpos=null;if(arc){const ru=F.runes[F.target];ru.s=sc;rpos=arcPos(ru.a);arcNext()}SFX.play(arc?'rune':'strike',timing);buzz(timing>.85?'MEDIUM':'LIGHT');F.T=Math.max(0,F.T-.09*F.cool);
   const lab=arc?(timing>.85?'Perfect rune':timing>.6?'Clean rune':timing>.3?'Smudged rune':'Missed the rune'):timing>.85?'Perfect strike':timing>.6?'Clean strike':timing>.3?'Glancing blow':'Missed the mark';
@@ -2200,10 +2421,11 @@ function strike(){if(!F||F.done||F.strikes.length>=F.need)return;const T=F.T,arc
   const pn=$('pipn');if(pn)pn.textContent=F.strikes.length;const pips=$('pips').children;F.strikes.forEach((s,i)=>pips[i].className='pip p'+(s>.8?3:s>.55?2:s>.3?1:0));
   const sp=$('sparks'),n=Math.round(4+sc*16),w=sp.clientWidth,h=sp.clientHeight;let sx0=w*.42,sxw=w*.16,sy0=h*.42;if(rpos){const rc=$('arcring');if(rc){const rr=rc.getBoundingClientRect(),sr=sp.getBoundingClientRect();sx0=rr.left-sr.left+rpos[0]/ARC.W*rr.width-6;sxw=12;sy0=rr.top-sr.top+rpos[1]/ARC.H*rr.height}}for(let i=0;i<n;i++){const d=document.createElement('i');d.className='spark';d.style.left=(sx0+Math.random()*sxw)+'px';d.style.top=sy0+'px';d.style.setProperty('--dx',(Math.random()*180-90)+'px');d.style.setProperty('--dy',(-Math.random()*100-10)+'px');sp.appendChild(d);setTimeout(()=>d.remove(),650)}
   if(F.strikes.length>=F.need){$('ctrls').classList.add('hidden');const fs3=$('fsteps');if(fs3)fs3.dataset.s='3';const pg=document.querySelector('.page.forging'),ff=F;setTimeout(()=>{if(F!==ff||!pg)return;pg.classList.add('struck');$('quench').classList.remove('hidden')},650)}}
-async function quickForge(){if(F||revealId||UI.qf)return;const c=C(),t=TYPES[c.sel],w=WT[t.wt];
+function quickForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt];
   if(!knows(c,t.wt))return toast(`Learn the ${WT[t.wt].n.toLowerCase()} blade pattern in the Workshop first.`);if(c.fuel<1||c.iron+(c.bog||0)<w.iron||c.coal<w.coal)return toast('You need more materials.');
-  UI.qf=1;const r=await act('quickForge',{type:c.sel},{hold:true});UI.qf=0;if(!r||!r.blade)return;
-  SFX.play('strike',.4);showReveal(blade(r.blade.id)||r.blade)}
+  const bog=Math.max(0,w.iron-c.iron);if(c.fuel>=FUEL_MAX)c.fuelTs=Date.now();c.fuel--;c.iron-=w.iron-bog;c.bog=(c.bog||0)-bog;c.coal-=w.coal;
+  const grade=30+Math.floor(Math.random()*26),b=makeBlade(c.sel,c.anvil,grade,c.name,Math.random()<QUENCH.oil.risk,bog?1:4);b.anvil=c.anvil;b.q='oil';b.quick=true;if(bog)b.bog=true;
+  c.blades.push(b);c.forged++;A.totalForged++;chEvent({k:'forge',b});SFX.play('strike',.4);showReveal(b);gainXP(c,3);save()}
 // ---- the quench: the blade is carried to the barrel, plunged in with a hiss, and drawn back out cold
 const LIQ={oil:['#5a3a10','#8f6424'],brine:['#5b7480','#8fa7b0'],water:['#2f6fae','#6fb2e8']};window.LIQ_BASE=LIQ;
 // The quench barrel, drawn in the same pixel style as the anvil: dark outline, wood from the grips, iron hoops from the anvil.
@@ -2237,11 +2459,11 @@ function barrelHTML(q){const S=barrelSprites(q);return `<img class="bback" src="
 const qwait=ms=>new Promise(r=>setTimeout(r,ms));
 // ---- the quench and size reveal: the scene dims, the blade goes into the barrel up to the guard,
 // and pulling it out reveals its length. Then it glides into the result card for the rest of the reveal.
-async function startQuench(q){if(!F||F.done||F.qing)return;F.qing=1;document.querySelectorAll('.qbtn').forEach(x=>x.disabled=true);
+function startQuench(q){if(!F||F.done||F.qing)return;F.qing=1;document.querySelectorAll('.qbtn').forEach(x=>x.disabled=true);
   const cv=$('hotpx'),reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduce||!cv||!F.spr||PX.off){doQuench(q);return}
   const o={hot:cv.toDataURL(),hw:cv.width,hh:cv.height,cr:cv.getBoundingClientRect(),type:F.type,arc:!!F.arc};
-  const b=await forgeResult(q);if(!b)return;cv.style.visibility='hidden';
+  const b=forgeResult(q);cv.style.visibility='hidden';
   quenchSeq(b,q,o).catch(e=>{console.error(e);document.querySelectorAll('.qseq').forEach(e=>e.remove());if(revealId!==b.id)showReveal(b,true)})}
 async function quenchSeq(b,q,o){
   const vw=innerWidth,vh=innerHeight,phone=vw<=760,D=bladeDims(b),x0=D.x0;
@@ -2286,15 +2508,14 @@ async function quenchSeq(b,q,o){
   ov.classList.add('fade');
   await grp.animate([{transform:T(cx,end,90,1)},{transform:T(tG[0],tG[1],0,kT)}],{duration:620,easing:'cubic-bezier(.45,0,.2,1)',fill:'forwards'}).finished;
   landNow&&landNow();ov.remove()}
-// The quench: the server scores the strikes (the same sums as the bar showed), rolls the blade and keeps it.
-async function forgeResult(q){HEAT_ARC=false;const ff=F;F.done=true;
-  const r=await act('forgeEnd',{q,strikes:ff.raw},{hold:true});F=null;
-  if(!r||!r.blade){render();return null}
-  return blade(r.blade.id)||r.blade}
-async function doQuench(q,quiet){if(!F||F.done)return;const b=await forgeResult(q);if(b)showReveal(b,quiet)}
-async function handOver(){if(!F||F.done||!F.labor)return;F.done=true;const ff=F;
-  const r=await act('forgeEnd',{strikes:ff.raw});F=null;
-  if(r&&r.labor)toast(`The foreman pays you ${r.iron} iron and ${r.coal} coal${r.avg<.4?', and grumbles about your strikes':''}.`,4000);render()}
+function forgeResult(q){HEAT_ARC=false;const c=C(),Q=QUENCH[q],avg=F.strikes.reduce((a,b)=>a+b,0)/F.strikes.length;F.done=true;
+  const grade=Math.max(1,Math.min(100,Math.round(avg*88+Q.bonus-F.burns*2))),perfect=grade>=90,tier=Math.min(ANVILS.length-1,c.anvil+(perfect?1:0));
+  const b=makeBlade(F.type,tier,grade,c.name,Math.random()<Q.risk+F.cold,F.bog?1:4);b.anvil=c.anvil;b.perfect=perfect&&tier>c.anvil&&!F.bog;b.q=q;if(F.bog)b.bog=true;
+  c.blades.push(b);c.forged++;A.totalForged++;chEvent({k:'forge',b});F=null;gainXP(c,6+WT[TYPES[b.type].wt].strikes*2);save();return b}
+function doQuench(q,quiet){if(!F||F.done)return;const b=forgeResult(q);showReveal(b,quiet)}
+function handOver(){if(!F||F.done||!F.labor)return;F.done=true;const c=C(),avg=F.strikes.reduce((a,b)=>a+b,0)/F.strikes.length;
+  const iron=1+(avg>.55?1:0),coal=1+(avg>.8?1:0);c.iron+=iron;c.coal+=coal;const d=today();if(!c.labor||c.labor.d!==d)c.labor={d,n:0};c.labor.n++;gainXP(c,8);F=null;save();
+  toast(`The foreman pays you ${iron} iron and ${coal} coal${avg<.4?', and grumbles about your strikes':''}.`,4000);render()}
 
 // =============== STAGED REVEAL ===============
 function cardHTML(b,stage){const s=SIZES[b.si],r=RAR[b.rarity],ban=[];
@@ -2359,14 +2580,14 @@ function revealAfter(b,tok,ov,set,at,t1){
   at(t1,()=>{set(2);if(b.cracked)SFX.play('crack');else if(b.rarity>=4)SFX.play('legend');else SFX.play('reveal',b.rarity);if(b.rarity>=3||b.si>=5)buzz('HEAVY')});
   if((b.shine||b.moon)&&!b.cracked){at(t1+1300,()=>{set(3);SFX.play('shine');if(b.shine)toast(b.shine==='star'?`A Starforged blade. The odds were 1 in ${A.testOdds?SHINE.star.test:fmt(SHINE.star.p)}.`:`A Tempered blade. The odds were 1 in ${A.testOdds?SHINE.temp.test:SHINE.temp.p}.`,4000);if(b.moon)toast('Forged under the moon. A Moonlit blade.',4000)});at(t1+2300,()=>set(4))}
   else at(t1+900,()=>set(4))}
-function closeReveal(){revealTok++;revealId=null;$('overlay').classList.add('hidden');$('overlay').innerHTML='';render();flushNotes()}
+function closeReveal(){revealTok++;revealId=null;$('overlay').classList.add('hidden');$('overlay').innerHTML='';render()}
 
 // =============== ACTIONS ===============
 const blade=id=>C().blades.find(b=>String(b.id)===String(id));
 // what selling these one after another pays (each sale of a type lowers its price a little)
 function sellAllTotal(list){const c=C(),keep={...c.demand};let t=0;list.forEach(b=>{t+=value(b);c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93)});c.demand=keep;return t}
-function sellBlade(b){if(!b||b.cracked)return;if(isGift(b))return toast('Keepsakes can’t be sold.');const nm=bname(b),r=actSync('sell',{ids:[b.id]});if(!r)return;SFX.play('coin');toast(`Sold ${nm} for <b>${r.coin}c</b>.`)}
-function salvBlade(b){if(!b)return;if(isGift(b))return toast('Keepsakes can’t be salvaged.');const rec=isRecord(b),r=actSync('salvage',{ids:[b.id]});if(!r)return;toast(`Salvaged into ${yieldStr(r.y)}.${rec?' Its record is gone.':''}`)}
+function sellBlade(b){if(b.cracked)return;if(isGift(b))return toast('Keepsakes can’t be sold.');SFX.play('coin');const c=C(),v=value(b);c.coin+=v;c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93);(b.status='sold',b.su=Date.now());chEvent({k:'sell',b,coin:v});toast(`Sold ${bname(b)} for <b>${v}c</b>.`)}
+function salvBlade(b){if(isGift(b))return toast('Keepsakes can’t be salvaged.');const c=C(),y=salvYield(b),rec=isRecord(b);gainXP(c,2);for(const[k,v]of Object.entries(y))c[k]=k==='fuel'?Math.min(ENERGY_CAP,c[k]+v):c[k]+v;(b.status='salvaged',b.su=Date.now());chEvent({k:'salv',b});toast(`Salvaged into ${yieldStr(y)}.${rec?' Its record is gone.':''}`)}
 // =============== ONLINE: SERVER, ACCOUNTS, CLOUD SAVE ===============
 // The game talks to your own Anvilmoon server (server/server.js). With no server set, everything still works offline.
 const SERVER=(window.ANVILMOON_SERVER||'').replace(/\/$/,'')||null;
@@ -2393,7 +2614,7 @@ async function netInit(){if(!SERVER)return;const back=oauthBack();
   render()}
 // ----- Discord and Google sign-in. The sign-in itself happens on their pages; the browser comes back here with a short-lived token.
 const OAUTH=(window.ANVILMOON_AUTH&&SERVER)?window.ANVILMOON_AUTH:{providers:[]},PROV={discord:'Discord',google:'Google'};
-function oauthGo(provider,mode){if(!OAUTH.url||!PROV[provider])return;try{sessionStorage.setItem('anvilmoon-oauth',mode)}catch(e){}
+function oauthGo(provider,mode){if(!OAUTH.url||!PROV[provider])return;try{sessionStorage.setItem('anvilmoon-oauth',mode)}catch(e){}flushSave();
   location.href=OAUTH.url+'/auth/v1/authorize?provider='+provider+'&redirect_to='+encodeURIComponent(location.origin+'/')}
 function oauthBack(){const h=location.hash||'';if(!/access_token=|error_description=|error=/.test(h))return null;
   const q=new URLSearchParams(h.slice(1));let mode='login';try{mode=sessionStorage.getItem('anvilmoon-oauth')||'login';sessionStorage.removeItem('anvilmoon-oauth')}catch(e){}
@@ -2425,86 +2646,76 @@ async function doRecover(username,code,next){NET.busy=true;NET.authErr='';render
   catch(e){NET.authErr=e.msg}NET.busy=false;render()}
 const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const oauthBtns=(mode,verb,list)=>(list||OAUTH.providers).filter(x=>PROV[x]).map(x=>`<button type="button" class="btn prov" data-action="oauth" data-p="${x}" data-m="${mode}">${verb} ${PROV[x]}</button>`).join('');
-async function afterLogin(){openEvents();refreshAH();fetchMail();await loadServerSave();refreshRecords()}
-// A smith goes by the account's username; the server re-signs blades forged under an old smith name (rules.js, oneName).
-const HIDE_REC=[],forgerNow=AMR.forgerNow;
-function signedOut(msg){showCode(null);SV.base=null;SV.rev=0;SV.queue=[];NET.resetTok=null;NET.oauth=null;clearTimeout(NET.pt);NET.pv=0;NET.pm=NET.pa=undefined;NET.user=null;NET.token=null;storeToken();AHL=[];ARENA.match=null;ARENA.queued=null;if(msg)toast(msg);render()}
+async function afterLogin(){openEvents();refreshAH();fetchMail();await syncSave();oneName();refreshRecords()}
+// A smith no longer has a name of its own: it goes by the account's username. Blades forged under an old smith name are re-signed.
+const FORGER_AKA={'Spriggan':'Anvilmoon','Lexy':'lexy','Edda Emberly':'Stubbs38','John':'Mouflon'},HIDE_REC=[];
+const forgerNow=n=>Object.prototype.hasOwnProperty.call(FORGER_AKA,n)?FORGER_AKA[n]:n;
+function oneName(){if(!NET.user)return;const un=NET.user.username;let ch=false;
+  A.slots.forEach(c=>{if(!c)return;const old=new Set([c.name,...(c.aka||[])]);old.delete(un);
+    if(c.name!==un){c.aka=[...new Set([...(c.aka||[]),c.name])];c.name=un;ch=true}
+    const fix=b=>{if(!b||b.forger===un)return;const f=old.has(b.forger)?un:forgerNow(b.forger);if(f!==b.forger){b.forger=f;ch=true}};
+    (c.blades||[]).forEach(fix);(c.trader||[]).forEach(fix)});
+  if(ch){ENT=null;save();render()}}
+function signedOut(msg){showCode(null);NET.resetTok=null;NET.oauth=null;clearTimeout(NET.pt);NET.pv=0;NET.pm=NET.pa=undefined;NET.user=null;NET.token=null;storeToken();AHL=[];ARENA.match=null;ARENA.queued=null;if(msg)toast(msg);render()}
 
 // Live updates: the game asks the server every few seconds what has changed (faster while a duel is on, not at all while the tab is hidden).
 function openEvents(){NET.pv=0;NET.pm=NET.pa=undefined;NET.pp='';pollLoop()}
 async function pollLoop(){clearTimeout(NET.pt);if(!online())return;
   const live=()=>!!(ARENA.queued||(ARENA.match&&!ARENA.match.over));
-  if(!document.hidden||live()){try{const r=scrub(await apiCall('/api/poll'));
-    if(r.now)SKEW=r.now-Date.now();
-    // the save changed somewhere else (another tab, another device, the end of a duel): fetch it again
-    if(r.rev!==undefined&&r.rev!==SV.rev&&!SV.busy&&!SV.queue.length&&!F&&!revealId)loadServerSave(true);
-    if(r.mail!==undefined){
+  if(!document.hidden||live()){try{const r=scrub(await apiCall('/api/poll'+(NET.pv?'?ver='+NET.pv:'')));
+    if(r.mail!==undefined){NET.pv=r.ver;
       if(r.mail!==NET.pm){const first=NET.pm===undefined;NET.pm=r.mail;if(!first)fetchMail()}
       if(r.ah!==NET.pa){const first=NET.pa===undefined;NET.pa=r.ah;if(!first)refreshAH()}
       if(r.pvp){const k=JSON.stringify(r.pvp);if(k!==NET.pp&&(!r.pvp.over||(ARENA.match&&ARENA.match.id===r.pvp.id&&!ARENA.match.over))){NET.pp=k;arenaUpdate(r.pvp)}}}
   }catch(e){}}
-  if(online())NET.pt=setTimeout(pollLoop,live()?1500:12000)}
+  if(online())NET.pt=setTimeout(pollLoop,live()?1500:8000)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&online())pollLoop()});
 setInterval(()=>{if(online()){fetchMail();if(A.tab==='auction')refreshAH()}},60000);
 
-// ----- your save lives on your account (see "the save on the server" below)
+// ----- cloud save: your account keeps a copy of your whole save
+const saveSummary=s=>{const sm=(s&&s.slots||[]).filter(Boolean);return sm.length?sm.map(x=>`${x.name} the ${CLASSES[x.cls]?CLASSES[x.cls].n:'smith'} (${x.forged} forged)`).join(', '):'no smiths'};
+// Saves are numbered (rev). base = the account save number this one grew from; pushed = the last rev the account has.
+// Newest wins on its own. If two devices really did play at once, the saves are combined and no owned blade is dropped.
+function mergeSaves(a,b){const[nw,old]=(b.at||0)>(a.at||0)?[b,a]:[a,b];const m=JSON.parse(JSON.stringify(nw));
+  m.serial=Math.max(a.serial||0,b.serial||0);m.totalForged=Math.max(a.totalForged||0,b.totalForged||0);
+  for(const k of['claimed','mailSeen'])m[k]={...(old[k]||{}),...(nw[k]||{})};
+  const ids=new Set();(m.slots||[]).forEach(sm=>sm&&(sm.blades||[]).forEach(x=>ids.add(x.id)));
+  const fp=x=>[x.type,x.len,x.grade,x.t||''].join('|');   // not the forger's name: that can be re-signed
+  (old.slots||[]).forEach((os,i)=>{if(!os)return;const ms=m.slots.find(x=>x&&(x.cid===os.cid||(x.merged||[]).includes(os.cid)));
+    if(!ms){const j=!m.slots[i]?i:m.slots.findIndex(x=>!x);if(j>=0)m.slots[j]=JSON.parse(JSON.stringify(os));return}
+    const have=new Map((ms.blades||[]).map(x=>[fp(x),x]));
+    (os.blades||[]).forEach(bl=>{const mine=have.get(fp(bl));
+      // same blade in both saves: whichever changed last wins (sold, salvaged, delivered, listed or back on the rack)
+      if(mine){if((bl.su||0)>(mine.su||0)||(!bl.su&&!mine.su&&mine.status==='owned'&&bl.status!=='owned')){const id=mine.id;Object.assign(mine,bl,{id})}return}
+      if(bl.status!=='owned')return;const c={...bl};if(ids.has(c.id))c.id=++m.serial;ids.add(c.id);ms.blades.push(c)});
+    if(ms.cid===os.cid)ms.forged=Math.max(ms.forged||0,os.forged||0);ms.classes=[...new Set([...(ms.classes||[ms.cls]),...(os.classes||[])])];if(os.freeWar)ms.freeWar=1});
+  m.rev=Math.max(a.rev||0,b.rev||0);return m}
 const SYNC={state:'local'};
 function renderSync(){const el=$('syncst');if(!el)return;const st=!SERVER||!NET.user?'local':SYNC.state;
   const L={local:['Device only','Saved on this device. Sign in to back it up to your account.'],saving:['Saving…','Saving to your account.'],saved:['Saved','Everything is saved to your account.'],offline:['Offline','Saved on this device. It will save to your account when you’re back online.'],error:['Not saved online','Saved on this device. Saving to your account failed; it will keep trying.']}[st]||['',''];
   el.className='syncst '+st;el.title=L[1];el.innerHTML=`<i></i><span>${L[0]}</span>`}
-// ----- the save on the server
-// The server keeps the real save and changes it only through actions (all of them are in js/rules.js). The game:
-//  1. runs simple actions (selling, buying, eating...) here at once, so the screen answers straight away: a "prediction";
-//  2. sends every action to the server, one at a time and in order (POST /api/act);
-//  3. applies the server's answer, a short list of changes, to SV.base (its copy of the server's save), and rebuilds A
-//     from that. If the server said no, the prediction simply disappears and the reason is shown.
-// Actions that roll dice (forging, new commissions) or involve other players wait for the server's answer instead.
-const SV={base:null,rev:0,queue:[],busy:false,stale:false};
-let HELD_NOTES=[];
-const noteHTML=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
-function showNotes(ns,hold){for(const n of ns||[]){if(hold)HELD_NOTES.push(n);else toast(noteHTML(n.text),n.ms)}}
-function flushNotes(){const h=HELD_NOTES;HELD_NOTES=[];showNotes(h)}
-const actEnv=rng=>({now:nowS(),rng,tz:tzNow(),test:!!A.testOdds,online:online(),user:NET.user?{username:NET.user.username}:null});
-// make A from the server's copy, keeping what only this device decides (page, tips, tour, the blade picked) and
-// replaying predictions that are still waiting for an answer
-function rebuild(){const old=A,S=SV.base?JSON.parse(JSON.stringify(SV.base)):freshAcct();
-  for(const k of LOCAL_KEYS)if(old[k]!==undefined)S[k]=old[k];if(!DEV)S.testOdds=false;
-  const oc=AMR.smithOf(old),nc=AMR.smithOf(S);if(oc&&nc)for(const k of SMITH_LOCAL)if(oc[k]!==undefined)nc[k]=oc[k];
-  if(nc&&(!nc.sel||!TYPES[nc.sel]||TYPES[nc.sel].c!==nc.cls)){nc.sel=typesOf(nc.cls)[0];nc.selW=TYPES[nc.sel].wt}
-  if(!oc&&nc&&S.tab==='chars')S.tab=AMR.gsState(S).fin?'forge':'home';   // a device seeing this save for the first time
-  A=S;for(const q of SV.queue)if(q.predicted)try{AMR.runAction(A,q.name,q.args,actEnv(null))}catch(e){}
-  if(nc){const c=C();AMR.tickFuel(c,nowS());AMR.settleDemand(c,nowS())}
-  ENT=null;writeLocal()}
-// An action that needs no dice: done here at once and sent to the server. Returns the action's answer, or null if the rules said no.
-function actSync(name,args={},opt={}){
-  const said=e=>{if(e&&e.rule){if(!opt.silent)toast(esc(e.message));return null}throw e};
-  if(!online()){try{const ctx=AMR.runAction(A,name,args,actEnv(Math.random));save();showNotes(ctx.notes,opt.hold);return ctx.out||{}}catch(e){return said(e)}}   // offline play: the rules run here
-  const def=AMR.ACTIONS[name];let out={};
-  if(def&&!def.rng){try{const ctx=AMR.runAction(A,name,args,actEnv(null));out=ctx.out||{};showNotes(ctx.notes,opt.hold)}catch(e){return said(e)}save()}
-  const job={name,args,opt,predicted:!!(def&&!def.rng)};job.p=new Promise(r=>job.done=r);SV.queue.push(job);pumpActs();return out}
-// Any action; the promise gives the server's answer (or null). Use it for actions that roll dice or involve other players.
-function act(name,args={},opt={}){
-  if(!online()||(AMR.ACTIONS[name]&&!AMR.ACTIONS[name].rng))return Promise.resolve(actSync(name,args,opt));
-  const job={name,args,opt,predicted:false};job.p=new Promise(r=>job.done=r);SV.queue.push(job);pumpActs();return job.p}
-async function pumpActs(){if(SV.busy)return;SV.busy=true;SYNC.state='saving';renderSync();
-  while(SV.queue.length){const job=SV.queue[0];let res=null,err=null;
-    try{res=await apiCall('/api/act',{method:'POST',body:{name:job.name,args:job.args,tz:tzNow(),test:!!A.testOdds}})}catch(e){err=e}
-    SV.queue.shift();
-    if(res){if(res.now)SKEW=res.now-Date.now();
-      if(res.save){SV.base=res.save;SV.rev=res.rev}
-      else if(res.from===SV.rev){SV.base=AMR.applyPatch(SV.base,res.ops||[]);SV.rev=res.rev}
-      else SV.stale=true;   // another tab or device changed the save meanwhile: fetch it whole once the queue is empty
-      if(!job.predicted)showNotes(res.notes,job.opt.hold);
-      job.done(res.out||{})}
-    else{if(!job.opt.silent||err.status===0)toast(esc(err&&err.msg||'The server couldn’t do that.'));job.done(null);if(!err||err.status===0)SV.stale=true}
-    if(SV.stale&&!SV.queue.length){SV.stale=false;SV.busy=false;await loadServerSave(true);SV.busy=true}else rebuild();
-    if(!F&&!revealId)render();else renderHUD()}
-  SV.busy=false;SYNC.state=NET.offline?'offline':'saved';renderSync()}
-// fetch the whole save from the server (after signing in, or when another tab or device changed it)
-async function loadServerSave(quiet){if(!online())return;
-  try{const r=await apiCall('/api/save');if(r.now)SKEW=r.now-Date.now();if(SV.busy||SV.queue.length)return;SV.base=r.save||null;SV.rev=r.rev||0;rebuild();SYNC.state='saved'}
-  catch(e){SYNC.state=e&&e.status===0?'offline':'error'}
-  renderSync();if(!F&&!revealId)render()}
+function adopt(sv){const tab=A.tab;sv.rev=Math.max(sv.rev||0,A.rev||0,(load()||{}).rev||0)+1;if(sv.pushed!=null&&sv.base!=null&&sv.pushed!==sv.rev)sv.pushed=sv.rev;A=sv;if(!DEV)A.testOdds=false;ENT=null;A.tab=tab||A.tab;writeLocal();render()}
+async function syncSave(){NET.syncing=true;
+  try{const r=await apiCall('/api/save'),rs=r.save,rrev=r.rev||0,local=A.slots.some(Boolean),remote=rs&&rs.slots&&rs.slots.some(Boolean);
+    if(!remote){await pushSave()}
+    else if(!local){adopt({...rs,base:rrev,pushed:rs.rev||0});SYNC.state='saved';toast('Your account’s save is loaded.')}
+    else if(A.base===rrev){if(A.pushed!==A.rev)await pushSave();else SYNC.state='saved'}
+    else if(A.base!=null&&A.pushed===A.rev){adopt({...rs,base:rrev,pushed:rs.rev||0});SYNC.state='saved';toast('Loaded your newer save from another device.')}
+    else{A=mergeSaves(A,rs);A.base=rrev;A.rev=(A.rev||0)+1;A.at=Date.now();writeLocal();await pushSave();toast('Combined the saves from your devices. Nothing was lost.')}}
+  catch(e){SYNC.state=e&&e.status===0?'offline':'error'}NET.syncing=false;renderSync();render()}
+async function pushSave(keepalive,tries=0){if(!online())return false;clearTimeout(NET.pushT);if(NET.pushing){NET.pushAgain=true;return false}
+  NET.pushing=true;SYNC.state='saving';renderSync();const rev=A.rev;let ok=false;
+  try{const r=await apiCall('/api/save',{method:'PUT',body:{save:A,base:A.base??null},keepalive});A.base=r.rev;A.pushed=rev;writeLocal();ok=true;SYNC.state=A.pushed===A.rev?'saved':'saving'}
+  catch(e){if(e&&e.status===409&&e.body&&e.body.save&&tries<3){A=mergeSaves(A,e.body.save);A.base=e.body.rev||0;A.rev=(A.rev||0)+1;A.at=Date.now();writeLocal();NET.pushing=false;return pushSave(keepalive,tries+1)}
+    SYNC.state=e&&e.status===0?'offline':'error'}
+  NET.pushing=false;if(NET.pushAgain||(ok&&A.pushed!==A.rev)){NET.pushAgain=false;queueSave()}else if(!ok){clearTimeout(NET.retryT);NET.retryT=setTimeout(()=>{if(A.pushed!==A.rev)pushSave()},15000)}
+  renderSync();return ok}
+const queueSave=()=>{if(!online())return;clearTimeout(NET.pushT);SYNC.state='saving';renderSync();NET.pushT=setTimeout(()=>pushSave(),500)};
+const flushSave=()=>{if(online()&&A.pushed!==A.rev)pushSave(true)};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushSave()});addEventListener('pagehide',flushSave);
+// another tab saved: take its newer save instead of overwriting it (waits until any forge or reveal here is finished)
+let PENDING=null;
+addEventListener('storage',e=>{if(e.key!==KEY||!e.newValue)return;let sv;try{sv=JSON.parse(e.newValue)}catch(x){return}if(!sv||(sv.rev||0)<=(A.rev||0))return;if(F||revealId){PENDING=sv;return}adopt(sv)});
 
 async function doAuth(mode,username,password){NET.busy=true;NET.authErr='';render();
   try{const r=await apiCall(mode==='create'?'/api/register':'/api/login',{method:'POST',body:{username,password}});
@@ -2512,12 +2723,15 @@ async function doAuth(mode,username,password){NET.busy=true;NET.authErr='';rende
   catch(e){NET.authErr=e.msg}NET.busy=false;render()}
 
 // =============== AUCTION HOUSE (online) ===============
-const AH_CUT=AMR.AH_CUT,DURS=AMR.DURS;
+const AH_CUT=.05;
+const DURS={short:{n:'Short',d:'30 minutes',ms:30*60e3,f:1},medium:{n:'Medium',d:'2 hours',ms:2*3600e3,f:2},long:{n:'Long',d:'12 hours',ms:12*3600e3,f:4}};
 let AHL=[],ahDefer=false;const MAIL_BUSY=new Set();const MAIL={list:[]};
 const ahUI={view:'browse',q:'',cls:'',minR:0,sort:'end',sellId:null,start:'',buyout:'',dur:'medium'};
-const depositFor=AMR.depositFor,minBid=AMR.minBid;
+const bladeFields=b=>{const o={};['type','rarity','variant','len','si','shine','moon','grade','cracked','anvil','forger','bog','perfect','q','t'].forEach(k=>{if(b[k]!==undefined)o[k]=b[k]});return o};
+const depositFor=(b,k)=>Math.max(1,Math.round(worth(b)*.03*DURS[k].f));
+const minBid=L=>L.bid?Math.max(L.bid+1,Math.ceil(L.bid*1.05)):L.start;
 function timeLeft(ms){if(ms<=0)return'Ending';const m=Math.ceil(ms/60e3);const lbl=ms<30*60e3?'Short':ms<2*3600e3?'Medium':ms<12*3600e3?'Long':'Very long';return `${lbl}, ${m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'}`}
-const ensureCid=()=>{};   // every smith has an id now
+function ensureCid(c){if(c&&!c.cid){c.cid='s'+Math.random().toString(36).slice(2,10);save()}}
 const ME_ID=()=>NET.user&&NET.user.id;
 
 async function refreshAH(){if(!SERVER)return;try{const r=await apiCall('/api/ah');AHL=r.listings.map(L=>({...L,status:'open'}))}catch(e){}ahRefresh()}
@@ -2526,46 +2740,65 @@ function ahRefresh(quiet){if(A.tab!=='auction'||F||revealId)return;const a=docum
 document.addEventListener('focusout',()=>{if(ahDefer){ahDefer=false;setTimeout(()=>ahRefresh(),50)}});
 
 function smithFor(cid){return A.slots.find(s=>s&&s.cid===cid)||C()||A.slots.find(Boolean)}
-async function fetchMail(){if(!online())return;try{const r=await apiCall('/api/mail');MAIL.list=(r.mail||[]).sort((a,b)=>b.t-a.t);renderHUD();renderMailbox()}catch(e){}}
+async function fetchMail(){if(!online())return;try{const r=await apiCall('/api/mail');A.mailSeen=A.mailSeen||{};const stale=[];
+  MAIL.list=(r.mail||[]).filter(m=>{if(A.mailSeen[m.id]){stale.push(m.id);return false}return true}).sort((a,b)=>b.t-a.t);
+  if(stale.length&&A.pushed===A.rev)apiCall('/api/mail/ack',{method:'POST',body:{ids:stale}}).catch(()=>{});
+  renderHUD();renderMailbox()}catch(e){}}
 function mailWhat(m){const out=[];if(m.coin)out.push(`<span class="mcoin"><i class="pxi" style="background-image:var(--ico-coin)"></i>${fmt(m.coin)}</span>`);if(m.blade)out.push(`<span class="mblade" style="color:${rarC(m.blade)}">${bname(m.blade)}</span>`);if(m.soldId)out.push('<span class="fine">Sale settled</span>');if(m.returnId)out.push('<span class="fine">Blade returned</span>');return out.join(' ')}
 function renderMailbox(){const el=$('mailbox');if(!el)return;if(!UI.mail||!C()){el.innerHTML='';return}
   const L=MAIL.list;el.innerHTML=`<div class="sheetbg" data-action="mailclose"></div><section class="sheet plate mailbox" role="dialog" aria-label="Mailbox"><div class="platehead"><h2><i class="pxi" style="background-image:var(--ico-mail)"></i> Mailbox</h2><span>${L.length>1?'<button class="btn go small" data-action="mailall">Collect all</button> ':''}<button class="btn ghost small" data-action="mailclose">Close</button></span></div>
     ${L.length?L.map(m=>`<div class="mailrow ${m.blade&&isGift(m.blade)?'giftmail'+giftCls(m.blade):''}">${m.blade?`<div class="mailart">${bladeSVG({...m.blade,id:'mail'+m.id},{noRuler:1,minW:listW(L.map(x=>x.blade),330)})}</div>`:`<div class="mailart icon"><i class="pxi" style="background-image:var(--ico-${m.coin?'coin':'mail'})"></i></div>`}
       <div class="mailtext"><p>${m.note||'A delivery.'}</p><div class="mailwhat">${mailWhat(m)}</div><span class="fine">${new Date(m.t).toLocaleDateString()}${m.cid&&A.slots.some(s=>s&&s.cid===m.cid)?` · for ${smithFor(m.cid).name}`:''}</span></div>
       <button class="btn ${m.blade&&isGift(m.blade)?'go':''}" data-action="mailget" data-id="${m.id}">Collect</button></div>`).join(''):'<p class="empty">No mail. Auction sales, winnings and gifts arrive here.</p>'}</section>`}
-// collecting mail is an action: the server adds the coin and blades to your save and deletes the letters in one step
-async function collectMails(list){list=(list||[]).filter(m=>m&&!MAIL_BUSY.has(m.id));if(!list.length)return[];list.forEach(m=>MAIL_BUSY.add(m.id));
-  const r=await act('mailCollect',{ids:list.map(m=>m.id)});list.forEach(m=>MAIL_BUSY.delete(m.id));
-  if(!r){fetchMail();return null}
-  MAIL.list=MAIL.list.filter(x=>!list.some(m=>m.id===x.id));if(list.some(m=>m.coin))SFX.play('coin');
-  if(r.skipped&&r.skipped.length)toast('You already have this keepsake.');
-  return(r.got||[]).map(g=>blade(g.id)).filter(Boolean)}
+function collectOne(m){A.mailSeen=A.mailSeen||{};if(!m||A.mailSeen[m.id]||MAIL_BUSY.has(m.id))return null;MAIL_BUSY.add(m.id);const c=smithFor(m.cid);let got=null;A.mailSeen[m.id]=Date.now();
+  if(m.coin){c.coin+=m.coin;SFX.play('coin')}
+  if(m.heal&&m.blade&&isGift(m.blade)&&allBlades().some(b=>b.type===m.blade.type)){toast('You already have this keepsake.');m={...m,blade:null}}
+  if(m.blade){got={...m.blade,id:++A.serial,status:'owned',t:Date.now()};c.blades.push(got)}
+  if(m.soldId){const b=c.blades.find(x=>x.ahId===m.soldId);if(b)(b.status='sold',b.su=Date.now())}
+  if(m.returnId){const b=c.blades.find(x=>x.ahId===m.returnId);if(b){(b.status='owned',b.su=Date.now());delete b.ahId}}
+  MAIL.list=MAIL.list.filter(x=>x.id!==m.id);save();pushSave().then(ok=>ok?apiCall('/api/mail/ack',{method:'POST',body:{ids:[m.id]}}):null).catch(()=>{}).finally(()=>MAIL_BUSY.delete(m.id));return got}
+function collectMail(list){MAIL.list=list;renderHUD();renderMailbox();return;A.mailSeen=A.mailSeen||{};let changed=false;const done=[];
+  list.forEach(m=>{if(MAIL_BUSY.has(m.id))return;
+    if(!A.mailSeen[m.id]){const c=smithFor(m.cid);if(!c)return;A.mailSeen[m.id]=Date.now();changed=true;
+      if(m.coin)c.coin+=m.coin;
+      if(m.blade){c.blades.push({...m.blade,id:++A.serial,status:'owned'})}
+      if(m.soldId){const b=c.blades.find(x=>x.ahId===m.soldId);if(b)(b.status='sold',b.su=Date.now())}
+      if(m.returnId){const b=c.blades.find(x=>x.ahId===m.returnId);if(b){(b.status='owned',b.su=Date.now());delete b.ahId}}
+      toast(`<b>Mail for ${c.name}.</b> ${m.note||''}`,5000)}
+    done.push(m.id);MAIL_BUSY.add(m.id)});
+  if(changed){save();if(!F&&!revealId)render()}
+  if(done.length){save();pushSave().then(ok=>ok?apiCall('/api/mail/ack',{method:'POST',body:{ids:done}}):null).catch(()=>{}).finally(()=>done.forEach(i=>MAIL_BUSY.delete(i)))}}
 
-async function ahCreate(){if(!online())return toast('Sign in first: tap your name at the top.');const c=C();const b=blade(ahUI.sellId);if(!b||b.status!=='owned')return toast('Pick a blade from your rack first.');
+async function ahCreate(){if(!online())return toast('Sign in first: tap your name at the top.');const c=C();ensureCid(c);const b=blade(ahUI.sellId);if(!b||b.status!=='owned')return toast('Pick a blade from your rack first.');
   const start=Math.floor(+ahUI.start),bo=Math.floor(+ahUI.buyout||0),dur=ahUI.dur,dep=depositFor(b,dur);
   if(!(start>=1))return toast('Set a starting bid of at least 1c.');if(bo&&bo<start)return toast('The buyout has to be at least the starting bid.');if(c.coin<dep)return toast(`The deposit is ${dep}c, and you have ${c.coin}c.`);
-  const r=await act('ahList',{id:b.id,start,buyout:bo,dur});
-  if(r){toast(`Listed ${r.name}. Deposit paid: ${r.deposit}c.`);ahUI.sellId=null;ahUI.start='';ahUI.buyout='';ahUI.view='mine';refreshAH()}
+  const clientId='l'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);c.coin-=dep;(b.status='listed',b.su=Date.now());b.ahId=clientId;save();
+  try{await apiCall('/api/ah',{method:'POST',body:{blade:bladeFields(b),start,buyout:bo,dur,smith:c.name,cid:c.cid,clientId,deposit:dep,name:bname(b)}});
+    toast(`Listed ${bname(b)}. Deposit paid: ${dep}c.`);ahUI.sellId=null;ahUI.start='';ahUI.buyout='';ahUI.view='mine';refreshAH()}
+  catch(e){c.coin+=dep;(b.status='owned',b.su=Date.now());delete b.ahId;save();toast(e.msg+' Your blade and deposit are back.')}
   render()}
-// the coin for a bid is taken by the server, and comes back by mail if someone outbids you
-async function ahBid(id,amount,isBuyout){if(!online())return toast('Sign in first: tap your name at the top.');const c=C();const L=AHL.find(x=>x.id===id);if(!L)return;
+async function ahBid(id,amount,isBuyout){if(!online())return toast('Sign in first: tap your name at the top.');const c=C();ensureCid(c);const L=AHL.find(x=>x.id===id);if(!L)return;
   amount=isBuyout?L.buyout:Math.floor(amount);if(!(amount>0))return;if(c.coin<amount)return toast(`You have ${fmt(c.coin)}c, which isn’t enough.`);
-  const r=await act(isBuyout?'ahBuyout':'ahBid',{id,amount});
-  if(r){if(r.bought)toast(`Bought the ${bname(r.blade)} for ${fmt(r.amount)}c. It’s on your rack.`);else toast(`You’re the top bidder at ${fmt(amount)}c. If someone outbids you, your coin comes back by mail.`);refreshAH()}
+  c.coin-=amount;save();
+  try{const r=await apiCall(`/api/ah/${id}/${isBuyout?'buyout':'bid'}`,{method:'POST',body:{amount,smith:c.name,cid:c.cid}});
+    if(r.bought){if(r.amount!==amount){c.coin+=amount-r.amount}c.blades.push({...r.blade,id:++A.serial,status:'owned'});save();toast(`Bought the ${bname(r.blade)} for ${fmt(r.amount)}c. It’s on your rack.`)}
+    else toast(`You’re the top bidder at ${fmt(amount)}c. If someone outbids you, your coin comes back by mail.`);refreshAH()}
+  catch(e){c.coin+=amount;save();toast(e.msg)}
   render()}
-async function ahCancel(id){const r=await act('ahCancel',{id});if(r){toast('Auction cancelled. The blade is back on your rack. The deposit is kept.');refreshAH()}render()}
+async function ahCancel(id){try{const r=await apiCall(`/api/ah/${id}/cancel`,{method:'POST'});for(const s of A.slots.filter(Boolean)){const b=s.blades.find(x=>x.ahId===r.clientId);if(b){(b.status='owned',b.su=Date.now());delete b.ahId}}
+    save();toast('Auction cancelled. The blade is back on your rack. The deposit is kept.');refreshAH()}catch(e){toast(e.msg)}render()}
 
 // =============== ARENA (PvP) ===============
 const ARENA={match:null,queued:null,mode:'ranked',bladeId:null,ladder:null,busy:false};
 function arenaUpdate(m){ARENA.match=m;if(m)ARENA.queued=null;
-  // the server has already settled the duel in both players' saves (a wager blade is lost or back on the rack); this only tells you
-  if(m&&m.over){ARENA.done=ARENA.done||{};if(!ARENA.done[m.id]){ARENA.done[m.id]=1;const r=m.result||{};
-    if(r.lostBladeId!=null)toast(`Your ${bname(m.you.blade)} now belongs to ${m.foe.smith}.`,5000);
-    if(r.outcome)toast(r.outcome==='win'?'Victory.':r.outcome==='loss'?'Defeat.':'A draw.');ARENA.ladder=null;if(!SV.busy&&!SV.queue.length)loadServerSave(true)}}
+  if(m&&m.over){A.arenaDone=A.arenaDone||{};if(!A.arenaDone[m.id]){A.arenaDone[m.id]=1;const r=m.result||{};
+    if(r.lostBladeId!=null){for(const s of A.slots.filter(Boolean)){const b=s.blades.find(x=>String(x.id)===String(r.lostBladeId));if(b){(b.status='lost',b.su=Date.now());toast(`Your ${bname(b)} now belongs to ${m.foe.smith}.`,5000)}}}
+    if(r.outcome)toast(r.outcome==='win'?'Victory.':r.outcome==='loss'?'Defeat.':'A draw.');if(r.outcome==='win')chEvent({k:'win'});save();ARENA.ladder=null}}
   if(A.tab==='arena'&&!F&&!revealId)render()}
-async function arenaQueue(){const b=blade(ARENA.bladeId);if(!b||b.status!=='owned'||b.cracked)return toast('Choose a blade from your rack to carry.');if(isGift(b)&&ARENA.mode==='wager')return toast('Keepsakes can only fight in ranked duels.');
+async function arenaQueue(){const c=C();ensureCid(c);const b=blade(ARENA.bladeId);if(!b||b.status!=='owned'||b.cracked)return toast('Choose a blade from your rack to carry.');if(isGift(b)&&ARENA.mode==='wager')return toast('Keepsakes can only fight in ranked duels.');
   ARENA.busy=true;render();
-  const r=await act('arenaQueue',{mode:ARENA.mode,id:b.id});if(r){if(r.match)arenaUpdate(r.match);else ARENA.queued=r.queued}
+  try{const r=await apiCall('/api/pvp/queue',{method:'POST',body:{mode:ARENA.mode,blade:bladeFields(b),bladeId:b.id,smith:c.name,cid:c.cid}});
+    if(r.match)arenaUpdate(r.match);else ARENA.queued=r.queued}catch(e){toast(e.msg)}
   ARENA.busy=false;render()}
 async function arenaMove(mv){if(!ARENA.match)return;try{const r=await apiCall('/api/pvp/move',{method:'POST',body:{matchId:ARENA.match.id,move:mv}});arenaUpdate(r.match)}catch(e){toast(e.msg)}}
 setInterval(async()=>{if(!online())return;
@@ -2628,12 +2861,22 @@ function navHTML(){const all=NAV.flatMap(g=>g[1]).filter(i=>navShow(i[0]));const
   <div class="navbar">${NAV_BAR.map(k=>navItem(k,nm(k),'railbtn')).join('')}<button class="railbtn ${UI.more||restOn?'on':''}" data-action="navmore" aria-expanded="${!!UI.more}"><i class="pxico" style="background-image:var(--ico-more)" aria-hidden="true"></i><span>More</span>${restN?`<b class="navb">${restN}</b>`:''}</button></div>
   ${UI.more?`<div class="morebg" data-action="navmore"></div><div class="moresheet" role="dialog" aria-label="More pages">${NAV.map(([g,l])=>{const r=l.filter(i=>rest.includes(i));return r.length?`<p class="navg">${g}</p>${r.map(i=>navItem(i[0],i[1])).join('')}`:''}).join('')}</div>`:''}`}
 
-// getting started: [id, title, why, coin, where, button] (in js/rules.js)
-const GS_STEPS=AMR.GS_STEPS;
-function gsState(){return AMR.gsState(A)}
+// getting started: [id, title, why, coin, where, button]
+const GS_STEPS=[['forge','Forge your first blade','The forge walks you through heating, striking and quenching.',25,'forge','Go to the Forge'],
+ ['rack','Look at your blade on the Rack','Every blade you keep hangs on your rack, drawn to scale.',10,'rack','Open the Rack'],
+ ['sell','Sell a blade','Open a blade on your rack and press Sell. Coin buys iron, coal and upgrades.',25,'rack','Open the Rack'],
+ ['market','Visit the Market','Buy iron and coal here, or a meal when you run out of energy.',15,'market','Go to the Market'],
+ ['board','Check the Commission board','Patrons pay extra for the exact blade they ask for.',15,'board','Open Commissions'],
+ ['task','Collect a challenge reward','Finish any daily challenge, then collect its coin.',50,'tasks','See Challenges'],
+ ['workshop','See what the Workshop sells','Patterns, anvils and hammers. This is what to save your coin for.',15,'workshop','Go to the Workshop'],
+ ['armory','Open your Armory','The book of every blade there is to find. First finds pay a reward.',15,'armory','Open the Armory'],
+ ['arena','Visit the Arena','Duel other smiths with your best blade.',15,'arena','Go to the Arena'],
+ ['hall','See your Smith’s hall','Your look, title and best blades, as other smiths see you.',25,'hall','Open your hall']];
+function gsState(){if(!A.gs||!A.gs.d)A.gs={d:{},fin:A.slots.some(x=>x&&x.forged)?1:0};return A.gs}
 const gsOn=()=>!!C()&&!gsState().fin;
-// steps that are about visiting a page are reported to the server, which pays the reward once
-function gsMark(id){try{const c=C();if(!c)return;const g=gsState();if(g.fin||g.d[id])return;if(id!=='forge'&&!g.d.forge)return;actSync('gs',{id},{silent:true})}catch(e){}}
+function gsMark(id){try{const c=C();if(!c)return;const g=gsState();if(g.fin||g.d[id])return;const st=GS_STEPS.find(s=>s[0]===id);if(!st)return;
+  if(id!=='forge'&&!g.d.forge)return;g.d[id]=1;c.coin+=st[3];const left=GS_STEPS.filter(s=>!g.d[s[0]]).length;
+  if(!left){g.fin=1;toast(`<b>Getting started is done.</b> +${st[3]} coin. The game now opens on the Forge.`,5200)}else toast(`<b>Step done:</b> ${st[1]}. +${st[3]} coin.`,3600);save()}catch(e){}}
 function gsVisit(){if(!gsOn()||F||revealId||TOUR.on)return;const g=gsState();if(!g.d.forge&&A.slots.some(x=>x&&x.forged))gsMark('forge');
   if(UI.rack&&owned().length)gsMark('rack');if(UI.board)gsMark('board');if(A.ch&&A.ch.done>=1)gsMark('task');
   if(['market','workshop','armory','arena'].includes(A.tab))gsMark(A.tab);if(A.tab==='hall'&&!HALL.user)gsMark('hall')}
@@ -2657,11 +2900,29 @@ const PAGE_TIPS={forge:['The Forge','Pick a blade, then light the forge. Hold Be
  chars:['Account','Switch class, learn a new one, start another smith, or manage your sign-in and recovery code.']};
 function tipHTML(){const t=PAGE_TIPS[A.tab];if(!t||needAcct()||!C()||(A.tipsOff||{})[A.tab]||(A.tab==='hall'&&HALL.user))return '';
   return `<div class="pagetip"><p><b>${t[0]}.</b> ${t[1]}</p><button class="linkbtn" data-action="tiphide" aria-label="Hide this tip">Got it</button></div>`}
-// The challenge lists and their rules live in js/rules.js; the server counts progress as you forge, sell, salvage and duel.
-const CH_DAY=AMR.CH_DAY,chDay=(t=nowS())=>AMR.chDay(t),chWeek=(t=nowS())=>AMR.chWeek(t),CH_TIER=AMR.CH_TIER;
-const chList=weekly=>AMR.chList(weekly,nowS());
-function chState(){return AMR.chState(A,nowS())}
-const chReady=()=>C()?AMR.chReady(A,nowS()):0;
+const CH_DAY=864e5,chDay=(t=Date.now())=>Math.floor(t/CH_DAY),chWeek=(t=Date.now())=>Math.floor((chDay(t)+3)/7);
+function chRng(seed){let h=(seed*2654435761)>>>0;return n=>{h=Math.imul(h^(h>>>15),2246822519)>>>0;h=Math.imul(h^(h>>>13),3266489917)>>>0;h^=h>>>16;return(h>>>0)%n}}
+const CH_TIER=[['Easy',25],['Medium',50],['Hard',100],['Very hard',200]],CH_SIZE={3:'Large',4:'Huge',5:'Titan'};
+const forged=(ev,f)=>ev.k==='forge'&&(!f||f(ev.b))?1:0;
+// each maker returns [text, how many, what one event adds]
+const CH_POOL=[
+  [r=>{const n=5+r(4);return[`Forge ${n} blades`,n,ev=>forged(ev)]},r=>{const n=3+r(3);return[`Sell ${n} blades`,n,ev=>ev.k==='sell'?1:0]},r=>{const n=2+r(2);return[`Salvage ${n} blades`,n,ev=>ev.k==='salv'?1:0]},r=>{const n=2+r(2);return[`Forge ${n} blades of grade 60 or better`,n,ev=>forged(ev,b=>b.grade>=60)]}],
+  [r=>{const w=['L','M'][r(2)],n=3+r(2);return[`Forge ${n} ${WT[w].n} blades`,n,ev=>forged(ev,b=>TYPES[b.type].wt===w)]},r=>{const n=2+r(2);return[`Forge ${n} blades of grade 80 or better`,n,ev=>forged(ev,b=>b.grade>=80)]},r=>{const n=2+r(2);return[`Forge ${n} blades that are ${RAR[1].n} or rarer`,n,ev=>forged(ev,b=>b.rarity>=1)]},r=>{const n=150+r(3)*50;return[`Earn ${n} coins from selling blades`,n,ev=>ev.k==='sell'?ev.coin||0:0]}],
+  [r=>[`Forge a blade that is ${RAR[2].n} or rarer`,1,ev=>forged(ev,b=>b.rarity>=2)],r=>[`Forge a ${CH_SIZE[3]} blade or bigger`,1,ev=>forged(ev,b=>b.si>=3)],r=>{const n=300+r(3)*100;return[`Earn ${n} coins from selling blades`,n,ev=>ev.k==='sell'?ev.coin||0:0]},r=>[`Forge 2 blades of grade 90 or better`,2,ev=>forged(ev,b=>b.grade>=90)]],
+  [r=>[`Forge a blade that is ${RAR[3].n} or rarer`,1,ev=>forged(ev,b=>b.rarity>=3)],r=>[`Forge a ${CH_SIZE[4]} blade or bigger`,1,ev=>forged(ev,b=>b.si>=4)],r=>[`Forge a blade of grade 97 or better`,1,ev=>forged(ev,b=>b.grade>=97)]]];
+const CH_WEEK=[[r=>[`Forge 40 blades`,40,ev=>forged(ev)],150],[r=>[`Sell 25 blades`,25,ev=>ev.k==='sell'?1:0],150],[r=>[`Earn 1,500 coins from selling blades`,1500,ev=>ev.k==='sell'?ev.coin||0:0],250],
+  [r=>[`Forge 5 blades that are ${RAR[2].n} or rarer`,5,ev=>forged(ev,b=>b.rarity>=2)],300],[r=>[`Forge 8 Heavy or Massive blades`,8,ev=>forged(ev,b=>'HX'.includes(TYPES[b.type].wt))],250],
+  [r=>[`Forge 3 blades of grade 95 or better`,3,ev=>forged(ev,b=>b.grade>=95)],300],[r=>[`Win 2 Arena duels`,2,ev=>ev.k==='win'?1:0],250],[r=>[`Forge a ${RAR[4].n} blade`,1,ev=>forged(ev,b=>b.rarity>=4)],600],[r=>[`Forge 10 ${CH_SIZE[3]} blades or bigger`,10,ev=>forged(ev,b=>b.si>=3)],300]];
+let CHC={};
+function chList(weekly){const key=(weekly?'w':'d')+(weekly?chWeek():chDay());if(CHC[key])return CHC[key];const r=chRng((weekly?9000000:0)+(weekly?chWeek():chDay())),out=[];
+  if(weekly){const idx=CH_WEEK.map((_,i)=>i);for(let i=0;i<5;i++){const j=idx.splice(r(idx.length),1)[0],[text,need,inc]=CH_WEEK[j][0](r);out.push({id:'w'+j,text,need,inc,pay:CH_WEEK[j][1],tier:CH_WEEK[j][1]>=600?3:CH_WEEK[j][1]>=300?2:1})}}
+  else{[0,0,1,2,3].forEach((tier,n)=>{const pool=CH_POOL[tier];let j=r(pool.length);if(n===1&&out[0].id==='d0-'+j)j=(j+1)%pool.length;const[text,need,inc]=pool[j](r);out.push({id:'d'+tier+'-'+j,text,need,inc,pay:CH_TIER[tier][1],tier})})}
+  CHC={[key]:out,...Object.fromEntries(Object.entries(CHC).slice(0,1))};return out}
+function chState(){const s=A.ch=A.ch||{},d=chDay(),w=chWeek();if(s.d!==d){s.d=d;s.p={};s.c={}}if(s.w!==w){s.w=w;s.wp={};s.wc={}}s.p=s.p||{};s.c=s.c||{};s.wp=s.wp||{};s.wc=s.wc||{};if(s.last!==d&&s.last!==d-1)s.streak=0;s.streak=s.streak||0;s.best=s.best||0;s.done=s.done||0;return s}
+// something happened in the game: forge, sell, salv or win
+function chEvent(ev){if(ev.k==='forge')gsMark('forge');if(ev.k==='sell')gsMark('sell');try{if(!C())return;const s=chState();for(const weekly of[false,true]){const P=weekly?s.wp:s.p;for(const t of chList(weekly)){const have=P[t.id]||0;if(have>=t.need)continue;const add=t.inc(ev);if(!add)continue;P[t.id]=Math.min(t.need,have+add);
+        if(P[t.id]>=t.need){toast(`Challenge done: ${t.text}. Collect <b>${t.pay}c</b> from Challenges.`,5200);if(!weekly&&s.last!==s.d){s.streak=(s.last===s.d-1?s.streak:0)+1;s.last=s.d;s.best=Math.max(s.best,s.streak)}}}}}catch(e){}}
+const chReady=()=>{if(!C())return 0;const s=chState();return chList(false).filter(t=>(s.p[t.id]||0)>=t.need&&!s.c[t.id]).length+chList(true).filter(t=>(s.wp[t.id]||0)>=t.need&&!s.wc[t.id]).length};
 const chLeft=ms=>{const h=Math.floor(ms/36e5),m=Math.floor(ms%36e5/6e4);return h>=24?`${Math.floor(h/24)}d ${h%24}h`:h?`${h}h ${m}m`:`${m}m`};
 function vTasks(){const s=chState(),now=Date.now(),resetAt=new Date((chDay()+1)*CH_DAY).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
   const card=(t,weekly)=>{const have=(weekly?s.wp:s.p)[t.id]||0,done=have>=t.need,got=(weekly?s.wc:s.c)[t.id],pct=Math.round(have/t.need*100);
@@ -3051,16 +3312,30 @@ function lookEditor(){const L=myLook();return `<div class="plate lookedit"><div 
 // =============== SMITH'S HALL: a public page for every smith ===============
 // Chosen blades on a wall, a rank badge, an earned title and the smith's record. Anyone can open it from a link.
 const HALL={user:null,data:null,busy:false,edit:false};
-// Badges, titles and the hall summary come from js/rules.js. The server works the summary out after every action
-// and keeps it with the save; the game works it out here only to show your own hall straight away.
-const BADGES=AMR.BADGES,badgeOf=AMR.badgeOf;
+const BADGES=[['bronze','Bronze',0],['silver','Silver',.1],['gold','Gold',.3],['platinum','Platinum',.6]];
+const badgeOf=p=>{let b=BADGES[0];BADGES.forEach(x=>{if((p||0)>=x[2])b=x});return b};
 const badgeChip=id=>{const b=BADGES.find(x=>x[0]===id);return b?`<span class="bdg b-${b[0]}" title="${b[1]} smith: Armory ${Math.round(b[2]*100)}% or more">${b[1]}</span>`:''};
-const FOUNDER_BEFORE=AMR.FOUNDER_BEFORE;
-const onBoards=()=>{const me=NET.user&&NET.user.username;return !!me&&(REC.list||[]).some(x=>x.user===me)};
-function hallCtx(){return AMR.hallCtx(A,NET.user,onBoards())}
-const TITLES=AMR.TITLES,titleDefault=AMR.titleDefault,HALL_MAX=AMR.HALL_MAX,HALL_KEYS=AMR.HALL_KEYS;
-function hallBlades(){return AMR.hallBlades(A)}
-function hallSummary(){return AMR.hallSummary(A,NET.user,onBoards(),myLook())}
+const FOUNDER_BEFORE=Date.UTC(2026,11,1);
+function hallCtx(){const seen=allBlades().filter(b=>b&&TYPES[b.type]&&b.status!=='pending'&&b.status!=='stock'&&!b.cracked),real=seen.filter(b=>!isGift(b)),{got,goals}=armoryProgress(),u=NET.user||{},me=u.username;
+  const found={};CK.forEach(k=>found[k]=new Set(real.filter(b=>TYPES[b.type].c===k).map(b=>b.type)).size);
+  const big=[...real].sort((a,b)=>b.len-a.len)[0];
+  return{forged:A.slots.filter(Boolean).reduce((a,x)=>a+(x.forged||0),0),pct:goals?got/goals:0,got,goals,leg:real.filter(b=>b.rarity===4).length,titan:real.some(b=>b.si>=5),star:real.some(b=>b.shine==='star'),moon:real.some(b=>b.moon),found,big,
+    coin:A.slots.filter(Boolean).reduce((a,x)=>a+Math.floor(x.coin||0),0),wins:u.wins||0,losses:u.losses||0,rating:u.rating||1000,created:u.created||0,rec:!!me&&(REC.list||[]).some(x=>x.user===me),classes:(C()&&C().classes||[]).length,onrack:C()?owned().length:0,chBest:(A.ch&&A.ch.best)||0,chDone:(A.ch&&A.ch.done)||0}}
+const TITLES=[
+  ['smith1','Apprentice Smith','Forge your first blade',x=>x.forged>=1],['smith2','Journeyman Smith','Forge 50 blades',x=>x.forged>=50],['smith3','Master Smith','Forge 250 blades',x=>x.forged>=250],['smith4','Grandmaster Smith','Forge 1,000 blades',x=>x.forged>=1000],
+  ['leg1','Legend-Maker','Find a Legendary blade',x=>x.leg>=1],['leg2','Keeper of Legends','Find 10 Legendary blades',x=>x.leg>=10],
+  ['titan','Titan-Forger','Find a Titan-sized blade',x=>x.titan],['star','Starforger','Find a Starforged blade',x=>x.star],['moon','Moon-Touched','Find a Moonlit blade',x=>x.moon],
+  ...CK.map(k=>['chron-'+k,`${CLASSES[k].n.replace(' Smith','')} Chronicler`,`Find every ${CLASSES[k].n} blade`,x=>x.found[k]>=typesOf(k).length]),
+  ['rec','Record Holder','Hold a place on a Records board',x=>x.rec],['duel','Duelist','Win 5 Arena duels',x=>x.wins>=5],['champ','Arena Champion','Reach an Arena rating of 1,200',x=>x.rating>=1200],
+  ['baron','Coin Baron','Hold 10,000 coins',x=>x.coin>=10000],['streak7','Steadfast','Keep a 7-day challenge streak',x=>x.chBest>=7],['tasks50','Taskmaster','Complete 50 challenges',x=>x.chDone>=50],['founder','Founding Smith','Joined during Anvilmoon’s first weeks',x=>x.created>0&&x.created<FOUNDER_BEFORE]];
+const titleDefault=earned=>{const t=['smith4','smith3','smith2','smith1'].find(k=>earned.includes(k));return t||earned[0]||null};
+const HALL_MAX=8,HALL_KEYS=['type','len','si','grade','rarity','variant','anvil','shine','moon','bog','forger','gdate','gift','q','perfect'];
+function hallBlades(){const c=C();if(!c)return[];const mine=owned().filter(b=>TYPES[b.type]);let pick=mine.filter(b=>b.hall);if(!pick.length)pick=[...mine].sort((a,b)=>(b.rarity-a.rarity)||(b.len-a.len)).slice(0,6);
+  return pick.sort((a,b)=>b.len-a.len).slice(0,HALL_MAX)}
+// worked out on this device and kept with the save, so other players' games can show it
+function hallSummary(){const x=hallCtx(),earned=TITLES.filter(t=>{try{return t[3](x)}catch(e){return false}}).map(t=>t[0]),tid=earned.includes(A.hallTitle)?A.hallTitle:titleDefault(earned),t=TITLES.find(y=>y[0]===tid);
+  return{v:1,look:myLook(),title:t?t[1]:'',badge:badgeOf(x.pct)[0],pct:Math.round(x.pct*1000)/1000,earned,stats:{forged:x.forged,leg:x.leg,onrack:x.onrack,classes:x.classes,big:x.big?{len:x.big.len,type:x.big.type}:null},
+    blades:hallBlades().map(b=>{const o={};HALL_KEYS.forEach(k=>{if(b[k]!==undefined&&b[k]!==''&&b[k]!==false)o[k]=b[k]});return o})}}
 async function openHall(name){if(A.tab!=='hall')window.__hallFrom=A.tab;const me=NET.user&&NET.user.username;if(!name||name===me){HALL.user=null;HALL.data=null;A.tab='hall';render();return}
   HALL.user=name;HALL.data=null;HALL.busy=true;A.tab='hall';UI.rack=false;render();
   try{HALL.data=await apiCall('/api/x/hall?u='+encodeURIComponent(name))}catch(e){HALL.data={missing:true,err:true}}HALL.busy=false;if(A.tab==='hall')render()}
@@ -3130,7 +3405,9 @@ document.addEventListener('submit',async e=>{const f=e.target.closest('form.auth
   if(f.dataset.auth==='oauthname'){oauthName(v('username').trim());return}
   if(f.dataset.auth==='create'&&v('password')!==v('confirm')){NET.authErr='The two passwords don’t match.';render();return}
   doAuth(f.dataset.auth,v('username').trim(),v('password'))});
-function conflictBanner(){return ''}   // the old two-saves chooser: saves can no longer disagree
+function conflictBanner(){return '';if(!NET.conflict)return '';return `<div class="hard conflict"><div class="hardhead"><h2>Two different saves</h2><p>This device has a save, and your account has a different one. Choose which to keep. The other is replaced.</p></div>
+  <div class="hardgrid"><div><h3>This device</h3><p class="fine">${saveSummary(A)}</p><button class="btn" data-action="keeplocal" data-confirm="1">Keep this device’s save</button></div>
+  <div><h3>Your account</h3><p class="fine">${saveSummary(NET.conflict)}</p><button class="btn go" data-action="keepremote" data-confirm="1">Load my account’s save</button></div></div></div>`}
 
 // ---------- view ----------
 function vAuction(){return `<section class="page"><div class="pagehead"><h1>Auction House</h1>${bookBtn()}<p class="fine" title="Bids are held until you’re outbid. Buyouts arrive at once; everything else comes by mail. Listing costs a deposit, refunded if the blade sells.">The house takes 5% of each sale.</p></div>
@@ -3180,18 +3457,20 @@ document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.datase
   if(e.target.name==='dur'&&e.target.closest('.sellform')){ahUI.dur=e.target.value;ahDefer=false;$('ahbody').innerHTML=ahBody()}});
 
 const ACT={
-  nav:el=>navGo(el.dataset.k),navmore:()=>{UI.more=!UI.more;renderTabs()},tiphide:()=>{(A.tipsOff=A.tipsOff||{})[A.tab]=1;save();render()},gsskip:()=>{actSync('gsSkip');A.tab='forge';save();render()},
+  nav:el=>navGo(el.dataset.k),navmore:()=>{UI.more=!UI.more;renderTabs()},tiphide:()=>{(A.tipsOff=A.tipsOff||{})[A.tab]=1;save();render()},gsskip:()=>{gsState().fin=1;A.tab='forge';save();render()},
   authmode:el=>{NET.authPicked=true;NET.authMode=el.dataset.m;NET.authErr='';render()},
-  signout:async()=>{try{await apiCall('/api/logout',{method:'POST'})}catch(e){}signedOut('Signed out. You can keep playing on this device.')},
+  signout:async()=>{await pushSave();try{await apiCall('/api/logout',{method:'POST'})}catch(e){}signedOut('Signed out. You can keep playing on this device.')},
   pwopen:()=>{const f=$('pwform');if(f)f.classList.toggle('hidden')},
   codeopen:()=>{const f=$('codeform');if(f)f.classList.toggle('hidden')},codeget:async()=>{try{const r=await apiCall('/api/recovery',{method:'POST',body:{}});NET.user=r.user;showCode(r.code);window.scrollTo(0,0)}catch(x){toast(x.msg)}render()},
   codelater:()=>{NET.codeLater=true;render()},
   codecopy:async()=>{try{await navigator.clipboard.writeText(NET.newCode);toast('Copied.')}catch(e){toast('Couldn’t copy. Select the code and copy it by hand.')}},codedone:()=>{showCode(null);render()},
   oauth:el=>oauthGo(el.dataset.p,el.dataset.m),forgot:()=>{NET.forgot=!NET.forgot;render()},oauthcancel:()=>{NET.oauth=null;NET.authErr='';render()},resetskip:()=>{NET.resetTok=null;NET.authErr='';render()},
   unlink:async el=>{try{const r=await apiCall('/api/unlink',{method:'POST',body:{id:el.dataset.id}});NET.user=r.user;toast('Unlinked.')}catch(x){toast(x.msg)}render()},
+  keeplocal:async()=>{NET.conflict=null;await pushSave();toast('Kept this device’s save. Your account now has it too.');render()},
+  keepremote:()=>{A=NET.conflict;NET.conflict=null;if(!DEV)A.testOdds=false;ENT=null;try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}toast('Your account’s save is loaded.');render()},
   arenago:()=>arenaQueue(),
   move:el=>arenaMove(el.dataset.m),
-  leavequeue:async()=>{await act('arenaLeave');ARENA.queued=null;render()},
+  leavequeue:async()=>{try{await apiCall('/api/pvp/leave',{method:'POST'})}catch(e){}ARENA.queued=null;render()},
   forfeit:async()=>{try{const r=await apiCall('/api/pvp/forfeit',{method:'POST'});arenaUpdate(r.match)}catch(e){toast(e.msg)}},
   arenaback:()=>{ARENA.match=null;render()},
   pickw:el=>{const c=C(),w=el.dataset.w;c.selW=w;const first=typesOf(c.cls).find(k=>TYPES[k].wt===w);if(TYPES[c.sel].wt!==w&&first)c.sel=first;save();render()},
@@ -3200,68 +3479,68 @@ const ACT={
   recpage:el=>{UI.recPage=el.dataset.k;render();document.querySelector('.rectabs .ahtab.on')?.scrollIntoView({block:'nearest',inline:'center'})},
   backup:async()=>{const code=btoa(unescape(encodeURIComponent(JSON.stringify(A))));try{await navigator.clipboard.writeText(code);toast('Backup code copied. Keep it somewhere safe.')}catch(e){const b=$('restorebox'),t=$('restoretxt');b.classList.remove('hidden');t.value=code;t.select();toast('Copy the code from the box below.')}},
   restoreopen:()=>{$('restorebox').classList.remove('hidden');$('restoretxt').focus()},
-  restore:()=>{if(online())return toast('Your save lives on your account now, so a backup code can only be restored when you play offline.');try{const s2=JSON.parse(decodeURIComponent(escape(atob($('restoretxt').value.trim()))));if(!s2||!s2.slots)throw 0;A=s2;save();toast('Save restored.');render()}catch(e){toast('That code didn’t work. Check that you copied all of it.')}},
+  restore:()=>{try{const s2=JSON.parse(decodeURIComponent(escape(atob($('restoretxt').value.trim()))));if(!s2||!s2.slots)throw 0;A=s2;save();toast('Save restored.');render()}catch(e){toast('That code didn’t work. Check that you copied all of it.')}},
   ahview:el=>{ahUI.view=el.dataset.v;render()},
   ahpick:el=>{ahUI.sellId=el.dataset.id;const b=blade(el.dataset.id);ahUI.start=String(Math.max(1,Math.round(worth(b)*.9)));ahUI.buyout=String(Math.round(worth(b)*1.4));$('ahbody').innerHTML=ahBody()},
   ahcreate:()=>ahCreate(),
   ahbid:el=>{const v=+($('bid-'+el.dataset.id)||{}).value;ahBid(el.dataset.id,v,false)},
   ahbuy:el=>{const L=AHL.find(x=>x.id===el.dataset.id);if(L)ahBid(L.id,L.buyout,true)},
   ahcancel:el=>ahCancel(el.dataset.id),
-  eat:el=>{const k=el.dataset.k,r=actSync('eat',{k});if(!r)return;setTimeout(()=>{const b=document.querySelector(`[data-action=eat][data-k="${k}"]`);if(b)floatUp(b,'+5%')},0);toast(`You eat the ${r.n.toLowerCase()}. +${r.e} energy.`);render()},
-  learn:el=>{const c=C(),k=el.dataset.k,r=RECIPES[k];if(knows(c,k)||!reqMet(c,r)||!canPay(r.cost))return;if(!actSync('learn',{k}))return;
-    toast(`Learned: ${c.cls==='arcane'&&ARC.Q[k]?ARC.Q[k]+' binding':r.n}.`);render()},
+  eat:el=>{const kk=el.dataset.k;setTimeout(()=>{const b=document.querySelector(`[data-action=eat][data-k="${kk}"]`);if(b)floatUp(b,'+5%')},0);const c=C(),k=el.dataset.k,m=MEALS[k],p=mealPrice(c,k);if(c.coin<p||c.fuel+m.e>ENERGY_CAP)return;c.coin-=p;c.fuel+=m.e;const d=today();if(!c.meals||c.meals.d!==d)c.meals={d,n:0};c.meals.n++;save();toast(`You eat the ${m.n.toLowerCase()}. +${m.e} energy.`);render()},
+  learn:el=>{const c=C(),k=el.dataset.k,r=RECIPES[k];if(knows(c,k)||!reqMet(c,r)||!canPay(r.cost))return;pay(r.cost);c.recipes=c.recipes||{};c.recipes[k]=true;
+    const nc=c.commissions.length;save();toast(`Learned: ${c.cls==='arcane'&&ARC.Q[k]?ARC.Q[k]+' binding':r.n}.`);render()},
   labor:()=>{const c=C();if(!isBroke(c))return toast('The foreman only hires smiths who are broke.');if(laborLeft(c)<=0)return toast('No more shifts today. Come back tomorrow.');startForge(true)},
   handover:()=>handOver(),
-  dig:()=>{const c=C();if(!isBroke(c))return;actSync('dig');render()},
-  collectdig:()=>{const c=C();if(!c.digUntil||nowS()<c.digUntil)return;if(actSync('collectDig'))toast('You haul out 1 bog iron and 1 coal.');render()},
+  dig:()=>{const c=C();if(!isBroke(c))return;c.digUntil=Date.now()+(A.testOdds?8000:DIG_MS);save();render()},
+  collectdig:()=>{const c=C();if(!c.digUntil||Date.now()<c.digUntil)return;c.digUntil=0;c.bog=(c.bog||0)+1;c.coal+=1;gainXP(c,3);save();toast('You haul out 1 bog iron and 1 coal.');render()},
   tab:el=>{if(F)return toast('Finish the blade first.');A.tab=el.dataset.tab;save();render()},
   pick:el=>{C().sel=el.dataset.type;if(el.dataset.w)C().selW=el.dataset.w;save();render()},
-  jobpin:el=>{actSync('jobFlag',{cid:el.dataset.cid,f:'pin'});render()},
+  jobpin:el=>{const q=C().commissions.find(x=>String(x.id)===el.dataset.cid);if(!q)return;q.pin=q.pin?0:1;save();render()},
   supopen:()=>{UI.sup=true;render()},supclose:()=>{UI.sup=false;render()},
   rackopen:el=>{RACK.open=el.dataset.k;render()},rackclose:()=>{RACK.open=null;render()},
-  racktoggle:()=>{UI.rack=!UI.rack;RACK.open=null;RACK.man={};render()},bulksell:el=>bulkDo(el.dataset.k,'sell'),bulksalv:el=>bulkDo(el.dataset.k,'salv'),bfreset:()=>{RACK.f={...BF0};RACK.man={};render()},keeptoggle:el=>{const b=blade(el.dataset.id);if(!b)return;const r=actSync('keep',{id:b.id});if(!r)return;if(RACK.man)delete RACK.man[b.id];toast(r.keep?'Locked. Selling will skip it.':'Unlocked.');render()},bulkall:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;const{ok}=bulkState(st.list);st.list.forEach(b=>{if(ok(b))RACK.man[b.id]=true});render()},bulknone:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;st.list.forEach(b=>RACK.man[b.id]=false);render()},
+  racktoggle:()=>{UI.rack=!UI.rack;RACK.open=null;RACK.man={};render()},bulksell:el=>bulkDo(el.dataset.k,'sell'),bulksalv:el=>bulkDo(el.dataset.k,'salv'),bfreset:()=>{RACK.f={...BF0};RACK.man={};render()},keeptoggle:el=>{const b=blade(el.dataset.id);if(!b)return;b.keep=!b.keep;if(RACK.man)delete RACK.man[b.id];save();toast(b.keep?'Locked. Selling will skip it.':'Unlocked.');render()},bulkall:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;const{ok}=bulkState(st.list);st.list.forEach(b=>{if(ok(b))RACK.man[b.id]=true});render()},bulknone:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;st.list.forEach(b=>RACK.man[b.id]=false);render()},
   begin:()=>startForge(),
   quick:()=>quickForge(),
   tdq:el=>tourQuench(el.dataset.q),rackmore:()=>{RACK.more=!RACK.more;render()},rackclear:()=>{Object.assign(RACK,{minR:0,minS:0,q:'',wt:'',fx:'',minL:''});render()},tutdone:()=>{A.tutDone=1;UI.tut=false;save();render()},tutopen:()=>tourStart(),boardtoggle:()=>{UI.board=!UI.board;if(UI.board){UI.mail=false;UI.rack=false;RACK.open=null}render()},tournext:()=>{if(TOUR.i>=TOUR_STEPS.length-1)tourEnd();else tourStep(1)},tourback:()=>tourStep(-1),tourend:()=>tourEnd(),
   snd:()=>{SFX.toggle();if(!SFX.muted)SFX.play('click');renderHUD()},
   quench:el=>startQuench(el.dataset.q),
   mailopen:()=>{UI.mail=true;UI.rack=false;renderDrawer();renderMailbox();renderBoard();fetchMail()},mailclose:()=>{UI.mail=false;renderMailbox()},
-  mailget:async el=>{const m=MAIL.list.find(x=>x.id===el.dataset.id);if(!m)return;const got=await collectMails([m]);renderMailbox();renderHUD();if(!got)return;const g=got[0];
-    if(g&&isGift(g)){UI.mail=false;renderMailbox();showReveal(g)}else{if(m.blade&&g)toast(`${bname(g)} is on your rack.`);render()}},
-  mailall:async()=>{const got=await collectMails([...MAIL.list]);renderHUD();if(!got)return;const gift=got.find(isGift);if(gift){UI.mail=false;renderMailbox();showReveal(gift)}else{toast('All mail collected.');render();renderMailbox()}},
+  mailget:el=>{const m=MAIL.list.find(x=>x.id===el.dataset.id);const got=collectOne(m);renderMailbox();renderHUD();
+    if(got&&isGift(got)){UI.mail=false;renderMailbox();showReveal(got)}else{if(m&&m.blade&&got)toast(`${bname(got)} is on your rack.`);render()}},
+  mailall:()=>{let gift=null;[...MAIL.list].forEach(m=>{const g=collectOne(m);if(g&&isGift(g))gift=g});renderHUD();if(gift){UI.mail=false;renderMailbox();showReveal(gift)}else{toast('All mail collected.');render();renderMailbox()}},
   giftkeep:()=>{SFX.play('coin');closeReveal();UI.rack=true;render()},
-  keep:el=>{const b=blade(el.dataset.id);if(b)toast(`${bname(b)} added to your rack.`);closeReveal()},
-  sell:el=>{sellBlade(blade(el.dataset.id));revealId?closeReveal():render()},
+  keep:el=>{const b=blade(el.dataset.id);(b.status='owned',b.su=Date.now());save();toast(`${bname(b)} added to your rack.`);closeReveal()},
+  sell:el=>{sellBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
   hall:el=>openHall(el.dataset.u||''),hallclose:()=>{HALL.user=null;HALL.data=null;A.tab=needAcct()?'chars':(window.__hallFrom||'records');try{history.replaceState(null,'',location.pathname)}catch(e){}render()},
   hallcopy:async el=>{const l=hallLink(el.dataset.u);try{await navigator.clipboard.writeText(l);toast('Link copied. Anyone can open it.')}catch(e){toast(l,6000)}},
-  titleset:el=>{actSync('prefs',{hallTitle:el.dataset.t});render()},
-  chclaim:el=>{const r=actSync('chClaim',{id:el.dataset.id,w:!!el.dataset.w});if(!r)return;SFX.play('coin');toast(`Collected <b>${r.pay}c</b>.`);render()},
+  titleset:el=>{A.hallTitle=el.dataset.t;save();render()},
+  chclaim:el=>{const s=chState(),w=!!el.dataset.w,t=chList(w).find(x=>x.id===el.dataset.id),P=w?s.wp:s.p,G=w?s.wc:s.c;if(!t||G[t.id]||(P[t.id]||0)<t.need)return;G[t.id]=1;s.done++;C().coin+=t.pay;SFX.play('coin');toast(`Collected <b>${t.pay}c</b>.`);save();render()},
   lookopen:()=>{HALL.edit=!HALL.edit;render()},lookclose:()=>{HALL.edit=false;render()},
-  lookset:el=>{const L={...myLook()};L[el.dataset.k]=+el.dataset.i;if(L.body===1)L.beard=0;actSync('prefs',{look:L});render()},
-  lookrand:()=>{const r=n=>Math.floor(Math.random()*n),L={body:r(2),skin:r(6),hair:r(14),hairC:r(8),cloth:r(8),trous:r(5)};L.beard=L.body?0:r(3);L.trim=(L.cloth+1+r(7))%8;actSync('prefs',{look:L});render()},
-  halltoggle:el=>{const b=blade(el.dataset.id);if(!b)return;if(!b.hall&&owned().filter(x=>x.hall).length>=HALL_MAX)return toast(`Your hall holds ${HALL_MAX} blades. Take one down first.`);const r=actSync('hall',{id:b.id});if(!r)return;toast(r.hall?'Hung in your hall.':'Taken down from your hall.');render()},
+  lookset:el=>{const L=myLook();L[el.dataset.k]=+el.dataset.i;if(L.body===1)L.beard=0;A.look=L;save();render()},
+  lookrand:()=>{const r=n=>Math.floor(Math.random()*n),L={body:r(2),skin:r(6),hair:r(14),hairC:r(8),cloth:r(8),trous:r(5)};L.beard=L.body?0:r(3);L.trim=(L.cloth+1+r(7))%8;A.look=L;save();render()},
+  halltoggle:el=>{const b=blade(el.dataset.id);if(!b)return;if(!b.hall&&owned().filter(x=>x.hall).length>=HALL_MAX)return toast(`Your hall holds ${HALL_MAX} blades. Take one down first.`);b.hall=!b.hall;save();toast(b.hall?'Hung in your hall.':'Taken down from your hall.');render()},
   racktall:()=>{A.rackTall=!A.rackTall;save();render()},
-  sellall:()=>{const list=rackStacks().flatMap(x=>x.list).filter(b=>!b.keep&&!isGift(b)&&!b.cracked);if(!list.length)return toast('Nothing to sell.');const r=actSync('sell',{ids:list.map(b=>b.id)});if(!r)return;SFX.play('coin');RACK.open=null;RACK.man={};save();toast(`Sold ${r.n} blade${r.n===1?'':'s'} for ${fmt(r.coin)}c. Locked blades and keepsakes were kept.`,4500);render()},
-  salvage:el=>{salvBlade(blade(el.dataset.id));revealId?closeReveal():render()},
-  salvplain:()=>{const list=owned().filter(b=>b.rarity===0&&!b.shine&&b.si>0&&b.si<4&&!vr(b).rare&&!isRecord(b)&&!b.keep);if(!list.length)return toast('Nothing to salvage.');const r=actSync('salvage',{ids:list.map(b=>b.id)});if(!r)return;toast(`Salvaged ${r.n} blades into ${yieldStr(r.y)}.`);render()},
-  supfill:()=>{const r=actSync('supfill',{type:C().sel});if(!r)return;toast(`Bought ${[r.iron&&r.iron+' iron',r.coal&&r.coal+' coal'].filter(Boolean).join(' and ')} for ${r.cost}c.`);render()},
+  sellall:()=>{const list=rackStacks().flatMap(x=>x.list).filter(b=>!b.keep&&!isGift(b)&&!b.cracked);if(!list.length)return toast('Nothing to sell.');const c=C(),before=c.coin;SFX.play('coin');list.forEach(b=>{const v=value(b);c.coin+=v;c.demand[b.type]=Math.max(.5,c.demand[b.type]*.93);b.status='sold';b.su=Date.now();chEvent({k:'sell',b,coin:v})});RACK.open=null;RACK.man={};save();toast(`Sold ${list.length} blade${list.length===1?'':'s'} for ${fmt(C().coin-before)}c. Locked blades and keepsakes were kept.`,4500);render()},
+  salvage:el=>{salvBlade(blade(el.dataset.id));save();revealId?closeReveal():render()},
+  salvplain:()=>{const c=C(),list=owned().filter(b=>b.rarity===0&&!b.shine&&b.si>0&&b.si<4&&!vr(b).rare&&!isRecord(b)&&!b.keep),tot={};list.forEach(b=>{const y=salvYield(b);for(const[k,v]of Object.entries(y)){const add=k==='fuel'?Math.max(0,Math.min(ENERGY_CAP,c[k]+v)-c[k]):v;c[k]+=add;tot[k]=(tot[k]||0)+add}(b.status='salvaged',b.su=Date.now())});save();toast(`Salvaged ${list.length} blades into ${yieldStr(tot)}.`);render()},
+  supfill:()=>{const c=C(),w=WT[TYPES[c.sel].wt],i=Math.max(0,w.iron-(c.iron+(c.bog||0))),k=Math.max(0,w.coal-c.coal),p=i*PRICES.iron+k*PRICES.coal;if(!p||c.coin<p)return;c.coin-=p;c.iron+=i;c.coal+=k;save();toast(`Bought ${[i&&i+' iron',k&&k+' coal'].filter(Boolean).join(' and ')} for ${p}c.`);render()},
   qstep:el=>{const row=el.closest('.qrow'),cur=+row.querySelector('input').value||1,d=el.dataset.d;qSync(row,d==='max'?+row.dataset.max:cur+ +d)},
   qgo:el=>{const row=el.closest('.qrow'),c=C(),op=row.dataset.op,m=row.dataset.m,n=qSync(row,+row.querySelector('input').value);
-    if(op==='buy'){const r=actSync('buy',{m,n});if(!r)return;toast(`Bought ${n} ${MATN[m].toLowerCase()} for ${fmt(r.cost)}c.`)}
-    else if(op==='sell'){const r=actSync('sellMat',{m,n});if(!r)return;toast(`Sold ${n} ${MATN[m].toLowerCase()} for ${fmt(r.coin)}c.`)}
-    else{if(!actSync('refine',{n}))return;toast(`Refined ${n*10} star-dust into ${n} star-shard${n>1?'s':''}.`)}
+    if(op==='buy'){const cost=PRICES[m]*n;if(c.coin<cost)return toast('Not enough coin.');c.coin-=cost;c[m]+=n;toast(`Bought ${n} ${MATN[m].toLowerCase()} for ${fmt(cost)}c.`)}
+    else if(op==='sell'){if(c[m]<n)return;c[m]-=n;c.coin+=SELLMAT[m]*n;toast(`Sold ${n} ${MATN[m].toLowerCase()} for ${fmt(SELLMAT[m]*n)}c.`)}
+    else{if(c.dust<n*10)return;c.dust-=n*10;c.shards+=n;toast(`Refined ${n*10} star-dust into ${n} star-shard${n>1?'s':''}.`)}
     QTY[row.dataset.key]=n;save();render()},
-  fulfill:async el=>{const c=C(),q=c.commissions.find(q=>q.id===el.dataset.cid);if(!q)return;const sel=$('sel-'+q.id),b=sel&&blade(sel.value);if(!b||!deliverable(b,q))return;
-    const r=await act('fulfill',{cid:q.id,id:b.id});if(r)toast(`${r.patron} paid <b>${r.pay}c</b>.`);render()},
-  refresh:async()=>{const c=C(),p=refreshCost(c);if(p==null||c.coin<p)return;await act('refreshBoard');render()},
-  joblock:el=>{actSync('jobFlag',{cid:el.dataset.cid,f:'lock'});render()},
-  anvil:()=>{const r=actSync('anvil');if(r)toast(`${r.n} crafted. Your rarity odds improved.`);render()},
-  hammer:el=>{const r=actSync('hammer',{k:el.dataset.h});if(r)toast(`${r.n} crafted and equipped.`);render()},
-  equip:el=>{actSync('equip',{k:el.dataset.h});render()},
-  repair:el=>{const r=actSync('repair',{k:el.dataset.h});if(r)toast(`${r.n} repaired.`);render()},
+  fulfill:el=>{const c=C(),i=c.commissions.findIndex(q=>q.id===el.dataset.cid);if(i<0)return;const q=c.commissions[i],sel=$('sel-'+q.id),b=sel&&blade(sel.value);if(!b||!deliverable(b,q))return;
+    c.coin+=q.pay;gainXP(c,10+Math.min(q.pay,300)/4);(b.status='commission',b.su=Date.now());c.commissions.splice(i,1);c.commissions.splice(i,0,genComm(c));save();toast(`${q.patron} paid <b>${q.pay}c</b>.`);render()},
+  refresh:()=>{const c=C(),p=refreshCost(c);if(p==null||c.coin<p)return;c.coin-=p;c.commissions=c.commissions.filter(q=>q.lock);ensure(c);save();render()},
+  joblock:el=>{const q=C().commissions.find(x=>String(x.id)===el.dataset.cid);if(!q)return;q.lock=q.lock?0:1;save();render()},
+  anvil:()=>{const c=C(),a=ANVILS[c.anvil+1];if(!a||!canPay(a.cost))return;pay(a.cost);c.anvil++;save();toast(`${a.n} crafted. Your rarity odds improved.`);render()},
+  hammer:el=>{const c=C(),k=el.dataset.h,h=HAMMERS[k];if(!canPay(h.cost))return;pay(h.cost);c.hammers[k]={dur:h.dur};c.hammer=k;save();toast(`${h.n} crafted and equipped.`);render()},
+  equip:el=>{C().hammer=el.dataset.h;save();render()},
+  repair:el=>{const c=C(),k=el.dataset.h,h=HAMMERS[k];if(!canPay(h.repair))return;pay(h.repair);c.hammers[k].dur=h.dur;save();toast(`${h.n} repaired.`);render()},
   clsswitch:el=>switchClass(el.dataset.k),clslearn:el=>learnClass(el.dataset.k),
   odds:el=>{A.testOdds=el.checked;save();render()},
-  reset:()=>{if(online())return toast('Your save lives on your account. Sign out to clear this device.');F=null;try{localStorage.removeItem(KEY)}catch(e){}A=freshAcct();save();closeReveal();toast('Everything has been deleted. Fresh start.')},
+  reset:()=>{F=null;try{localStorage.removeItem(KEY)}catch(e){}A=freshAcct();save();closeReveal();toast('Everything has been deleted. Fresh start.')},
 };
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&UI.board){UI.board=false;render()}});
 document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!el||el.tagName==='LABEL')return;
@@ -3269,17 +3548,16 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-action]')
   if(el.dataset.confirm&&!el.dataset.armed){el.dataset.armed='1';el.dataset.orig=el.innerHTML;if(!el.dataset.sure)el.style.width=el.offsetWidth+'px';el.textContent=el.dataset.sure||'Sure?';el.title='Click again to confirm';setTimeout(()=>{if(el.isConnected&&el.dataset.armed){delete el.dataset.armed;el.innerHTML=el.dataset.orig;el.style.width=''}},2500);return}
   ACT[el.dataset.action]?.(el)});
 document.addEventListener('submit',e=>{const f=e.target.closest('form[data-slot]');if(!f)return;e.preventDefault();const i=+f.dataset.slot;if(i!==0||A.slots.some(Boolean))return;
-  act('createSmith').then(r=>{if(!r)return;A.tab=gsOn()?'home':'forge';save();toast(`${r.name} the ${CLASSES.war.n} lights the forge.`);render()})});
+  const name=NET.user?NET.user.username:pick(NAMES)+' '+pick(['Ashford','Coldwater','Emberly','Harth','Steelwick','Vane']),cls='war';
+  const c=newChar(name,cls);c.classes=[cls];c.selBy={};A.slots[i]=c;ensure(c);A.active=i;A.tab=gsOn()?'home':'forge';save();toast(`${name} the ${CLASSES[cls].n} lights the forge.`);render()});
 document.addEventListener('keydown',e=>{if(!F||F.done)return;if(e.code==='Space'){e.preventDefault();if(!e.repeat)strike()}if(e.code==='KeyF'){F.bell=true;$('bellows')?.classList.add('on')}});
 document.addEventListener('keyup',e=>{if(e.code==='KeyF'&&F){F.bell=false;$('bellows')?.classList.remove('on')}});
 
 try{const AppP=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;if(AppP)AppP.addListener('backButton',()=>{if(F||revealId)return;if(A.tab!=='forge'&&C()){A.tab='forge';save();render()}else AppP.minimizeApp()})}catch(e){}
 try{const native=window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform();if(!native&&'serviceWorker'in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
-// Merchant demand follows the clock (rules.js, settleDemand): it drifts back toward normal, and every 75 seconds
-// merchants clamour for one blade of your class. The server works out the same numbers, so nothing is uploaded here.
-let prevOpen=slotsOpen(),clamorW=Math.floor(nowS()/AMR.DEM_WIN);
-setInterval(()=>{const c=C();if(c){AMR.settleDemand(c,nowS());const w=Math.floor(nowS()/AMR.DEM_WIN);if(w!==clamorW){clamorW=w;if(!F&&!revealId&&!document.hidden)toast(`Merchants are clamoring for <b>${TYPES[AMR.clamorType(c,w)].n}s</b>.`)}}
-  const o=slotsOpen();if(o>prevOpen){prevOpen=o;const cc=C();if(cc&&cc.classes.length<CK.length&&o>clsN(cc))toast('You can learn a new class now. Tap your name to see it.',4000)}},5000);
+let prevOpen=slotsOpen();
+setInterval(()=>{A.slots.forEach(c=>{if(c)TK.forEach(k=>c.demand[k]+=(1-c.demand[k])*.03)});save();const o=slotsOpen();if(o>prevOpen){prevOpen=o;const cc=C();if(cc&&cc.classes.length<CK.length&&o>clsN(cc))toast('You can learn a new class now. Tap your name to see it.',4000)}},5000);
+setInterval(()=>{const c=C();if(!c)return;const k=pick(typesOf(c.cls));c.demand[k]=Math.min(1.6,c.demand[k]+.4);save();if(!F&&!revealId)toast(`Merchants are clamoring for <b>${TYPES[k].n}s</b>.`)},75000);
 setInterval(()=>{renderHUD();const c=C();if(!c)return;const el=$('digleft');if(el){const s=Math.ceil((c.digUntil-Date.now())/1000);if(s>0)el.textContent=s;else if(!F&&!revealId&&A.tab==='forge')render()}},1000);
 if(A.active<0)A.tab='chars';setTimeout(netInit,0);
 try{const sm=new URLSearchParams(location.search).get('smith');if(sm&&/^[A-Za-z0-9_]{3,20}$/.test(sm))setTimeout(()=>openHall(sm),50)}catch(e){}
