@@ -1805,7 +1805,7 @@ const ANVIL_SVG=`<svg class="anvilsvg" viewBox="0 0 600 120" preserveAspectRatio
 
 // =============== COMMISSIONS & TRADER ===============
 const isOn=()=>{try{return online()}catch(e){return false}};
-function genComm(c){const ownAll=typesOf(c.cls),own=ownAll.filter(k=>knows(c,TYPES[k].wt)),imp=!own.length||(isOn()&&Math.random()<.3),type=imp?pick(TK.filter(k=>!ownAll.includes(k))):pick(own);
+function genComm(c){const ownAll=typesOf(c.cls),own=ownAll.filter(k=>knows(c,TYPES[k].wt)),imp=!own.length||(isOn()&&!(c.commissions||[]).some(q=>q&&q.imp)&&Math.random()<.12),type=imp?pick(TK.filter(k=>!ownAll.includes(k))):pick(own);
   const maxR=c.anvil<1?1:c.anvil<3?2:3,minR=Math.min(maxR,rollIdx([35,35,22,8])),minS=Math.random()<.35?(Math.random()<.75?3:4):0,minG=Math.random()<.35?55+Math.floor(Math.random()*5)*5:0;
   const payv=Math.round([15,40,100,280][minR]*WT[TYPES[type].wt].v*(minS===3?1.6:minS===4?3:1)*(minG?1.3:1)*(imp?1.8:1));
   return{id:String(Date.now())+Math.floor(Math.random()*1e6),type,minR,minS,minG,pay:payv,imp,patron:pick(PATRONS)}}
@@ -3428,8 +3428,8 @@ const ACT={
     else{if(c.dust<n*10)return;c.dust-=n*10;c.shards+=n;toast(`Refined ${n*10} star-dust into ${n} star-shard${n>1?'s':''}.`)}
     QTY[row.dataset.key]=n;save();render()},
   fulfill:el=>{const c=C(),i=c.commissions.findIndex(q=>q.id===el.dataset.cid);if(i<0)return;const q=c.commissions[i],sel=$('sel-'+q.id),b=sel&&blade(sel.value);if(!b||!deliverable(b,q))return;
-    c.coin+=q.pay;gainXP(c,10+Math.min(q.pay,300)/4);(b.status='commission',b.su=Date.now());c.commissions[i]=genComm(c);save();toast(`${q.patron} paid <b>${q.pay}c</b>.`);render()},
-  refresh:()=>{const c=C(),p=refreshCost(c);if(p==null||c.coin<p)return;c.coin-=p;c.commissions=c.commissions.map(q=>q.lock?q:genComm(c));ensure(c);save();render()},
+    c.coin+=q.pay;gainXP(c,10+Math.min(q.pay,300)/4);(b.status='commission',b.su=Date.now());c.commissions.splice(i,1);c.commissions.splice(i,0,genComm(c));save();toast(`${q.patron} paid <b>${q.pay}c</b>.`);render()},
+  refresh:()=>{const c=C(),p=refreshCost(c);if(p==null||c.coin<p)return;c.coin-=p;c.commissions=c.commissions.filter(q=>q.lock);ensure(c);save();render()},
   joblock:el=>{const q=C().commissions.find(x=>String(x.id)===el.dataset.cid);if(!q)return;q.lock=q.lock?0:1;save();render()},
   anvil:()=>{const c=C(),a=ANVILS[c.anvil+1];if(!a||!canPay(a.cost))return;pay(a.cost);c.anvil++;save();toast(`${a.n} crafted. Your rarity odds improved.`);render()},
   hammer:el=>{const c=C(),k=el.dataset.h,h=HAMMERS[k];if(!canPay(h.cost))return;pay(h.cost);c.hammers[k]={dur:h.dur};c.hammer=k;save();toast(`${h.n} crafted and equipped.`);render()},
