@@ -1063,6 +1063,12 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+.recgrid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}.recgrid2 .recboard{max-width:none;margin:0}.recgrid2 .rechead h2{text-align:left}
+.recside{margin:0!important}.recboard .ledger{table-layout:fixed;width:100%}.recside h2{margin:0 0 8px}.recside tr[data-action]{cursor:pointer}.recside tr[data-action]:hover td{background:rgba(226,194,117,.08)}.recside .fine{margin:8px 0 0}
+.rank b{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;font-weight:700;color:var(--mute)}
+.rank.r1>b{background:var(--straw);color:#2a2018;border:2px solid var(--ink)}.rank.r2>b{background:#b9b3a6;color:#2a2018;border:2px solid var(--ink)}.rank.r3>b{background:var(--bronze);color:#2a2018;border:2px solid var(--ink)}
+td.rank{width:38px}span.rank{width:auto}.rectail{margin-top:8px;border-top:3px dashed var(--rule)}.recboard .ledger td{padding-top:9px;padding-bottom:9px}
+@media (max-width:1000px){.recgrid2{grid-template-columns:minmax(0,1fr)}}
 .mktgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}.mktcol{display:flex;flex-direction:column;gap:16px;min-width:0}.mktcol .plate{margin:0}
 .mkt .platehead{gap:12px;margin-bottom:10px}.mkt .platehead h2{margin:0}.mktnote{margin:10px 0 0}
 .mkt .qrow{grid-template-columns:minmax(120px,1fr) auto auto;grid-template-areas:"name ctl go";padding:8px 10px;margin-bottom:6px;background:var(--plate2);border-bottom:0}
@@ -2254,22 +2260,30 @@ const REC_PAGES=[['long','Largest blade'],['runt','Runt board'],['grade','Forge 
 function vRecords(){if(SERVER&&Date.now()-REC.at>10000)setTimeout(refreshRecords,0);const e=entries(),cur=C(),me=NET.user?NET.user.username:null;
   const pg=REC_PAGES.some(x=>x[0]===UI.recPage)?UI.recPage:'long',pi=REC_PAGES.findIndex(x=>x[0]===pg);
   const one=l=>{const seen=new Set();return l.filter(x=>!seen.has(x.who)&&seen.add(x.who))};
-  const row=(x,i,val)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(x.who)}${x.shine==='star'?' <span class="tag star">Starforged</span>':x.shine==='temp'?' <span class="tag temp">Tempered</span>':''}</td><td class="mute">${TYPES[x.type]?TYPES[x.type].n:''}</td><td class="n">${val}</td></tr>`;
+  const row=(x,i,val)=>`<tr class="${x.mine?'cur':''}"><td class="rank r${i+1}"><b>${i+1}</b></td><td>${smithName(x.who)}${x.shine==='star'?' <span class="tag star">Starforged</span>':x.shine==='temp'?' <span class="tag temp">Tempered</span>':''}</td><td class="mute">${TYPES[x.type]?TYPES[x.type].n:''}</td><td class="n">${val}</td></tr>`;
   const board=(note,list,fn,empty)=>`<p class="fine">${note}</p>${list.length?`<table class="ledger">${list.map((x,i)=>row(x,i,fn(x))).join('')}</table>`:`<p class="empty">${empty||'No blades yet.'}</p>`}`;
   let body='';
-  if(pg==='long')body=board('Raw length. Every blade rolls size the same way, so any class can take the top spot.',one([...e].sort((a,b)=>b.len-a.len)).slice(0,10),x=>x.len+' cm','No blades yet. Forge one to claim the top spot.');
-  else if(pg==='runt')body=board('The smallest blades in existence.',one([...e].sort((a,b)=>a.len-b.len)).slice(0,10),x=>x.len+' cm');
-  else if(pg==='grade')body=board('Pure skill: the highest forge grade each smith has reached.',one([...e].sort((a,b)=>b.grade-a.grade||b.len-a.len)).slice(0,10),x=>x.grade);
-  else if(pg==='rough')body=board('The biggest blades forged on starter gear.',one(e.filter(x=>x.anvil===0).sort((a,b)=>b.len-a.len)).slice(0,10),x=>x.len+' cm');
+  const LS={long:one([...e].sort((a,b)=>b.len-a.len)),runt:one([...e].sort((a,b)=>a.len-b.len)),grade:one([...e].sort((a,b)=>b.grade-a.grade||b.len-a.len)),rough:one(e.filter(x=>x.anvil===0).sort((a,b)=>b.len-a.len))};
+  const wAll=(()=>{let w=(REC.wealth||[]).filter(x=>x&&x.user!==me).map(x=>({user:x.user,wealth:+x.wealth||0}));if(me||!SERVER)w.push({user:me||(cur?cur.name:'You'),wealth:wealthNow(),mine:true});return w.filter(x=>x.wealth>0).sort((a,b)=>b.wealth-a.wealth)})();
+  if(SERVER&&!ARENA.ladder){ARENA.ladder=[];apiCall('/api/pvp/ladder').then(r=>{ARENA.ladder=r.ladder;if(A.tab==='records')render()}).catch(()=>{})}
+  const Lall=ARENA.ladder||[],ai=NET.user?Lall.findIndex(u=>u.id===NET.user.id):-1;
+  const stand=[['long','Largest blade',LS.long.findIndex(x=>x.mine),LS.long.length,x=>x.len+' cm',LS.long],['runt','Runt board',LS.runt.findIndex(x=>x.mine),LS.runt.length,x=>x.len+' cm',LS.runt],['grade','Forge grade',LS.grade.findIndex(x=>x.mine),LS.grade.length,x=>'grade '+x.grade,LS.grade],['rough','Rough anvil',LS.rough.findIndex(x=>x.mine),LS.rough.length,x=>x.len+' cm',LS.rough],
+    ['wealth','Wealth',wAll.findIndex(x=>x.mine),wAll.length,x=>fmt(x.wealth)+'c',wAll],['arena','Arena',ai,Lall.length,x=>'rated '+x.rating,Lall]];
+  const side=`<aside class="plate recside"><h2>Your standings</h2>${cur?`<table class="ledger"><tbody>${stand.map(([k,n,i,tot,f,l])=>`<tr class="${k===pg?'cur':''}" data-action="recpage" data-k="${k}" role="button" tabindex="0"><td>${n}</td><td class="n mute">${i>=0?f(l[i]):''}</td><td class="n">${i>=0?`<span class="rank r${i+1}"><b>${i+1}</b></span> <span class="fine">of ${tot}</span>`:'<span class="fine">Not placed</span>'}</td></tr>`).join('')}</tbody></table><p class="fine">One entry per smith on every board. Tap a row to open that board.</p>`:'<p class="fine">Make a smith to appear on the boards.</p>'}</aside>`;
+  const tail=(list,fn)=>{const i=list.findIndex(x=>x.mine);return i>=10?`<table class="ledger rectail"><tr class="cur"><td class="rank"><b>${i+1}</b></td><td>${smithName(list[i].who)}</td><td class="mute">${TYPES[list[i].type]?TYPES[list[i].type].n:''}</td><td class="n">${fn(list[i])}</td></tr></table>`:''};
+  if(pg==='long')body=board('Raw length. Every blade rolls size the same way, so any class can take the top spot.',LS.long.slice(0,10),x=>x.len+' cm','No blades yet. Forge one to claim the top spot.')+tail(LS.long,x=>x.len+' cm');
+  else if(pg==='runt')body=board('The smallest blades in existence.',LS.runt.slice(0,10),x=>x.len+' cm')+tail(LS.runt,x=>x.len+' cm');
+  else if(pg==='grade')body=board('Pure skill: the highest forge grade each smith has reached.',LS.grade.slice(0,10),x=>x.grade)+tail(LS.grade,x=>x.grade);
+  else if(pg==='rough')body=board('The biggest blades forged on starter gear.',LS.rough.slice(0,10),x=>x.len+' cm')+tail(LS.rough,x=>x.len+' cm');
   else if(pg==='each'){const rc=UI.recCls||(cur?cur.cls:'war');const per=typesOf(rc).map(k=>{const bd=e.filter(x=>x.type===k).sort((a,b)=>b.len-a.len),top=bd[0],mine=bd.find(x=>x.mine);return `<tr class="${top&&top.mine?'cur':''}"><td>${TYPES[k].n}</td><td>${top?top.who:'Nobody yet'}</td><td class="n">${top?top.len+' cm':''}</td><td class="n mute">${mine?mine.len+' cm':''}</td></tr>`}).join('');
     body=`<p class="fine">The longest of every kind of blade, and who holds it.</p>${clsTabs(rc,'reccls')}<table class="ledger"><tr><th>Blade</th><th>Holder</th><th class="n">Length</th><th class="n">Your best</th></tr>${per}</table>`}
-  else if(pg==='wealth'){let w=(REC.wealth||[]).filter(x=>x&&x.user!==me).map(x=>({user:x.user,wealth:+x.wealth||0}));if(me||!SERVER)w.push({user:me||(cur?cur.name:'You'),wealth:wealthNow(),mine:true});w=w.filter(x=>x.wealth>0).sort((a,b)=>b.wealth-a.wealth).slice(0,10);
-    body=`<p class="fine">Coin in hand. Blades don’t count.</p>${w.length?`<table class="ledger">${w.map((x,i)=>`<tr class="${x.mine?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(x.user)}</td><td class="n">${fmt(x.wealth)}c</td></tr>`).join('')}</table>`:'<p class="empty">Nobody has a coin to their name yet.</p>'}`}
-  else{if(SERVER&&!ARENA.ladder){ARENA.ladder=[];apiCall('/api/pvp/ladder').then(r=>{ARENA.ladder=r.ladder;if(A.tab==='records')render()}).catch(()=>{})}const L=ARENA.ladder||[];
-    body=`<p class="fine">Ranked duel ratings. Everyone starts at 1000.</p>${L.length?`<table class="ledger"><tr><th></th><th>Smith</th><th class="n">Rating</th><th class="n">Won–lost</th></tr>${L.slice(0,10).map((u,i)=>`<tr class="${NET.user&&u.id===NET.user.id?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(u.username)}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')}</table>`:'<p class="empty">No ranked duels have been fought yet.</p>'}`}
+  else if(pg==='wealth'){const w=wAll.slice(0,10);
+    body=`<p class="fine">Coin in hand. Blades don’t count.</p>${w.length?`<table class="ledger">${w.map((x,i)=>`<tr class="${x.mine?'cur':''}"><td class="rank r${i+1}"><b>${i+1}</b></td><td>${smithName(x.user)}</td><td class="n">${fmt(x.wealth)}c</td></tr>`).join('')}</table>`:'<p class="empty">Nobody has a coin to their name yet.</p>'}`}
+  else{const L=Lall;
+    body=`<p class="fine">Ranked duel ratings. Everyone starts at 1000.</p>${L.length?`<table class="ledger"><tr><th></th><th>Smith</th><th class="n">Rating</th><th class="n">Won–lost</th></tr>${L.slice(0,10).map((u,i)=>`<tr class="${NET.user&&u.id===NET.user.id?'cur':''}"><td class="rank r${i+1}"><b>${i+1}</b></td><td>${smithName(u.username)}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')}</table>`:'<p class="empty">No ranked duels have been fought yet.</p>'}`}
   return `<section class="page"><div class="pagehead"><h1>Records</h1>${REC.list?(NET.user?'':'<p class="fine">Sign in so your own blades count for everyone else.</p>'):SERVER?(REC.err?'<p class="fine">Can’t reach the server right now, so only your blades are shown.</p>':'<p class="fine">Loading the server’s records…</p>'):'<p class="fine">This copy isn’t connected to a server, so only your own blades are shown.</p>'}</div>
    <div class="ahtabs rectabs" role="tablist">${REC_PAGES.map(([k,n])=>`<button class="ahtab ${k===pg?'on':''}" role="tab" aria-selected="${k===pg}" data-action="recpage" data-k="${k}">${n}</button>`).join('')}</div>
-   <div class="plate recboard"><div class="rechead"><button class="btn small" data-action="recpage" data-k="${REC_PAGES[(pi+REC_PAGES.length-1)%REC_PAGES.length][0]}" aria-label="Previous board">◀</button><h2>${REC_PAGES[pi][1]}</h2><button class="btn small" data-action="recpage" data-k="${REC_PAGES[(pi+1)%REC_PAGES.length][0]}" aria-label="Next board">▶</button></div>${body}</div></section>`}
+   <div class="recgrid2"><div class="plate recboard"><div class="rechead"><h2>${REC_PAGES[pi][1]}</h2></div>${body}</div>${side}</div></section>`}
 
 function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPicked)NET.authMode=had?'signin':'create';
     return `<section class="page welcome"><div class="pagehead"><h1>Welcome to Anvilmoon</h1></div>
@@ -2798,7 +2812,7 @@ function vArena(){
       <button class="btn go big" data-action="arenago" ${ARENA.busy?'disabled':''}>Find an opponent</button>`
     :`<p class="empty">You need a blade on your rack to fight. Forge one first.</p>`}
    </div><div class="plate"><h2>Ladder</h2><p class="fine">You: rated ${NET.user.rating}, ${NET.user.wins} wins, ${NET.user.losses} losses.</p>
-    <table class="ledger">${(ARENA.ladder||[]).map((u,i)=>`<tr class="${u.id===NET.user.id?'cur':''}"><td class="rank">${i+1}</td><td>${smithName(u.username)}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')||'<tr><td class="fine">No ranked duels yet. Be the first.</td></tr>'}</table></div></div></section>`}
+    <table class="ledger">${(ARENA.ladder||[]).map((u,i)=>`<tr class="${u.id===NET.user.id?'cur':''}"><td class="rank r${i+1}"><b>${i+1}</b></td><td>${smithName(u.username)}</td><td class="n">${u.rating}</td><td class="n mute">${u.wins}–${u.losses}</td></tr>`).join('')||'<tr><td class="fine">No ranked duels yet. Be the first.</td></tr>'}</table></div></div></section>`}
 document.addEventListener('change',e=>{if(e.target.id==='arenablade'){ARENA.bladeId=e.target.value;render()}if(e.target.name==='amode'){ARENA.mode=e.target.value}});
 
 // =============== CHALLENGES: five tasks a day and five a week, the same for every smith ===============
