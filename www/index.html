@@ -1063,6 +1063,11 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+@media (min-width:761px){nav.rail{top:var(--hh,57px)!important;height:calc(100vh - var(--hh,57px))!important}}
+@media (min-width:761px) and (max-width:1240px){.forgehero{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)!important;grid-template-areas:"art info" "act act";gap:16px 20px!important}
+  .forgehero .fhart{grid-area:art;height:170px}.forgehero .fhinfo{grid-area:info;min-height:0}.forgehero .fhact{grid-area:act;flex-direction:row;flex-wrap:wrap;min-width:0;align-items:stretch}
+  .forgehero .fhact>.btn{flex:1 1 0;min-width:0}.forgehero .fhact .needs{order:-1;flex-basis:100%;min-height:0;margin:0}.forgehero .fhact .needs[aria-hidden]{display:none}
+  .forgehero .fhact .btn.big{padding:12px 14px}.fhlab span{display:none}}
 .fsteps{list-style:none;display:flex;gap:6px;margin:0 0 10px;padding:0;flex-wrap:wrap}.fsteps li{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 6px;background:#1c1917;border:3px solid var(--ink);color:var(--dim);font-weight:600;font-size:15px}
 .fsteps li b{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--plate2);color:var(--mute);font-size:13px}
 .fsteps[data-s="1"] li:nth-child(1),.fsteps[data-s="2"] li:nth-child(2),.fsteps[data-s="3"] li:nth-child(3){color:var(--ash);border-color:var(--straw)}
@@ -1878,7 +1883,9 @@ const stock=(k,v,extra='')=>`<span class="stock" title="${MATN[k]}"><i class="px
 function renderHUD(){setTimeout(renderSync,0);if(needAcct()){$('hud').innerHTML='<span class="who">Not signed in</span><span class="stocks"></span>';return}const c=C();if(!c){$('hud').innerHTML=`<span class="who">No smith yet</span><span class="stocks"></span><span class="hbtns"><button class="hico" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button></span>`;return}tickFuel();
   const ft=c.fuel<FUEL_MAX?`<span class="tick" title="Time until your next energy">${(()=>{const r=Math.ceil((FUEL_MS-(Date.now()-c.fuelTs))/1000);return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
   $('hud').innerHTML=`<button class="who" data-action="tab" data-tab="chars" title="Your smith"><b>${c.name}</b><span class="whocls"> the ${CLASSES[c.cls].n}</span></button><span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}</span><span class="hbtns"><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
-function renderTabs(){try{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px')}catch(e){}const c=needAcct()?null:C();
+function setHH(){try{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px')}catch(e){}}
+addEventListener('resize',setHH);
+function renderTabs(){setHH();const c=needAcct()?null:C();
   if(A.tab==='rack'){UI.rack=true;A.tab='forge'}
   if(!['home','forge','workshop','market','auction','arena','chars','armory','records','hall','tasks'].includes(A.tab)||(!c&&!['chars','hall'].includes(A.tab)))A.tab=c?(gsOn()?'home':'forge'):'chars';if(!c)UI.more=false;
   $('tabs').innerHTML=c?navHTML():'';
