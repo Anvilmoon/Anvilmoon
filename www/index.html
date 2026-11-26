@@ -1063,11 +1063,12 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+.fhname{display:flex;align-items:center;gap:12px}.fhname .tag{flex:none;font:700 14px var(--body);margin:0}
 @media (min-width:761px){nav.rail{top:var(--hh,57px)!important;height:calc(100vh - var(--hh,57px))!important}}
 body.rackopen{overflow:visible!important}.drawer{overscroll-behavior:contain}
 @media (min-width:761px) and (max-width:1240px){.forgehero{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)!important;grid-template-areas:"art info" "act act";gap:16px 20px!important}
   .forgehero .fhart{grid-area:art;height:170px}.forgehero .fhinfo{grid-area:info;min-height:0}.forgehero .fhact{grid-area:act;flex-direction:row;flex-wrap:wrap;min-width:0;align-items:stretch}
-  .forgehero .fhact>.btn{flex:1 1 0;min-width:0}.forgehero .fhact .needs{order:-1;flex-basis:100%;min-height:0;margin:0}.forgehero .fhact .needs[aria-hidden]{display:none}
+  .forgehero .fhact>.btn{flex:1 1 0;min-width:0}.forgehero .fhact .needs{order:-1;flex-basis:100%;min-height:20px;margin:0}
   .forgehero .fhact .btn.big{padding:12px 14px}.fhlab span{display:none}}
 .fsteps{list-style:none;display:flex;gap:6px;margin:0 0 10px;padding:0;flex-wrap:wrap}.fsteps li{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 6px;background:#1c1917;border:3px solid var(--ink);color:var(--dim);font-weight:600;font-size:15px}
 .fsteps li b{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--plate2);color:var(--mute);font-size:13px}
@@ -1942,14 +1943,14 @@ function vForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt],h=hammerFx(),locked=!kno
   ${tut}${hardTimes(c)}${pinRow(c)}
   <div class="plate forgehero">
     <div class="fhart">${bladeSVG({type:c.sel,len:100,rarity:0,variant:0,si:2,grade:70},{plain:!locked,stage:locked?'sil':'',noRuler:1,minW:330})}</div>
-    <div class="fhinfo"><h2>${t.n}</h2>
+    <div class="fhinfo"><h2 class="fhname">${t.n}${demandTag(c,c.sel)}</h2>
       <p class="fhlab">Cost of one forge <span>· what it uses / what you have</span></p><div class="costs">${costChip('fuel',1,c.fuel)}${costChip('iron',w.iron,c.iron+(c.bog||0))}${costChip('coal',w.coal,c.coal)}<span class="cost strikes" title="Strikes needed"><b>${w.strikes}</b><small>strikes</small></span></div>
       <p class="fhlab">Your tools <span>· point at the anvil to see your odds</span></p><div class="gear"><button class="gearbtn" aria-label="${ANVILS[c.anvil].n}: show the odds"><i class="pxi" style="background-image:var(--ico-anvil)"></i>${ANVILS[c.anvil].n}
         <span class="pop" role="tooltip"><span class="popcol"><b>Rarity</b><table class="ledger tight">${oddsRows(c.anvil)}</table><small>Grade 90+ rolls on the next anvil up.</small></span>
         <span class="popcol"><b>Size</b><table class="ledger tight">${SIZES.map(z=>`<tr><td>${z.n}</td><td class="n">${z.p<.1?'1 in 10,000':z.p+'%'}</td></tr>`).join('')}</table></span>
         <span class="popcol"><b>Shine</b><table class="ledger tight"><tr><td>Moonlit</td><td class="n">1 in ${A.testOdds?3:15}</td></tr><tr><td>Tempered</td><td class="n">1 in ${A.testOdds?SHINE.temp.test:SHINE.temp.p}</td></tr><tr><td>Starforged</td><td class="n">1 in ${A.testOdds?SHINE.star.test:fmt(SHINE.star.p)}</td></tr></table><small>${isNight()?'The moon is up.':'Moonlit: 8pm to 6am.'}</small></span></span></button>
         <span class="gearbtn ${broken?'bad':''}" title="${broken?'Broken. Repair it in the Workshop.':`Sweet spot +${Math.round((h.zone-1)*100)}% · cooling −${Math.round((1-h.cool)*100)}%`}"><i class="pxi" style="background-image:var(--ico-workshop)"></i>${h.n}${broken?' (broken)':''}</span>
-        ${demandTag(c,c.sel)}</div>
+        </div>
       ${locked?`<p class="warn fhnote">Needs the ${WT[t.wt].n.toLowerCase()} pattern.</p>`:bogUse&&can?`<p class="bogwarn fhnote">Uses ${bogUse} bog iron: capped at Fine.</p>`:'<p class="fhnote" aria-hidden="true">&nbsp;</p>'}
     </div>
     <div class="fhact">${locked?`<button class="btn go big" data-action="tab" data-tab="workshop">Get the pattern</button>`:`<button class="btn go big" data-action="begin" ${can?'':'disabled'}>Light the forge</button>${can?'<p class="needs" aria-hidden="true">&nbsp;</p>':`<p class="needs">${(()=>{const m=[c.fuel<1&&'1 energy',(c.iron+(c.bog||0))<w.iron&&`${w.iron-(c.iron+(c.bog||0))} iron`,c.coal<w.coal&&`${w.coal-c.coal} coal`].filter(Boolean);return m.length?'Need '+m.join(', '):broken?'Repair your hammer first':''})()}</p>`}<button class="btn fhsec" data-action="quick" ${can?'':'disabled'} title="Skip the hammering. Quick blades come out at grade 30 to 55. Forging by hand reaches 100, and a grade of 90+ rolls on the next anvil up.">Quick forge<small>No hammering · grade up to 55</small></button>`}
