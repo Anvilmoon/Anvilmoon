@@ -20,13 +20,15 @@ wins**. `05-implementation.md` turns it into code. Every number here was checked
   the first few minutes; the top levels take about two months (Smithing) and six weeks (Enchanting) of typical play.
 - **Enchanting costs mana** from **one mana meter**: 20 at most at first, +1 every 2 minutes, like energy. **Mana draughts** at
   the market add 5 (20c, +10% for each one bought that day).
-- **Selling:** scrap merchant (instant, 40%), salvage (materials), or **a shop shelf**: 10 minutes for 80%, 1 hour for
-  100%, 8 hours for 125%. Price fixed when you list; the blade sells by the clock, even with the game closed.
+- **Selling:** scrap merchant (instant, 40%), salvage (materials), or **a shop shelf**: 115% of worth, and **one fixed
+  selling time per blade** that grows slowly with its worth (4 minutes for a 5c blade, 12 minutes at 100c, 30 minutes
+  at 1,000c, about an hour at 5,000c). So a dear blade earns far more per shelf-minute than a pile of cheap ones.
+  Price and time are fixed when you list; the blade sells by the clock, even with the game closed.
 - **Three trees** (Forge, Polish, Enchant) and the **shop** (shelf slots, then **Advertising**), all bought with one
   `unlock` action from one table.
-- **Coin no longer piles up:** late income is about a third lower than in 01, and **Advertising** (flyers and notices
-  around town) is a never-ending thing to buy (level n costs 10,000 × n coin, +1% on every shelf sale). A keen player holds about 100,000 coin on day 60
-  (saving for the next level) instead of 2 million.
+- **Coin no longer piles up:** **Advertising** (flyers and notices around town) is a never-ending thing to buy (level n
+  costs 10,000 × n coin, +1% on every shelf sale). A keen player holds about 140,000 coin on day 60 (saving for the
+  next level) instead of 2.6 million.
 
 ---
 
@@ -71,7 +73,8 @@ worth      = max(1, round(forgeWorth · polishMult · enchantMult))     (a crack
 | Price | Formula |
 |---|---|
 | Scrap merchant | `max(1, round(worth × 0.40))` |
-| Shop shelf | `max(1, round(worth × listing factor × (1 + 0.01 × Advertising level)))` (the save field is still `renown`) |
+| Shop shelf | `max(1, round(worth × 1.15 × (1 + 0.01 × Advertising level)))` (the save field is still `renown`) |
+| Shelf selling time | `12 min × (worth / 100)^0.4`, rounded to the minute, at least 2 min, at most 3 h (section 6) |
 | Auction House deposit | as today, from `worth` |
 
 ### Ranges
@@ -308,13 +311,56 @@ bought in order. Hammers keep their own Workshop rows (they wear out and are rep
 |---|---|
 | **Scrap merchant** (the `sell` action) | Instant. 40% of worth. Any number of blades. Replaces today's Sell (75% × demand). |
 | **Salvage** | As today, plus: polished blade +1 grit (Massive +2); +1 star-dust for each rune on it (not scars). Cracked as today. |
-| **Shop shelf** | One blade per slot. Price fixed when listed. Sells at exactly listed time + duration, settled from the clock. Cancel any time before: back to the rack, nothing paid. Locked (kept) blades and keepsakes can't be listed. |
+| **Shop shelf** | One blade per slot. **No choice of listing:** every blade has one price (115% of worth, + Advertising) and one selling time from its worth, both fixed when listed and stored on the listing. Sells at exactly listed time + selling time, settled from the clock. Cancel any time before: back to the rack, nothing paid. Locked (kept) blades and keepsakes can't be listed. |
 
-| Listing | Sells after | Price | With test odds (dev only) |
+### The selling time
+
+```
+time = 12 min × (worth / 100) ^ 0.4         rounded to the whole minute, at least 2 minutes, at most 3 hours
+price = worth × 1.15 × (1 + 0.01 × Advertising level)
+```
+
+The power 0.4 is the point: a blade worth **100× more takes only about 6× longer**, so coin per shelf-minute rises
+steeply with worth. Shelf slots are the limit late in the game, so the way to earn more is to put better blades on them,
+not more blades. The scrap merchant pays 40% at once and needs no shelf.
+
+| Worth | Sells after | Shelf price | **Coin per shelf-hour** | Scrap merchant (instant) | Shelf's extra over scrap, per shelf-hour | With test odds (dev only) |
+|---|---|---|---|---|---|---|
+| 5c | 4 min | 6c | 90 | 2c | 60 | 12 s |
+| 10c (a first Light blade) | 5 min | 12c | 144 | 4c | 96 | 15 s |
+| 20c | 6 min | 23c | 230 | 8c | 150 | 18 s |
+| 50c | 9 min | 57c | 380 | 20c | 247 | 27 s |
+| 100c | 12 min | 115c | 575 | 40c | 375 | 36 s |
+| 200c | 16 min | 230c | 863 | 80c | 563 | 48 s |
+| 500c | 23 min | 575c | 1,500 | 200c | 978 | 69 s |
+| 1,000c (a typical late blade) | 30 min | 1,150c | 2,300 | 400c | 1,500 | 90 s |
+| 2,000c | 40 min | 2,300c | 3,450 | 800c | 2,250 | 2 min |
+| 5,000c (a jackpot) | 57 min | 5,750c | 6,053 | 2,000c | 3,947 | 2.9 min |
+
+One shelf slot for an hour: about **12 first-day blades of 10c earn 144c**; **two 1,000c blades earn 2,300c**, 16×
+more. Against the scrap merchant the shelf always pays 2.9× as much, but what it adds per shelf-hour is 96c on a 10c
+blade and 1,500c on a 1,000c blade.
+
+The example blades of section 2 on a shelf:
+
+| Blade | Worth | Sells after | Price |
 |---|---|---|---|
-| Short | 10 minutes | 80% | 30 seconds |
-| Medium | 1 hour | 100% | 3 minutes |
-| Long | 8 hours | 125% | 24 minutes |
+| Light Common Seax, grade 70, unpolished | 10c | 5 min | 12c |
+| Medium Fine Broadsword, Sandstone polish | 39c | 8 min | 45c |
+| Heavy Masterwork Claymore, late polish | 176c | 15 min | 202c |
+| Medium Fine Broadsword, late polish + three top runes | 258c | 18 min | 297c |
+| Heavy Masterwork Claymore, late polish + three top runes | 791c | 27 min | 910c |
+| Massive Masterwork Zweihänder, late polish + three top runes | 1,300c | 33 min | 1,495c |
+
+What this means for a session (typical player, sim): early on, cheap blades sell in 4–6 minutes, so 3 shelves turn
+over several times in a 25-minute session. Late on, blades take 25–45 minutes, so a full shop of 8 listed at the end
+of a session is sold about half an hour to an hour later; checking back every hour or so keeps the shelves busy. The
+average listing in the sim is 22 minutes.
+
+Why the top blades take about an hour and not 2–3 hours: with the power at 0.4 the curve only reaches 3 hours at a worth
+of about 87,000c (the 3-hour cap is a safety limit). Making top blades take 2–3 hours would need a power near 0.6, and
+then a 1,000c blade would earn only about 6× a 10c blade per shelf-minute instead of 16×. The owner's goal (dear blades
+clearly more profitable per shelf-minute) wins.
 
 **Merchant demand is removed** (the per-type demand, the clamouring, `settleDemand`). The shelves limit selling now.
 
@@ -370,6 +416,7 @@ pay = [15, 40, 100, 280][minR] · WT.v · (Large 1.6 | Huge 3 | 1) · (minGrade 
 | Top costs re-tuned: Steel Chisel 4,000c, Starsteel 40,000c, Dawn 60,000c + 15 shards, Ward 12,000c, Hearth 25,000c. | Keep the top tier over weeks with the new (lower) late income. |
 | **Advertising** added (10,000 × n, +1%/level; first called Renown). | Fixes the coin pile (section 10). |
 | Shelf listings sell 20× faster with test odds. | So the owner can test shelves in a short session. |
+| Shelves: Short / Medium / Long (10 min ×0.8, 1 h ×1.0, 8 h ×1.25) replaced by one fixed time per blade, `12 min × (worth/100)^0.4`, and one price, worth × 1.15. | Owner's change: no listing choice, and selling dear blades must be clearly better per shelf-minute than selling hundreds of cheap ones. ×1.15 is the low end of the owner's 1.15–1.25: it already makes the game about 18% faster than the three listings did (section 10). |
 
 ### From 02-polishing
 
@@ -395,9 +442,14 @@ pay = [15, 40, 100, 280][minR] · WT.v · (Large 1.6 | Huge 3 | 1) · (minGrade 
 
 ## 10. Simulation results
 
-`node tools/sim-economy.mjs --runs 300 --days 60` for each profile (re-run with the levels of section 11). Typical: 3
-sessions of 25 minutes a day. Casual: 2 × 20 minutes, slightly less skilled. Keen: 4 × 40 minutes, slightly more
-skilled. Medians.
+`node tools/sim-economy.mjs --runs 300 --days 60` for each profile (re-run with the levels of section 11 and the one
+selling time per blade of section 6). Typical: 3 sessions of 25 minutes a day. Casual: 2 × 20 minutes, slightly less
+skilled. Keen: 4 × 40 minutes, slightly more skilled. Medians.
+
+**What the shelf change did:** with one price of ×1.15 (the three listings averaged a little under ×1.0) the whole game
+runs about **18% faster**: the tree completes after 32.5 h of play instead of 39.5 h (typical, day 26 instead of 31).
+Shelf slots still limit late selling only a little (2% of blades go to the scrap merchant, 1% to salvage). If the owner
+wants the old pace back, a price factor of ×1.0 gives about 37 h (day 29).
 
 ### Pacing (typical player)
 
@@ -405,51 +457,51 @@ skilled. Medians.
 |---|---|---|---|
 | Iron Anvil | 1 min | 1 .. 2 min | 1 |
 | Medium pattern | 5 min | 3 .. 5 min | 1 |
-| Shelf slot 4 | 7 min | 6 .. 12 min | 1 |
-| **Polishing bench** | **24 min** | 18 .. 26 min | 1 |
-| Camellia oil | 48 min | 25 .. 74 min | 1 |
-| Whetstone | 75 min | 50 .. 100 min | 1 |
-| Heavy pattern | 102 min | 77 .. 150 min | 2 |
-| Steel Anvil | 127 min | 101 .. 153 min | 2 |
-| Shadow style | 129 min | 113 .. 176 min | 2 |
-| Shelf slot 5 | 152 min | 125 .. 178 min | 2 |
-| **Enchanter's table** | **179 min** | 152 .. 219 min | 3 |
-| Water quench, Frost rune | 3.3 h | | 3 |
-| Waterstone | 3.9 h | 3.3 .. 4.7 h | 4 |
-| Iron Chisel | 4.3 h | 3.7 .. 5.1 h | 4 |
-| Silver Conduit | 4.9 h | 4.1 .. 5.6 h | 4 |
-| Valor rune | 5.5 h | 4.6 .. 6.3 h | 5 |
-| Massive pattern | 6.1 h | 5.2 .. 7.1 h | 5 |
-| Acid wash | 6.4 h | 5.3 .. 7.3 h | 5 |
-| Arcane style | 6.5 h | 5.6 .. 7.4 h | 6 |
-| Steel Chisel | 7.3 h | 6.4 .. 8.2 h | 6 |
-| Shelf slot 6 | 7.7 h | 6.5 .. 8.6 h | 6 |
-| Storm rune | 8.2 h | 7.3 .. 9.4 h | 7 |
-| Master Hammer | 8.6 h | 7.4 .. 9.5 h | 7 |
-| **Damascus Anvil** | **9.3 h** | 8.2 .. 10.4 h | **8** |
-| Stormglass Conduit | 10.4 h | 9.4 .. 11.6 h | 9 |
-| Fortune rune | 11.6 h | 10.3 .. 12.9 h | 9 |
-| Moonstone | 12.5 h | 11.2 .. 13.8 h | 10 |
-| Sanctum style | 13.0 h | 11.7 .. 14.3 h | 11 |
-| Shelf slot 7 | 13.7 h | 12.4 .. 15.0 h | 11 |
-| Ward rune | 15.2 h | 13.8 .. 16.8 h | 12 |
-| **Dragonbone Anvil** | **20.3 h** | 18.7 .. 22.1 h | **16** |
-| Starsteel Chisel | 25.2 h | 23.4 .. 27.2 h | 20 |
-| Hearth rune | 28.2 h | 26.3 .. 30.4 h | 22 |
-| Starstone | 32.4 h | 30.0 .. 34.3 h | 25 |
-| Shelf slot 8 (Advertising opens) | 34.3 h | 31.9 .. 36.6 h | 27 |
-| **Dawn rune (tree complete)** | **39.5 h** | 36.9 .. 42.1 h | **31** |
+| Shelf slot 4 | 6 min | 6 .. 11 min | 1 |
+| **Polishing bench** | **21 min** | 17 .. 25 min | 1 |
+| Camellia oil | 33 min | 25 .. 51 min | 1 |
+| Whetstone | 51 min | 38 .. 73 min | 1 |
+| Heavy pattern | 87 min | 65 .. 127 min | 2 |
+| Steel Anvil | 102 min | 76 .. 126 min | 2 |
+| Shadow style | 103 min | 88 .. 128 min | 2 |
+| Shelf slot 5 | 123 min | 101 .. 142 min | 2 |
+| **Enchanter's table** | **152 min** | 127 .. 178 min | 3 |
+| Water quench, Frost rune | 2.6 h | | 3 |
+| Waterstone | 3.2 h | 2.6 .. 3.8 h | 3 |
+| Iron Chisel | 3.4 h | 3.0 .. 4.2 h | 3 |
+| Silver Conduit | 3.9 h | 3.4 .. 4.7 h | 4 |
+| Valor rune | 4.4 h | 3.9 .. 5.1 h | 4 |
+| Massive pattern | 5.1 h | 4.3 .. 6.0 h | 5 |
+| Acid wash | 5.2 h | 4.5 .. 6.0 h | 5 |
+| Arcane style | 5.5 h | 4.7 .. 6.2 h | 5 |
+| Steel Chisel | 6.1 h | 5.3 .. 6.9 h | 5 |
+| Shelf slot 6 | 6.4 h | 5.6 .. 7.3 h | 6 |
+| Storm rune | 6.9 h | 6.0 .. 7.7 h | 6 |
+| Master Hammer | 6.9 h | 6.3 .. 8.0 h | 6 |
+| **Damascus Anvil** | **7.7 h** | 6.9 .. 8.6 h | **7** |
+| Stormglass Conduit | 8.6 h | 7.7 .. 9.5 h | 7 |
+| Fortune rune | 9.5 h | 8.6 .. 10.4 h | 8 |
+| Moonstone | 10.4 h | 9.2 .. 11.6 h | 9 |
+| Sanctum style | 10.8 h | 9.6 .. 12.1 h | 9 |
+| Shelf slot 7 | 11.3 h | 10.3 .. 12.5 h | 9 |
+| Ward rune | 12.6 h | 11.3 .. 13.8 h | 10 |
+| **Dragonbone Anvil** | **16.8 h** | 15.3 .. 18.2 h | **13** |
+| Starsteel Chisel | 20.8 h | 19.1 .. 22.5 h | 17 |
+| Hearth rune | 23.4 h | 21.5 .. 25.2 h | 18 |
+| Starstone | 26.5 h | 24.4 .. 28.5 h | 21 |
+| Shelf slot 8 (Advertising opens) | 28.2 h | 26.2 .. 30.3 h | 22 |
+| **Dawn rune (tree complete)** | **32.5 h** | 30.1 .. 34.5 h | **26** |
 
-The levels change the pacing only a little: the tree completes about an hour of play sooner than without them (40.4 h),
-mostly because a bigger mana meter means fewer draughts (4% of coin spent instead of 8%).
+The levels change the pacing only a little: when they were added (still with the three listings) the tree completed
+about an hour of play sooner than without them, mostly because a bigger mana meter means fewer draughts.
 
 ### Pacing per profile
 
 | Profile | Play a day | Polishing | Enchanting | Damascus Anvil | Dragonbone | Tree complete |
 |---|---|---|---|---|---|---|
-| Casual | 40 min | 20 min, day 1 | 170 min, day 5 | day 14 | day 29 | day 56 (97% by day 60) |
-| Typical | 75 min | 24 min, day 1 | 179 min, day 3 | day 8 | day 16 | day 31 |
-| Keen | 160 min | 23 min, day 1 | 198 min, day 2 | day 4 | day 8 | day 15 |
+| Casual | 40 min | 20 min, day 1 | 144 min, day 4 | day 13 | day 27 | day 51 (100% by day 60) |
+| Typical | 75 min | 21 min, day 1 | 152 min, day 3 | day 7 | day 13 | day 26 |
+| Keen | 160 min | 20 min, day 1 | 160 min, day 1 | day 3 | day 6 | day 12 |
 
 ### Levels per profile (level at the end of the day)
 
@@ -458,55 +510,60 @@ mostly because a bigger mana meter means fewer draughts (4% of coin spent instea
 | Smithing, casual | 4 | 6 | 7 | 9 | 11 | 12 | 14 | 16 |
 | Smithing, typical | 5 | 7 | 9 | 12 | 14 | 16 | 18 | 20 |
 | Smithing, keen | 6 | 9 | 12 | 16 | 18 | **21** (day 28) | 21 | 21 |
-| Enchanting, casual | 1 | 1 | 2 | 5 | 6 | 8 | 10 | 13 |
-| Enchanting, typical | 1 | 2 | 4 | 7 | 9 | 12 | 15 | **16** (day 46) |
-| Enchanting, keen | 1 | 4 | 8 | 12 | 15 | **16** (day 22) | 16 | 16 |
+| Enchanting, casual | 1 | 1 | 3 | 5 | 7 | 8 | 11 | 13 |
+| Enchanting, typical | 1 | 2 | 5 | 8 | 10 | 13 | **16** (day 43) | 16 |
+| Enchanting, keen | 1 | 4 | 8 | 12 | **16** (day 21) | 16 | 16 | 16 |
 
 Typical player: Smithing level 2 after **4 minutes** of play, level 3 after 15 minutes, level 5 at the end of the first
 hour, level 10 on day 8, level 21 around day 60 (40% of runs by day 60). Enchanting level 2 about half an hour after the
-enchanter's table, level 8 on day 15, level 16 on day 46.
+enchanter's table, level 8 on day 14, level 16 on day 43.
 
 ### Coin per hour of play (typical, all income)
 
-| Play | Coin/hour | (01's sim) |
+| Play | Coin/hour | (with the three listings) |
 |---|---|---|
-| 0 – 30 min | 2,600 (Armory first finds, getting started) | 3,280 |
-| 30 – 60 min | 970 | 1,870 |
-| 1 – 2 h | 1,260 | 2,450 |
-| 2 – 3 h | 2,160 | 3,390 |
-| 3 – 5 h | 1,960 | 3,510 |
-| 5 – 10 h | 3,100 | 5,780 |
-| 10 – 20 h | 4,630 | 9,930 |
-| 20 – 40 h | 5,660 | 12,270 |
-| 40 – 80 h | 7,990 | 19,750 |
+| 0 – 30 min | 2,830 (Armory first finds, getting started) | 2,600 |
+| 30 – 60 min | 1,750 | 1,430 |
+| 1 – 2 h | 2,540 | 1,800 |
+| 2 – 3 h | 3,680 | 3,120 |
+| 3 – 5 h | 4,090 | 3,340 |
+| 5 – 10 h | 7,680 | 5,760 |
+| 10 – 20 h | 11,840 | 9,330 |
+| 20 – 40 h | 17,190 | 12,130 |
+| 40 – 80 h | 21,810 | 17,620 |
 
-Keen player after 40 hours: 11,500 coin/hour (01: 20,400).
+Keen player after 40 hours: 24,500 coin/hour (with the three listings: 18,300). The sim now counts shelf sales that
+settle between sessions toward the next session; before, it missed them, so the earlier version of this table read
+far too low late in the game (7,990 instead of 17,620 for 40–80 h). Both columns here use the corrected count.
 
 ### Coin in hand (incl. listed blades), end of day, median
 
 | Day | 1 | 3 | 7 | 14 | 21 | 30 | 45 | 60 |
 |---|---|---|---|---|---|---|---|---|
-| Casual | 347 | 771 | 1,534 | 4,258 | 8,034 | 20,114 | 22,191 | 22,827 |
-| Typical | 509 | 1,373 | 3,623 | 26,802 | 17,355 | 31,821 | 48,472 | 62,837 |
-| Keen | 980 | 3,301 | 32,015 | 40,897 | 40,955 | 63,311 | 97,972 | 114,384 |
-| Keen **without Advertising** | 980 | 3,301 | 32,015 | 43,649 | 266,901 | 627,050 | 1,226,247 | 1,826,748 |
+| Casual | 398 | 991 | 1,948 | 5,958 | 13,489 | 27,357 | 23,807 | 31,302 |
+| Typical | 700 | 1,790 | 6,444 | 25,072 | 22,384 | 35,400 | 64,328 | 79,216 |
+| Keen | 1,459 | 6,415 | 28,531 | 44,438 | 68,883 | 97,377 | 118,252 | 139,844 |
+| Keen **without Advertising** | 1,459 | 6,415 | 28,531 | 165,089 | 543,063 | 1,030,214 | 1,835,661 | 2,646,473 |
 
-Advertising level on day 60: casual 2, typical 10, keen 19 (+19% on shelf sales). The coin a keen player holds is what
-they are saving for the next level (200,000c).
+Advertising level on day 60: casual 3, typical 13, keen 24 (+24% on shelf sales). The coin a keen player holds is what
+they are saving for the next level (250,000c).
 
 ### Other results (typical, last 300 blades sold)
 
-- 100% polished, average ×1.73; 99% enchanted, average ×3.96, best ×6.5, 2.74 runes per enchanted blade.
-- Over 60 days: 1,804 polishes (68 Mirror, 56 stained), 3,692 runes set (162 Resonant, 442 scars).
-- Income: shop shelves 95%, commissions 3%, challenges and Armory 1%, scrap merchant under 1%.
-- Blades: 49% Short listings, 29% Medium, 15% Long, 4% commissions, 3% scrap merchant, 1% salvage.
-- Coin spent: unlocks 33%, Advertising 56%, iron and coal 5%, mana draughts 4%, grit 2%.
+- 100% polished, average ×1.73; 99% enchanted, average ×3.95, best ×6.4, 2.74 runes per enchanted blade.
+- Over 60 days: 1,791 polishes (70 Mirror, 56 stained), 3,747 runes set (170 Resonant, 459 scars).
+- Income: shop shelves 96%, commissions 3%, challenges and Armory 1%, scrap merchant under 1%.
+- Blades: 93% shop shelves (average listing 22 minutes), 4% commissions, 2% scrap merchant, 1% salvage.
+- Coin spent: unlocks 26%, Advertising 65%, iron and coal 4%, mana draughts 4%, grit 2%.
 
 ### What the sim tells us
 
-- **Targets met:** polishing in the first session, enchanting in the 3rd hour, the top tier over two to eight weeks.
-- **The first two hours earn less than in 01** (polish starts at about ×1.2 with Sandstone). Pacing still holds; if
-  playtesters find hour 1–2 slow, lower the Whetstone and Steel Anvil costs first.
+- **Targets met:** polishing in the first session, enchanting in the 3rd hour, the top tier over about two to seven
+  weeks (keen day 12, typical day 26, casual day 51). The keen player now finishes a little under two weeks; a shelf
+  price factor of ×1.0 would put them at day 13 (the three listings: day 15).
+- **Hours 1–2 earn more than before** (2,540 coin/hour instead of 1,800): cheap blades sell in about 5 minutes, so the
+  first 3 shelves turn over quickly. If playtesters find hour 1–2 slow anyway, lower the Whetstone and Steel Anvil
+  costs first.
 - **Energy matters less late** (polishing and enchanting don't use it), but the Smithing level keeps raising it, so a
   long session needs fewer meals. Mana and shelf slots are the late limits; Enchanting levels loosen mana slowly.
 - **Coin pile fixed:** income is lower and Advertising absorbs the rest, with a small, lasting reward.
@@ -519,8 +576,11 @@ everything else that is new. Polish uses the exact roll above with a skill curve
 practice); rune strength is a curve too (0.58 rising to about 0.82 with the Flint chisel, +0.04/+0.07/+0.10 for better
 chisels, +0.03/+0.05 for more carving time, a little lower for long runes). The imaginary player forges the heaviest
 blade they can afford, polishes everything once enchanting is open, picks the rune and conduit with the best gain per
-mana, buys draughts when they pay for themselves, lists Short in a session and Medium/Long before a break, and buys
-unlocks in the order of `NODES` (Advertising only once the tree is complete). Times: forge 25–48 s, polish 25 s, each
+mana, buys draughts when they pay for themselves, puts the dearest blades on the rack on the shelves first whenever a
+slot is free (selling time from the real `shelfMs`, price from `SHELF.f`; it keeps at most 8 blades on the rack while
+playing and 12 between sessions, scrapping or salvaging the cheapest beyond that), and buys unlocks in the order of
+`NODES` (Advertising only once the tree is complete). Try other shelf numbers with `--shelf-f`, `--shelf-min`,
+`--shelf-ref`, `--shelf-p`, `--shelf-max`; the sim also prints the shelf table of section 6. Times: forge 25–48 s, polish 25 s, each
 rune 15 s, all × 1.35. It compares numbers; it does not predict a real player to the minute.
 
 ---
@@ -582,3 +642,6 @@ fewer levels because it opens later (day 3) and its XP comes faster once three r
 7. **Styles cost coin and need Armory finds** (10/25/45 types).
 8. **Levels** (section 11): Smithing to 21 (energy 30), Enchanting to 16 (mana 50), one shared curve. No XP for a
    backlash. If the top levels feel too far away, lower the 1.5 power; if early levels come too fast, raise the 80.
+9. **One shelf time per blade** (section 6): `12 min × (worth/100)^0.4`, 2 min to 3 h, price ×1.15. Top blades take about
+   an hour, not 2–3 hours (that would need a power near 0.6 and weaken the reward for dear blades). ×1.15 makes the game
+   about 18% faster than the three listings; ×1.0 restores the old pace. Tune in `SHELF` in rules.js.

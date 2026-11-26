@@ -12,6 +12,8 @@
 //   node tools/sim-economy.mjs --runs 100 --days 60 --seed 7
 //   node tools/sim-economy.mjs --one                 one player, printing each purchase as it happens
 //   node tools/sim-economy.mjs --no-renown           leave out Advertising, the repeatable coin sink (to compare)
+//   node tools/sim-economy.mjs --shelf-f 1.2 --shelf-min 10 --shelf-ref 100 --shelf-p 0.4
+//                                                    try other shelf numbers (price factor, minutes at worth ref, power)
 //
 // It is a model, not the game: players are greedy and tidy, skill is a smooth curve, challenges are a flat
 // daily amount. Use it to compare numbers against each other, not to predict a real player to the minute.
@@ -31,6 +33,12 @@ const PROFILES = {
   keen: { sessions: [[8, 40], [12, 40], [17, 40], [21, 40]], skill: 0.05 },
 };
 const PF = PROFILES[PROFILE]; if (!PF) throw new Error('unknown profile ' + PROFILE);
+// optional overrides of the shelf numbers (they change R.SHELF, so R.shelfMs uses them too)
+if (arg('shelf-f')) R.SHELF.f = +arg('shelf-f');
+if (arg('shelf-min')) R.SHELF.ms = +arg('shelf-min') * MIN;
+if (arg('shelf-ref')) R.SHELF.ref = +arg('shelf-ref');
+if (arg('shelf-p')) R.SHELF.p = +arg('shelf-p');
+if (arg('shelf-max')) R.SHELF.max = +arg('shelf-max') * MIN;
 
 // ------------------------------------------------------------------------------------------- RECONCILED NUMBERS (04-balance.md)
 const P = {
@@ -41,7 +49,7 @@ const P = {
   mana: { ms: 2 * MIN },                                           // ONE mana meter: +1 every 2 min up to R.manaMax (20 + 2 per Enchanting level); draughts to R.manaCap
   draught: { mana: 5, p: 20, rise: 0.10 },                         // mana draught: +5 mana, 20c, +10% for each one bought today
   scrap: 0.40,                                                     // scrap merchant: instant, 40% of worth
-  lists: { short: { ms: 10 * MIN, f: 0.80 }, medium: { ms: HOUR, f: 1.00 }, long: { ms: 8 * HOUR, f: 1.25 } },
+  // shop shelves: R.SHELF from rules.js (one price factor, one selling time per blade from its worth: R.shelfMs)
   shelfStart: 3,
   grit: { L: 1, M: 1, H: 2, X: 3 },                                // grit per polish, by weight
   // polishing: q = 50 x skill + stone dice + liquid bonus (0..99), m = 1 + (q/100)^1.5; Mirror q 100 x2.5; stain x0.8
@@ -129,7 +137,7 @@ function newState(rng) {
     polishOn: 0, enchantOn: 0, shelves: P.shelfStart, got: {}, shelf: [], rack: [], orders: [], found: new Set(), arm: {},
     forged: 0, comms: 0, mw: 0, g70: 0, polished: 0, pgood: 0, runesSet: 0, r70: 0, r80: 0, r90: 0, manaVal: 0,
     meals: { d: -1, n: 0 }, draughts: { d: -1, n: 0 }, playMs: 0, now: 0, day: 0, unlock: {}, coinByDay: [],
-    inc: { shelf: 0, quick: 0, comm: 0, other: 0 }, n: { short: 0, medium: 0, long: 0, quick: 0, salv: 0, comm: 0 },
+    inc: { shelf: 0, quick: 0, comm: 0, other: 0 }, n: { shelf: 0, quick: 0, salv: 0, comm: 0 }, shelfMin: 0,
     spend: { supplies: 0, meals: 0, grit: 0, draughts: 0, dust: 0, unlocks: 0, renown: 0 }, sold: [], gs: 0, chD: -1, chN: 0, mirrors: 0, stains: 0, scars: 0, reson: 0,
     xp: { smith: 0, ench: 0 }, lvAt: { smith: {}, ench: {} }, lvByDay: { smith: [], ench: [] } };
 }
@@ -141,7 +149,7 @@ function addXp(s, track, n) {
   for (let l = lv0 + 1; l <= lv; l++) s.lvAt[track][l] = { min: s.playMs / MIN, day: s.day + 1 };
 }
 
-// ---- clocks: energy and mana refill from the clock, shop listings sell at listedAt + duration
+// ---- clocks: energy and mana refill from the clock, shop listings sell at their fixed end time
 function tick(s) {
   const fm = fmax(s), mm = mmax(s);
   if (s.fuel >= fm) s.fuelTs = s.now;
@@ -150,7 +158,7 @@ function tick(s) {
     if (s.mana >= mm) s.manaTs = s.now;
     else { const n = Math.floor((s.now - s.manaTs) / P.mana.ms); if (n > 0) { s.mana = Math.min(mm, s.mana + n); s.manaTs += n * P.mana.ms; if (s.mana >= mm) s.manaTs = s.now; } }
   }
-  s.shelf = s.shelf.filter((L) => { if (L.at + P.lists[L.k].ms > s.now) return true; s.coin += L.price; s.inc.shelf += L.price; s.sold.push(L.b); return false; });
+  s.shelf = s.shelf.filter((L) => { if (L.until > s.now) return true; s.coin += L.price; s.inc.shelf += L.price; s.sold.push(L.b); return false; });
 }
 
 // ---- skill (gets better with practice)
@@ -356,7 +364,7 @@ function salvage(s, b) {
   if (b.polish) s.grit += R.TYPES[b.type].wt === 'X' ? 2 : 1;
   for (const r of b.runes || []) if (r.k !== 'scar') s.dust++;   // +1 star-dust per rune
 }
-function sellRound(s, kind, maxRack) {
+function sellRound(s, maxRack) {
   for (let i = s.orders.length - 1; i >= 0; i--) {   // deliver any blade on the rack that fits an order
     const q = s.orders[i], j = s.rack.findIndex((b) => fits(b, q) && (q.pay > worth(b) * 0.9 || s.comms < 5));
     if (j < 0) continue;
@@ -364,9 +372,9 @@ function sellRound(s, kind, maxRack) {
   }
   s.rack.sort((a, b) => worth(b) - worth(a));
   const ren = 1 + P.renown.per * s.renown;
-  while (s.rack.length && s.shelf.length < s.shelves) {
-    const b = s.rack.shift(), price = Math.round(worth(b) * P.lists[kind].f * ren);
-    s.shelf.push({ b, k: kind, at: s.now, price }); s.n[kind]++;
+  while (s.rack.length && s.shelf.length < s.shelves) {   // the dearest blade first: it earns the most per shelf-minute
+    const b = s.rack.shift(), v = worth(b), price = Math.round(v * R.SHELF.f * ren), ms = R.shelfMs(v);
+    s.shelf.push({ b, until: s.now + ms, price }); s.n.shelf++; s.shelfMin += ms / MIN;
   }
   while (s.rack.length > maxRack) {   // too many: sell or salvage the least valuable
     const b = s.rack.pop(), q = Math.round(worth(b) * P.scrap), sv = salvCoin(b);
@@ -376,7 +384,7 @@ function sellRound(s, kind, maxRack) {
 }
 
 // ---- a session of play
-function session(s, len, gap) {
+function session(s, len) {
   const end = s.playMs + len * MIN; tick(s);
   for (const q of s.orders) q.age++;
   if (s.orders.some((q) => q.age > 6) && s.coin > 60) { s.coin -= 10; s.orders = []; }
@@ -385,23 +393,20 @@ function session(s, len, gap) {
     tick(s); shop(s);
     const before = s.playMs;
     forge(s);
-    const away = end - s.playMs < 10 * MIN ? leaveKind(gap) : 'short';
-    sellRound(s, away, 8);
+    sellRound(s, 8);
     if (s.playMs === before) { s.playMs += 20e3; s.now += 20e3; }   // nothing to do: wait a moment
   }
-  tick(s); sellRound(s, leaveKind(gap), 12); shop(s);
+  tick(s); sellRound(s, 12); shop(s);
 }
-const leaveKind = (gap) => (gap >= P.lists.long.ms ? 'long' : gap >= P.lists.medium.ms ? 'medium' : 'short');
 
 function run(seed) {
   const s = newState(R.mulberry(seed));
   for (let d = 0; d < DAYS; d++) {
     s.day = d;
     PF.sessions.forEach(([h, len], i) => {
-      const next = PF.sessions[i + 1] ? PF.sessions[i + 1][0] : PF.sessions[0][0] + 24, gap = (next - h) * HOUR - len * MIN;
-      s.now = d * DAY + h * HOUR; tick(s);
+      s.now = d * DAY + h * HOUR;
       const m0 = s.playMs, c0 = s.inc.shelf + s.inc.quick + s.inc.comm + s.inc.other;
-      session(s, len, gap);
+      session(s, len);
       (s.log = s.log || []).push({ min: s.playMs / MIN, earned: s.inc.shelf + s.inc.quick + s.inc.comm + s.inc.other - c0, dm: (s.playMs - m0) / MIN });
     });
     s.coinByDay.push(s.coin + s.shelf.reduce((a, L) => a + L.price, 0));
@@ -416,6 +421,13 @@ const pct = (a, p) => { if (!a.length) return NaN; const x = [...a].sort((u, v) 
 const fm = (m) => (isNaN(m) ? '   -  ' : m < 600 ? `${m.toFixed(0)} min` : `${(m / 60).toFixed(1)} h`);
 const runs = []; for (let i = 0; i < RUNS; i++) runs.push(run(SEED * 100003 + i));
 const minPerDay = PF.sessions.reduce((a, x) => a + x[1], 0);
+// the shelf curve itself: selling time, price and coin per shelf-hour by worth (no Advertising), against the scrap merchant
+console.log(`\nShop shelf: price x${R.SHELF.f}, time ${R.SHELF.ms / MIN} min x (worth / ${R.SHELF.ref})^${R.SHELF.p}, ${R.SHELF.min / MIN} min .. ${R.SHELF.max / MIN} min`);
+console.log('  worth      time   price   coin/shelf-hour   scrap merchant (instant)');
+for (const v of [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]) {
+  const ms = R.shelfMs(v), pr = Math.round(v * R.SHELF.f);
+  console.log(`  ${String(v).padStart(5)}  ${fm(ms / MIN).padStart(8)}  ${String(pr).padStart(6)}   ${String(Math.round(pr / (ms / HOUR))).padStart(10)}        ${Math.round(v * P.scrap)}`);
+}
 console.log(`\nAnvilmoon economy sim (04-balance). Profile "${PROFILE}" (${PF.sessions.length} sessions, ${minPerDay} min of play a day), ${RUNS} runs, ${DAYS} days, seed ${SEED}${NO_RENOWN ? ', NO renown' : ''}.\n`);
 if (!ONE) {
   console.log('Unlock                                                     reached  median play     p10 .. p90 play     median day  forges');
@@ -457,4 +469,5 @@ const nn = runs.reduce((t, r) => { for (const k in r.n) t[k] = (t[k] || 0) + r.n
 console.log(`Where blades went: ${Object.entries(nn).map(([k, v]) => `${k} ${(100 * v / nAll).toFixed(0)}%`).join(', ')}.`);
 const sp = runs.reduce((t, r) => { for (const k in r.spend) t[k] = (t[k] || 0) + r.spend[k]; return t; }, {}), spAll = Object.values(sp).reduce((a, b) => a + b, 0);
 console.log(`Where coin went: ${Object.entries(sp).map(([k, v]) => `${k} ${(100 * v / spAll).toFixed(0)}%`).join(', ')}.`);
+console.log(`Average shelf listing: ${(runs.reduce((t, r) => t + r.shelfMin, 0) / Math.max(1, nn.shelf)).toFixed(0)} min.`);
 console.log(`Blades forged in ${DAYS} days: median ${pct(runs.map((r) => r.forged), 0.5)}.\n`);

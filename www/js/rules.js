@@ -223,11 +223,10 @@ const minBid = (L) => (L.bid ? Math.max(L.bid + 1, Math.ceil(L.bid * 1.05)) : L.
 
 // ============================================================== the shop, polishing and enchanting (docs/redesign/04-balance.md)
 const SCRAP = .40;                                   // the scrap merchant pays 40% of worth, at once
-const SHELF = {                                      // shop shelf listings: the price is fixed when you list
-  short:  { n: 'Short',  d: '10 minutes', ms: 10 * 60e3,   f: .80 },
-  medium: { n: 'Medium', d: '1 hour',     ms: 60 * 60e3,   f: 1.00 },
-  long:   { n: 'Long',   d: '8 hours',    ms: 8 * 3600e3,  f: 1.25 },
-};
+// Shop shelf listings: one fixed price and one fixed selling time per blade, both set when you list.
+// time = ms x (worth / ref)^p, rounded to the minute, kept between min and max. p < 1, so a blade worth 100x more
+// takes only about 6x longer to sell: dear blades earn far more per shelf-minute than cheap ones.
+const SHELF = { f: 1.15, ms: 12 * 60e3, ref: 100, p: .40, min: 2 * 60e3, max: 3 * 3600e3 };
 const SHELF_START = 3, SHELF_MAX = 8, SHELF_TEST_DIV = 20;   // test odds (dev only): listings sell 20x sooner
 // Advertising (the save field and action are still called `renown`): flyers and notices around town.
 // Level n costs 10,000 x n; each level +1% on shelf sales.
@@ -427,7 +426,11 @@ function value(b) {
 }
 const worth = value;
 const scrapPrice = (b) => Math.max(1, Math.round(value(b) * SCRAP));
-const shelfPrice = (c, b, k) => Math.max(1, Math.round(value(b) * SHELF[k].f * (1 + RENOWN_PER * ((c && c.renown) || 0))));
+// the shelf price (the third argument is ignored: it was the old Short/Medium/Long choice)
+const shelfPrice = (c, b) => Math.max(1, Math.round(value(b) * SHELF.f * (1 + RENOWN_PER * ((c && c.renown) || 0))));
+// how long a blade worth v takes to sell on a shelf, in ms (real time; test odds divide it by SHELF_TEST_DIV)
+const shelfMs = (v) => clamp(Math.round(SHELF.ms * Math.pow(Math.max(1, v) / SHELF.ref, SHELF.p) / 60e3) * 60e3, SHELF.min, SHELF.max);
+const shelfTime = (c, b) => shelfMs(value(b));
 const renownCost = (c) => RENOWN_STEP * (((c && c.renown) || 0) + 1);
 
 // ============================================================== levels: Smithing and Enchanting
@@ -1183,15 +1186,14 @@ def('jobFlag', false, (ctx, a) => {
 
 // ---- shop shelves: the price is fixed now, the blade sells by the clock (settleShop in beginAction)
 def('shelfList', false, (ctx, a) => {
-  const { c } = ctx, b = bladeById(c, a.id), k = String(a.k);
-  need(Object.prototype.hasOwnProperty.call(SHELF, k), 'Pick Short, Medium or Long.');
+  const { c } = ctx, b = bladeById(c, a.id);        // a.k (the old Short/Medium/Long) is ignored
   need(b && b.status === 'owned', 'That blade isn’t on your rack.');
   need(!b.cracked, 'Nobody buys a cracked blade. Salvage it instead.');
   need(!isGift(b), 'Keepsakes can’t be sold.');
   need(!b.keep, 'That blade is locked. Unlock it first.');
   need(shelfCount(c) < c.shelves, `All ${c.shelves} shelves are full.`);
-  const price = shelfPrice(c, b, k), ms = ctx.test ? SHELF[k].ms / SHELF_TEST_DIV : SHELF[k].ms;
-  b.status = 'shelf'; b.shelf = { k, at: ctx.now, until: ctx.now + ms, price };
+  const price = shelfPrice(c, b), full = shelfTime(c, b), ms = ctx.test ? Math.round(full / SHELF_TEST_DIV) : full;
+  b.status = 'shelf'; b.shelf = { at: ctx.now, until: ctx.now + ms, price };
   ctx.out = { price, until: b.shelf.until };
 });
 def('shelfCancel', false, (ctx, a) => {
@@ -1376,7 +1378,7 @@ G.AMR = {
   // levels
   LV_BASE, LV_POW, SMITH_MAX_LV, ENCH_MAX_LV, LV_FUEL, LV_MANA, MEAL_ROOM, DRAUGHT_ROOM, XP_LEVELS, FORGE_XP, CRACK_XP, POLISH_XP, MIRROR_XP, ENCH_RAR_XP, RESONANT_XP,
   levelOf, smithLevel, enchLevel, fuelMax, manaMax, fuelCap, manaCap, forgeXp, polishXp, runeXp, gainXp,
-  forgeWorth, polishMult, enchantMult, scrapPrice, shelfPrice, renownCost, tickMana, draughtsToday, draughtPrice, settleShop,
+  forgeWorth, polishMult, enchantMult, scrapPrice, shelfPrice, shelfTime, shelfMs, renownCost, tickMana, draughtsToday, draughtPrice, settleShop,
   shelfCount, polishInit, polishFx, polishTick, polishLimit, polishStrip, polishResult, polishScore, polishCurve, polishName,
   rollPolish, runeWindow, nearCredit, runeScore, cleanStrokes, rollRune, runeSlots, owns, tierPrev,
   // helpers

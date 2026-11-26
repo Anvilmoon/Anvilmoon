@@ -56,7 +56,7 @@ Known without buying (`knows`): `L`, `oil`, `war`; `spring` once `recipes.polish
 | `b.polish` | `polishEnd` | `{ q, m, s, stone, liq }` plus `mirror: 1` or `stain: 1`. q 0..100, m 0.8..2.5, s 0..1 (2 decimals) |
 | `b.runes` | `enchantEnd` | array, at most 3: `{ k, q, p }` plus `r: 1` if Resonant; a scar is `{ k: 'scar', q: 0, p: 0 }` |
 | `b.status` | | new value **`'shelf'`** (on a shop shelf); `'sold'` once the shelf sale settles |
-| `b.shelf` | `shelfList` | `{ k, at, until, price }` (kept after the sale as a record) |
+| `b.shelf` | `shelfList` | `{ at, until, price }` (kept after the sale as a record). Listings made before the one-time change may still carry an old `k`: ignore it |
 
 ### 1.3 Session objects on `S`
 
@@ -88,11 +88,10 @@ A new start replaces a stale one (the old one's grit or mana is simply lost).
 
 ```js
 const SCRAP = .40;                                   // the scrap merchant pays 40% of worth, at once
-const SHELF = {                                      // shop shelf listings: the price is fixed when you list
-  short:  { n: 'Short',  d: '10 minutes', ms: 10 * 60e3,   f: .80 },
-  medium: { n: 'Medium', d: '1 hour',     ms: 60 * 60e3,   f: 1.00 },
-  long:   { n: 'Long',   d: '8 hours',    ms: 8 * 3600e3,  f: 1.25 },
-};
+// Shop shelf listings: one fixed price and one fixed selling time per blade, both set when you list.
+// time = ms x (worth / ref)^p, rounded to the minute, kept between min and max. p < 1, so a blade worth 100x more
+// takes only about 6x longer to sell: dear blades earn far more per shelf-minute than cheap ones.
+const SHELF = { f: 1.15, ms: 12 * 60e3, ref: 100, p: .40, min: 2 * 60e3, max: 3 * 3600e3 };
 const SHELF_START = 3, SHELF_MAX = 8, SHELF_TEST_DIV = 20;   // test odds (dev only): listings sell 20x sooner
 const RENOWN_STEP = 10000, RENOWN_PER = .01;          // Advertising level n costs 10,000 x n; each level +1% on shelf sales
 const GRIT_PER = { L: 1, M: 1, H: 2, X: 3 };          // grit used by one polish, by weight
@@ -276,7 +275,11 @@ function value(b) {
 }
 const worth = value;
 const scrapPrice = (b) => Math.max(1, Math.round(value(b) * SCRAP));
-const shelfPrice = (c, b, k) => Math.max(1, Math.round(value(b) * SHELF[k].f * (1 + RENOWN_PER * ((c && c.renown) || 0))));
+// the shelf price (the third argument is ignored: it was the old Short/Medium/Long choice)
+const shelfPrice = (c, b) => Math.max(1, Math.round(value(b) * SHELF.f * (1 + RENOWN_PER * ((c && c.renown) || 0))));
+// how long a blade worth v takes to sell on a shelf, in ms (real time; test odds divide it by SHELF_TEST_DIV)
+const shelfMs = (v) => clamp(Math.round(SHELF.ms * Math.pow(Math.max(1, v) / SHELF.ref, SHELF.p) / 60e3) * 60e3, SHELF.min, SHELF.max);
+const shelfTime = (c, b) => shelfMs(value(b));
 const renownCost = (c) => RENOWN_STEP * (((c && c.renown) || 0) + 1);
 
 // ============================================================== the clock: mana and shop shelves
@@ -550,7 +553,7 @@ new `qualifies` through `deliverable`), `refreshBoard`, `jobFlag`, `chClaim`, `g
 | `drink` (mana draught) | false | `{}` | `{ mana, p }` |
 | `unlock` | false | `{ k }` | `{ n }` |
 | `renown` (Advertising) | false | `{}` | `{ level, cost }` |
-| `shelfList` | false | `{ id, k }`, k ∈ short medium long | `{ price, until }` |
+| `shelfList` | false | `{ id }` (a `k` from an old client is ignored) | `{ price, until }` |
 | `shelfCancel` | false | `{ id }` | `{}` |
 | `polishStart` | false | `{ id, liq }` | `{ seed, stone, liq }` |
 | `polishEnd` | **true** | `{ samples }` | `{ polish, name, clean, finish, s, before, after, xp: { smith } }` |
@@ -606,15 +609,14 @@ def('renown', false, (ctx) => {
 });
 // ---- shop shelves: the price is fixed now, the blade sells by the clock (settleShop in beginAction)
 def('shelfList', false, (ctx, a) => {
-  const { c } = ctx, b = bladeById(c, a.id), k = String(a.k);
-  need(Object.prototype.hasOwnProperty.call(SHELF, k), 'Pick Short, Medium or Long.');
+  const { c } = ctx, b = bladeById(c, a.id);        // a.k (the old Short/Medium/Long) is ignored
   need(b && b.status === 'owned', 'That blade isn’t on your rack.');
   need(!b.cracked, 'Nobody buys a cracked blade. Salvage it instead.');
   need(!isGift(b), 'Keepsakes can’t be sold.');
   need(!b.keep, 'That blade is locked. Unlock it first.');
   need(shelfCount(c) < c.shelves, `All ${c.shelves} shelves are full.`);
-  const price = shelfPrice(c, b, k), ms = ctx.test ? SHELF[k].ms / SHELF_TEST_DIV : SHELF[k].ms;
-  b.status = 'shelf'; b.shelf = { k, at: ctx.now, until: ctx.now + ms, price };
+  const price = shelfPrice(c, b), full = shelfTime(c, b), ms = ctx.test ? Math.round(full / SHELF_TEST_DIV) : full;
+  b.status = 'shelf'; b.shelf = { at: ctx.now, until: ctx.now + ms, price };
   ctx.out = { price, until: b.shelf.until };
 });
 def('shelfCancel', false, (ctx, a) => {
@@ -742,7 +744,7 @@ CHISELS, CONDUITS, RUNES, RUNE_KEYS, RUNE_STEP, RUNE_MAX_PTS, RUNE_MAX_STROKES, 
 RUNE_GRACE_MS, RUNE_SLOT_W, RESONANT, UNLOCKS, UNLOCK_KEYS, STAT0, ADVERT,`
 `LV_BASE, LV_POW, SMITH_MAX_LV, ENCH_MAX_LV, LV_FUEL, LV_MANA, MEAL_ROOM, DRAUGHT_ROOM, XP_LEVELS, FORGE_XP, CRACK_XP, POLISH_XP,
 MIRROR_XP, ENCH_RAR_XP, RESONANT_XP, levelOf, smithLevel, enchLevel, fuelMax, manaMax, fuelCap, manaCap, forgeXp, polishXp, runeXp, gainXp,`
-`forgeWorth, polishMult, enchantMult, scrapPrice, shelfPrice, renownCost, tickMana, draughtsToday, draughtPrice, settleShop,
+`forgeWorth, polishMult, enchantMult, scrapPrice, shelfPrice, shelfTime, shelfMs, renownCost, tickMana, draughtsToday, draughtPrice, settleShop,
 shelfCount, polishInit, polishFx, polishTick, polishLimit, polishStrip, polishResult, polishScore, polishCurve, polishName,
 rollPolish, runeWindow, nearCredit, runeScore, cleanStrokes, rollRune, runeSlots, owns, tierPrev`.
 
@@ -933,12 +935,22 @@ chisel, the conduits and runes owned.
 
 ### 9.4 Shop page (new tab "Shop", next to the Rack)
 
-- `c.shelves` slots. A filled slot (blade with `status === 'shelf'`): sprite, name, price `b.shelf.price`, listing name,
+- `c.shelves` slots. A filled slot (blade with `status === 'shelf'`): sprite, name, price `b.shelf.price`,
   time left `b.shelf.until − nowS()` counting down, **Cancel** → `actSync('shelfCancel', { id })`.
-- An empty slot: **List a blade** → pick from the rack (owned, not cracked, not a keepsake, not locked) and a listing:
-  three buttons "Short · 10 min · 123c", "Medium · 1 h · 154c", "Long · 8 h · 192c" (`AMR.shelfPrice(c, b, k)`; with
-  `A.testOdds` show the shortened time `ms / AMR.SHELF_TEST_DIV`) → `actSync('shelfList', { id, k })`.
+- An empty slot: **List a blade** → pick from the rack (owned, not cracked, not a keepsake, not locked). There is **no
+  listing choice any more**: each blade shows one line, "Sells in 23 min · 575c" (`AMR.shelfTime(c, b)` and
+  `AMR.shelfPrice(c, b)`; with `A.testOdds` show `Math.round(AMR.shelfTime(c, b) / AMR.SHELF_TEST_DIV)`), and one
+  **List** button → `actSync('shelfList', { id })`. Sorting the picker by worth (dearest first) helps: dear blades earn
+  the most per shelf-minute (04-balance section 6).
 - Buy more slots links to the Workshop Shop tab.
+
+**Client note (one-time change, Short/Medium/Long removed).** `AMR.SHELF` is now a single config object
+`{ f, ms, ref, p, min, max }`, not three listings: any code that reads `SHELF.short`, `SHELF[k].n`, `SHELF[k].d`,
+`SHELF[k].ms` or `SHELF[k].f` must go. Use `AMR.shelfTime(c, b)` (ms, real time) and `AMR.shelfPrice(c, b)` (a third
+argument is still accepted and ignored). `shelfList` takes `{ id }`; an old client that still sends `k` keeps working
+(the server ignores it). Listings already on a shelf keep their stored `price` and `until`, and may still carry an old
+`b.shelf.k`: don't show it. Format the time with minutes under an hour ("23 min") and hours and minutes above
+("1 h 16 min").
 
 ### 9.5 Rack, blade card and the forge reveal
 
@@ -948,7 +960,7 @@ For a blade on the rack, the actions are:
 |---|---|---|
 | **Polish** | `knows(c,'polish') && !b.polish && !b.cracked && !isGift(b)` | the polish flow (9.6) |
 | **Enchant** | `knows(c,'enchant') && b.polish && !b.cracked && (b.runes||[]).length < AMR.runeSlots(c)` | the enchant flow (9.7) |
-| **Shelf** (Short / Medium / Long with prices) | not cracked, not keepsake, not locked, a free slot | `shelfList` |
+| **Shelf · 23 min · 575c** (`AMR.shelfTime`, `AMR.shelfPrice`) | not cracked, not keepsake, not locked, a free slot | `actSync('shelfList', { id })` |
 | **Scrap merchant · Nc** | not cracked, not keepsake | `actSync('sell', { ids: [id] })` (`AMR.scrapPrice(b)`) |
 | **Salvage** | not keepsake | as today (show `yieldStr(AMR.salvYield(b))`) |
 
@@ -1050,6 +1062,9 @@ then continue with the `null` / partial result.
 - [ ] `value` = forge worth × polish × enchant (check one blade by hand); `enchantMult` sorts by power.
 - [ ] `settleShop`: a listing pays exactly once at `until`, not before; `tickMana` refills +1 per 2 min up to 20, not
       above 20 after a draught.
+- [ ] Shelf time: `shelfMs(SHELF.ref) === SHELF.ms`, clamped to 2 min / 3 h, whole minutes, never shorter for a dearer
+      blade, and coin per shelf-minute always higher for a dearer blade; `shelfList {id}` sets `until = now +
+      shelfTime(c, b)` (÷ `SHELF_TEST_DIV` with test odds) and ignores an old `k`.
 - [ ] `unlock`: buys in order (stone2 before stone1 refused), `after` and `req` refused with the right message, pays
       the cost; `owns` true afterwards.
 - [ ] server tests: `polishStart` → `polishEnd` works and raises worth; polishing twice refused; a cracked blade refused;
@@ -1087,8 +1102,9 @@ then continue with the `null` / partial result.
 
 ### SHOP/CLIENT (`www/index.html`, `www/sw.js`)
 
-- [ ] `npm run dev`, new account: forge, list a blade Short with test odds on (it sells in 30 s while the tab is open,
-      and while closed), cancel a listing, scrap-merchant sell, salvage.
+- [ ] `npm run dev`, new account: forge, list a blade with test odds on (a starting blade takes about 5 minutes, so
+      about 15 s with test odds; it sells while the tab is open and while closed), cancel a listing, scrap-merchant
+      sell, salvage.
 - [ ] No console errors on any page (Forge, Rack, Shop, Workshop tabs, Market, Commissions, Armory, Records, Hall,
       Account, Arena, Auction House). No reference left to classes or demand.
 - [ ] Workshop: buy Iron Anvil, Medium pattern, the bench (after 20 forges), a stone, a liquid; locked rows explain why.

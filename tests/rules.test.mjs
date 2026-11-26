@@ -53,7 +53,7 @@ test('tidying a big save keeps Armory progress, records and blades on the rack',
   const rng = seq();
   const S = R.upgradeSave(null, 1e12); R.runAction(S, 'createSmith', {}, env(1e12, rng)); const c = S.slots[0];
   for (let i = 0; i < 400; i++) { const b = R.makeBlade({ S, c, rng, now: 1e12, tz: 0 }, R.TK[i % 100], 0, 50 + (i % 50), false); b.status = i % 3 ? 'sold' : 'salvaged'; c.blades.push(b); }
-  c.blades[5].status = 'owned'; c.blades[7].status = 'shelf'; c.blades[7].shelf = { k: 'long', at: 1e12, until: 2e12, price: 10 };
+  c.blades[5].status = 'owned'; c.blades[7].status = 'shelf'; c.blades[7].shelf = { at: 1e12, until: 2e12, price: 10 };
   const before = R.armoryProgress(S), longest = Math.max(...c.blades.filter(R.exists).map((b) => b.len));
   R.compact(S);
   assert.ok(c.blades.length < 200, 'smaller: ' + c.blades.length);
@@ -106,8 +106,9 @@ test('salvage gives back grit for a polish and star-dust for each rune (not for 
 
 test('shop shelves: the price is fixed when listed and pays exactly once, at the time, not before', () => {
   const S = smith(), c = S.slots[0], b = seax(++S.serial, { forger: c.name }); c.blades.push(b);
-  const ctx = act(S, 'shelfList', { id: b.id, k: 'medium' });
-  assert.equal(ctx.out.price, R.value(b)); assert.equal(ctx.out.until, T0 + 1000 + 3600e3);
+  const ctx = act(S, 'shelfList', { id: b.id });
+  assert.equal(ctx.out.price, Math.round(R.value(b) * R.SHELF.f)); assert.equal(ctx.out.until, T0 + 1000 + R.shelfTime(c, b));
+  assert.deepEqual(Object.keys(b.shelf).sort(), ['at', 'price', 'until']);
   assert.equal(b.status, 'shelf'); assert.equal(R.shelfCount(c), 1);
   const coin = c.coin;
   assert.deepEqual(R.settleShop(c, b.shelf.until - 1), []); assert.equal(c.coin, coin, 'not before');
@@ -116,32 +117,48 @@ test('shop shelves: the price is fixed when listed and pays exactly once, at the
   assert.deepEqual(R.settleShop(c, b.shelf.until + 1e6), []); assert.equal(c.coin, coin + b.shelf.price, 'only once');
   // through an action: beginAction settles it and says so
   const b2 = seax(++S.serial, { forger: c.name }); c.blades.push(b2);
-  act(S, 'shelfList', { id: b2.id, k: 'short' }, T0 + 5000);
-  const coin2 = c.coin, later = act(S, 'buy', { m: 'iron', n: 1 }, T0 + 5000 + 10 * 60e3 + 1);
+  act(S, 'shelfList', { id: b2.id, k: 'long' }, T0 + 5000);    // an old client's k is ignored
+  assert.equal(b2.shelf.until, T0 + 5000 + R.shelfTime(c, b2));
+  const coin2 = c.coin, later = act(S, 'buy', { m: 'iron', n: 1 }, b2.shelf.until + 1);
   assert.equal(b2.status, 'sold'); assert.ok(c.coin >= coin2 + b2.shelf.price - R.PRICES.iron);
   assert.ok(later.notes.some((n) => /Your shop sold/.test(n.text)));
 });
 
-test('shelf rules: Long pays more, renown adds 1% a level, cancel and full shelves', () => {
-  const S = smith(), c = S.slots[0], b = seax(1);
-  assert.equal(R.shelfPrice(c, b, 'short'), Math.round(16.32 * .8)); assert.equal(R.shelfPrice(c, b, 'long'), Math.round(16.32 * 1.25));
-  assert.equal(R.shelfPrice({ renown: 10 }, b, 'medium'), Math.round(16.32 * 1.1));
+test('shelf rules: one price factor, renown adds 1% a level, cancel and full shelves', () => {
+  const S = smith(), c = S.slots[0], b = seax(1), v = R.value(b);
+  assert.equal(R.shelfPrice(c, b), Math.round(v * R.SHELF.f));
+  assert.equal(R.shelfPrice(c, b, 'short'), R.shelfPrice(c, b, 'long'), 'the old third argument is ignored');
+  assert.equal(R.shelfPrice({ renown: 10 }, b), Math.round(v * R.SHELF.f * 1.1));
   assert.equal(R.renownCost(c), 10000); assert.equal(R.renownCost({ renown: 2 }), 30000);
   const ids = [1, 2, 3, 4].map(() => { const x = seax(++S.serial, { forger: c.name }); c.blades.push(x); return x.id; });
-  refuses(() => act(S, 'shelfList', { id: ids[0], k: 'forever' }), /Short, Medium or Long/);
-  for (const id of ids.slice(0, 3)) act(S, 'shelfList', { id, k: 'long' });
-  refuses(() => act(S, 'shelfList', { id: ids[3], k: 'long' }), /All 3 shelves are full/);
+  for (const id of ids.slice(0, 3)) act(S, 'shelfList', { id });
+  refuses(() => act(S, 'shelfList', { id: ids[3] }), /All 3 shelves are full/);
   act(S, 'shelfCancel', { id: ids[0] });
   assert.equal(R.bladeById(c, ids[0]).status, 'owned'); assert.equal(R.bladeById(c, ids[0]).shelf, undefined);
-  act(S, 'shelfList', { id: ids[3], k: 'long' });
+  act(S, 'shelfList', { id: ids[3] });
   refuses(() => act(S, 'shelfCancel', { id: ids[0] }), /isn’t on a shelf/);
   refuses(() => act(S, 'renown', {}), /8 shelves/);
 });
 
+test('shelf time: grows with worth but slower, so dear blades earn more per shelf-minute; kept between 2 min and 3 h', () => {
+  assert.equal(R.shelfMs(R.SHELF.ref), R.SHELF.ms, 'a blade worth ref takes the base time');
+  assert.equal(R.shelfMs(1), R.SHELF.min); assert.equal(R.shelfMs(1e9), R.SHELF.max);
+  assert.equal(R.SHELF.min, 2 * 60e3); assert.equal(R.SHELF.max, 3 * 3600e3);
+  const ws = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+  for (let i = 1; i < ws.length; i++) {
+    const a = ws[i - 1], z = ws[i];
+    assert.ok(R.shelfMs(z) >= R.shelfMs(a), `worth ${z} takes at least as long as ${a}`);
+    assert.ok(z / R.shelfMs(z) > a / R.shelfMs(a), `worth ${z} earns more per shelf-minute than ${a}`);
+  }
+  for (const w of ws) assert.equal(R.shelfMs(w) % 60e3, 0, 'whole minutes');
+  assert.ok(R.shelfMs(1000) <= 7 * R.shelfMs(10), '100x the worth, about 6x the time');
+  const b = seax(1); assert.equal(R.shelfTime(null, b), R.shelfMs(R.value(b)));
+});
+
 test('test odds make shelf listings 20x shorter', () => {
   const S = smith(), c = S.slots[0], b = seax(++S.serial, { forger: c.name }); c.blades.push(b);
-  const ctx = R.runAction(S, 'shelfList', { id: b.id, k: 'short' }, { ...env(T0 + 1000, null), test: true });
-  assert.equal(ctx.out.until, T0 + 1000 + 30e3);
+  const ctx = R.runAction(S, 'shelfList', { id: b.id }, { ...env(T0 + 1000, null), test: true });
+  assert.equal(ctx.out.until, T0 + 1000 + Math.round(R.shelfTime(c, b) / R.SHELF_TEST_DIV));
 });
 
 // ---------------------------------------------------------------------------------------------- mana

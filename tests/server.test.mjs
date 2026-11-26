@@ -279,17 +279,17 @@ test('enchanting: needs a polished blade and the mana; a traced rune is set; slo
 test('shop shelves: list at a fixed price, cancel, full shelves refused, and a listing sells by the clock', async () => {
   const a = await player('shelly'); await a.act('createSmith');
   const blade = await sound(a);
-  const L = await a.act('shelfList', { id: blade.id, k: 'medium' });
+  const L = await a.act('shelfList', { id: blade.id });
   assert.equal(L.status, 200, L.error);
   const b = R.bladeById(a.c(), blade.id);
-  assert.equal(b.status, 'shelf'); assert.equal(L.out.price, R.value(b)); assert.equal(b.shelf.price, L.out.price); assert.equal(L.out.until - b.shelf.at, 3600e3);
+  assert.equal(b.status, 'shelf'); assert.equal(L.out.price, R.shelfPrice(a.c(), b)); assert.equal(b.shelf.price, L.out.price); assert.equal(L.out.until - b.shelf.at, R.shelfTime(a.c(), b));
   assert.equal((await a.act('sell', { ids: [blade.id] })).status, 400, 'a blade on a shelf can’t go to the scrap merchant');
   const c1 = await a.act('shelfCancel', { id: blade.id });
   assert.equal(c1.status, 200, c1.error); assert.equal(R.bladeById(a.c(), blade.id).status, 'owned');
   let ids;
   await edit(a, (S, c) => { ids = [1, 2, 3].map(() => copyBlade(S, c, blade).id); });
-  for (const id of [blade.id, ids[0], ids[1]]) assert.equal((await a.act('shelfList', { id, k: 'long' })).status, 200);
-  const full = await a.act('shelfList', { id: ids[2], k: 'short' });
+  for (const id of [blade.id, ids[0], ids[1]]) assert.equal((await a.act('shelfList', { id })).status, 200);
+  const full = await a.act('shelfList', { id: ids[2] });
   assert.equal(full.status, 400); assert.match(full.error, /shelves are full/);
   // the listing's time is up: the next action pays for it
   await edit(a, (S, c) => { R.bladeById(c, blade.id).shelf.until = Date.now() - 1000; });
