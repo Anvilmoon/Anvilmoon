@@ -1167,7 +1167,7 @@ body.rackopen{overflow:visible!important}.drawer{overscroll-behavior:contain}
 </head>
 <body>
 <div class="app">
-  <header><p class="mark" data-action="tab" data-tab="chars" role="link" tabindex="0" title="Your smith"><img class="emblem" src="icons/emblem.png" alt="" width="29" height="26">Anvilmoon</p><div id="hud"></div></header>
+  <header><p class="mark" data-action="nav" data-k="home" role="link" tabindex="0" title="Home"><img class="emblem" src="icons/emblem.png" alt="" width="29" height="26">Anvilmoon</p><div id="hud"></div></header>
   <nav class="rail" aria-label="Sections"><div id="tabs"></div><div id="opts"></div></nav>
   <main id="view"></main>
 </div>
@@ -1902,7 +1902,7 @@ const stock=(k,v,extra='')=>`<span class="stock" title="${MATN[k]}"><i class="px
 
 function renderHUD(){setTimeout(renderSync,0);if(needAcct()){$('hud').innerHTML='<span class="who">Not signed in</span><span class="stocks"></span>';return}const c=C();if(!c){$('hud').innerHTML=`<span class="who">No smith yet</span><span class="stocks"></span><span class="hbtns"><button class="hico" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button></span>`;return}tickFuel();
   const ft=c.fuel<FUEL_MAX?`<span class="tick" title="Time until your next energy">${(()=>{const r=Math.ceil((FUEL_MS-(Date.now()-c.fuelTs))/1000);return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
-  $('hud').innerHTML=`<button class="who" data-action="tab" data-tab="chars" title="Your smith"><b>${c.name}</b><span class="whocls"> the ${CLASSES[c.cls].n}</span></button><span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}</span><span class="hbtns"><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
+  $('hud').innerHTML=`<button class="who" data-action="nav" data-k="hall" title="Your Smith’s hall"><b>${c.name}</b><span class="whocls"> the ${CLASSES[c.cls].n}</span></button><span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}</span><span class="hbtns"><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
 function setHH(){try{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px')}catch(e){}}
 addEventListener('resize',setHH);
 function renderTabs(){setHH();const c=needAcct()?null:C();
