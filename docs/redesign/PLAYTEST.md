@@ -26,7 +26,7 @@ buttons can never appear or work there.
 | **+5,000 coin & materials** | +5,000 coin, +50 iron, +50 coal, +20 damascus, +5 star-shards, +30 star-dust, +30 grit. Press it as often as you like. |
 | **Unlock polishing** | Medium pattern and the Polishing bench (Sandstone, Spring water), counts 20 forges, at least 10 grit. |
 | **Unlock enchanting** | Everything above plus the Iron and Steel Anvils and the Enchanter's table (Flint Chisel, Copper Conduit, Ember rune), counts 40 polishes, fills the mana meter. |
-| **Unlock everything** | Every row in every Workshop tab: all anvils, patterns, styles, quenches, stones, liquids, chisels, conduits, runes and all 8 shelves (so Renown opens). Counts every requirement as met. Hammers aren't included; buy them in the Workshop. |
+| **Unlock everything** | Every row in every Workshop tab: all anvils, patterns, styles, quenches, stones, liquids, chisels, conduits, runes and all 8 shelves (so Advertising opens). Counts every requirement as met. Hammers aren't included; buy them in the Workshop. |
 
 The unlock buttons skip the coin cost and the requirements. Use them to jump to a stage, then play from there.
 
@@ -42,6 +42,6 @@ The unlock buttons skip the coin cost and the requirements. Use them to jump to 
 4. **The shop:** list blades Short/Medium/Long, cancel one, close the tab and come back after the time is up: the coin
    is there and a toast says what sold.
 5. **Late game:** "Unlock everything" and "+5,000 coin" a few times. Forge a Massive blade, polish with Acid wash, carve
-   three runes with the Starsteel Chisel and Stormglass, list it Long. Raise Renown in the Workshop's Shop tab.
+   three runes with the Starsteel Chisel and Stormglass, list it Long. Raise Advertising in the Workshop's Shop tab.
 6. **Commissions:** after unlocking polishing or enchanting, buy new notices on the board: orders now ask for a polish
    quality and sometimes a rune.

@@ -1198,6 +1198,13 @@ body.rackopen{overflow:visible!important}.drawer{overscroll-behavior:contain}
 .runebtn .rglyph{font-size:28px;color:var(--glow);line-height:1}
 .craftgo{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:12px}
 .devpanel{border:3px dashed #8fb8ff!important;margin-bottom:16px}.devpanel .row2{display:flex;flex-wrap:wrap;gap:8px}
+.hlvs{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0 4px;cursor:pointer;color:var(--ash);font:inherit}
+.hlv{position:relative;display:block;font-size:12px;line-height:1.1;padding-bottom:4px;white-space:nowrap;color:var(--mute)}.hlv b{color:var(--ash)}
+.hlv i{position:absolute;left:0;bottom:0;height:2px;display:block}.hlv::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(255,255,255,.12)}
+.lvplate{margin:16px 0}.lvrow{display:grid;grid-template-columns:130px 1fr auto;gap:10px;align-items:center;margin-top:8px}.lvn b{color:var(--straw);font-size:20px}
+.lvbar{height:12px;background:#1c1917;border:2px solid var(--ink)}.lvbar i{display:block;height:100%}
+@media(max-width:560px){.lvrow{grid-template-columns:1fr auto}.lvbar{grid-column:1/-1;grid-row:2}}
+.xpgain{color:#9fe0a0;font-weight:700;margin:6px 0}.lvup{color:var(--straw);font-weight:700}
 /* ===== challenges ===== */
 .chstreak{display:flex;align-items:center;gap:14px;margin-bottom:18px}.chfire{font:400 40px/1 var(--display);color:var(--straw);min-width:44px;text-align:center}.chstreak span{display:grid;gap:2px}.chstreak small{color:var(--mute);font-size:14px}
 .chhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin:6px 0 8px}.chhead h2{margin:0}.chhead h2 small{font-size:15px;color:var(--mute);margin-left:8px}
@@ -1725,10 +1732,21 @@ const hudNum=n=>{n=Math.floor(n||0);return n>=1e6?(Math.floor(n/1e5)/10)+'m':n>=
 const stock=(k,v,extra='')=>`<span class="stock" title="${matN(k)}"><i class="pxi" style="background-image:var(--ico-${k})" aria-hidden="true"></i><b>${v}</b><span class="lbl">${matN(k).toLowerCase()}</span>${extra}</span>`;
 
 function renderHUD(){setTimeout(renderSync,0);if(needAcct()){$('hud').innerHTML='<span class="who">Not signed in</span><span class="stocks"></span>';return}const c=C();if(!c){$('hud').innerHTML=`<span class="who">No smith yet</span><span class="stocks"></span><span class="hbtns"><button class="hico" data-action="tab" data-tab="records" title="Records" aria-label="Records"><i class="pxi" style="background-image:var(--ico-records)"></i></button></span>`;return}tickFuel();
-  const ft=c.fuel<FUEL_MAX?`<span class="tick" title="Time until your next energy">${(()=>{const r=Math.ceil((FUEL_MS-(Date.now()-c.fuelTs))/1000);return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
-  // mana refills like energy (+1 every 2 minutes up to 20); the timer shows when the next one arrives
-  const MM=AMR.MANA_MAX||20,mt=c.mana<MM&&c.manaTs?`<span class="tick" title="Time until your next mana">${(()=>{const r=Math.max(0,Math.ceil(((AMR.MANA_MS||120000)-(nowS()-c.manaTs))/1000));return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
-  $('hud').innerHTML=`<button class="who" data-action="nav" data-k="hall" title="Your Smith’s hall"><b>${c.name}</b></button><span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}${knows(c,'polish')?stock('grit',hudNum(c.grit)):''}${knows(c,'enchant')?stock('mana',`${Math.floor(c.mana||0)}/${MM}`,mt):''}</span><span class="hbtns"><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
+  const FM=AMR.fuelMax(c),ft=c.fuel<FM?`<span class="tick" title="Time until your next energy">${(()=>{const r=Math.ceil((FUEL_MS-(Date.now()-c.fuelTs))/1000);return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
+  // mana refills like energy (+1 every 2 minutes up to the max); the timer shows when the next one arrives
+  const MM=AMR.manaMax(c),mt=c.mana<MM&&c.manaTs?`<span class="tick" title="Time until your next mana">${(()=>{const r=Math.max(0,Math.ceil(((AMR.MANA_MS||120000)-(nowS()-c.manaTs))/1000));return Math.floor(r/60)+':'+String(r%60).padStart(2,'0')})()}</span>`:'';
+  $('hud').innerHTML=`<button class="who" data-action="nav" data-k="hall" title="Your Smith’s hall"><b>${c.name}</b></button>${lvBadge(c)}<span class="stocks">${stock('coin',hudNum(c.coin))}${stock('fuel',`${c.fuel}/${FM}`,ft)}${stock('iron',hudNum(c.iron))}${stock('coal',hudNum(c.coal))}${stock('damascus',hudNum(c.damascus))}${stock('dust',hudNum(c.dust))}${stock('shards',hudNum(c.shards))}${knows(c,'polish')?stock('grit',hudNum(c.grit)):''}${knows(c,'enchant')?stock('mana',`${Math.floor(c.mana||0)}/${MM}`,mt):''}</span><span class="hbtns"><span id="syncst" class="syncst"></span><button class="sndbtn" data-action="snd" title="${SFX.muted?'Sound is off':'Sound is on'}" aria-label="Sound ${SFX.muted?'off':'on'}">${SFX.muted?'🔇':'🔊'}</button></span>`}
+// ---- levels: Smithing (forging and polishing) and Enchanting (runes that take) grow with play.
+// Each Smithing level adds 1 max energy, each Enchanting level 2 max mana (rules.js, levelOf).
+const lvPct=L=>L.next?Math.min(100,L.cur/L.next*100):100;
+const lvTip=(L,k)=>(k==='s'?'Smithing':'Enchanting')+` level ${L.lv}`+(L.next?`: ${fmt(L.cur)} of ${fmt(L.next)} XP. Level ${L.lv+1}: max ${k==='s'?'energy '+(AMR.FUEL_MAX+AMR.LV_FUEL*L.lv):'mana '+(AMR.MANA_MAX+AMR.LV_MANA*L.lv)}.`:' (the top level).');
+const lvEnch=c=>knows(c,'enchant')||!!(c.xp&&c.xp.ench);
+function lvBadge(c){const S=AMR.smithLevel(c),E=AMR.enchLevel(c),one=(L,k,t,col)=>`<span class="hlv" title="${lvTip(L,k)}">${t} <b>${L.lv}</b><i style="width:${lvPct(L)}%;background:${col}"></i></span>`;
+  return `<button class="hlvs" data-action="nav" data-k="home" aria-label="Your levels">${one(S,'s','Smith','var(--straw)')}${lvEnch(c)?one(E,'e','Ench','#8fb8ff'):''}</button>`}
+function lvPlate(c){const S=AMR.smithLevel(c),E=AMR.enchLevel(c),row=(n,L,k,col)=>`<div class="lvrow" title="${lvTip(L,k)}"><span class="lvn">${n} <b>${L.lv}</b></span><div class="lvbar"><i style="width:${lvPct(L)}%;background:${col}"></i></div><span class="fine">${L.next?`${fmt(L.cur)} / ${fmt(L.next)} XP`:'top level'}</span></div>`;
+  return `<div class="plate lvplate"><h2>Your levels</h2>${row('Smithing',S,'s','var(--straw)')}<p class="fine">From forging and polishing. Each level gives +1 max energy (now ${AMR.fuelMax(c)}).</p>
+    ${lvEnch(c)?row('Enchanting',E,'e','#8fb8ff')+`<p class="fine">From runes that take. Each level gives +2 max mana (now ${AMR.manaMax(c)}).</p>`:''}</div>`}
+const xpTxt=x=>x?[x.smith&&`+${x.smith} Smithing XP`,x.ench&&`+${x.ench} Enchanting XP`].filter(Boolean).join(' · '):'';
 function setHH(){try{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px')}catch(e){}}
 addEventListener('resize',setHH);
 function renderTabs(){setHH();const c=needAcct()?null:C();
@@ -1778,8 +1796,8 @@ function vForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt],h=hammerFx(),locked=!kno
   const supply=UI.sup?`<div class="suppop"><div class="sheetbg" data-action="supclose"></div><div class="plate supply" role="dialog" aria-label="Supplies"><div class="platehead"><h3>Supplies</h3><span class="supcoin"><i class="pxi" style="background-image:var(--ico-coin)" aria-hidden="true"></i>${fmt(c.coin)}c to spend</span><button class="btn ghost small" data-action="supclose">Close</button></div>
     ${locked?'':`<div class="supneed ${sCost?'short':''}"><p>One <b>${t.n}</b> takes <b>${w.iron} iron</b> and <b>${w.coal} coal</b>. ${sCost?`You’re short ${[sIron&&sIron+' iron',sCoal&&sCoal+' coal'].filter(Boolean).join(' and ')}.`:`You have enough for <b>${sN}</b> more.`}</p>${sCost?`<button class="btn go small" data-action="supfill" ${c.coin>=sCost?'':'disabled'}>${c.coin>=sCost?`Buy what’s missing · ${sCost}c`:`Missing costs ${sCost}c`}</button>`:''}</div>`}
     <p class="suph">Materials</p>${qRow('buy','iron','Iron',PRICES.iron,Math.floor(c.coin/PRICES.iron),c.iron)}${qRow('buy','coal','Coal',PRICES.coal,Math.floor(c.coin/PRICES.coal),c.coal)}
-    <p class="suph">Meals <span>· energy ${c.fuel} of ${ENERGY_CAP} · every forge uses 1</span></p>
-    <div class="meals">${Object.entries(MEALS).map(([k,m])=>{const p=mealPrice(c,k),full=c.fuel+m.e>ENERGY_CAP,poor=c.coin<p;return `<button class="mealbtn" data-action="eat" data-k="${k}" ${!poor&&!full?'':'disabled'} title="${m.d}"><b>${m.n}</b><span class="mealE">+${m.e} energy</span><span class="mealp">${full?'Too full':poor?`${p}c · can’t afford`:`${p}c`}</span></button>`}).join('')}</div></div></div>`:'';
+    <p class="suph">Meals <span>· energy ${c.fuel} of ${AMR.fuelMax(c)} · every forge uses 1</span></p>
+    <div class="meals">${Object.entries(MEALS).map(([k,m])=>{const p=mealPrice(c,k),full=c.fuel+m.e>AMR.fuelCap(c),poor=c.coin<p;return `<button class="mealbtn" data-action="eat" data-k="${k}" ${!poor&&!full?'':'disabled'} title="${m.d}"><b>${m.n}</b><span class="mealE">+${m.e} energy</span><span class="mealp">${full?'Too full':poor?`${p}c · can’t afford`:`${p}c`}</span></button>`}).join('')}</div></div></div>`:'';
   const tut=false&&(UI.tut||(!A.tutDone&&!c.forged))?`<div class="plate tut"><div class="platehead"><h2>How to forge</h2><button class="btn small" data-action="tutdone">Got it</button></div>
     <ol class="steps"><li><i class="pxi" style="background-image:var(--ico-rack)"></i><span><b>Pick a blade</b> from the list below.</span></li>
     <li><i class="pxi" style="background-image:var(--ico-forge)"></i><span><b>Light the forge.</b> It costs the energy, iron and coal shown.</span></li>
@@ -1944,7 +1962,7 @@ const leftTxt=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m
 const canPolish=(c,b)=>!!(c&&b&&knows(c,'polish')&&!b.polish&&!b.cracked&&!isGift(b));
 const canEnchant=(c,b)=>!!(c&&b&&knows(c,'enchant')&&b.polish&&!b.cracked&&!isGift(b)&&(b.runes||[]).length<AMR.runeSlots(c));
 const shelfFree=c=>AMR.shelfCount(c)<(c.shelves||AMR.SHELF_START||3);
-function shelfBtns(c,b,cls='btn small'){return SHELF_K.map(k=>`<button class="${cls}" data-action="shelflist" data-id="${b.id}" data-k="${k}" title="Sells after ${durTxt(shelfMs(k))} for ${Math.round(AMR.SHELF[k].f*100)}% of its worth${c.renown?`, +${c.renown}% renown`:''}">${AMR.SHELF[k].n} · ${durTxt(shelfMs(k))} · ${fmt(AMR.shelfPrice(c,b,k))}c</button>`).join('')}
+function shelfBtns(c,b,cls='btn small'){return SHELF_K.map(k=>`<button class="${cls}" data-action="shelflist" data-id="${b.id}" data-k="${k}" title="Sells after ${durTxt(shelfMs(k))} for ${Math.round(AMR.SHELF[k].f*100)}% of its worth${c.renown?`, +${c.renown}% from advertising`:''}">${AMR.SHELF[k].n} · ${durTxt(shelfMs(k))} · ${fmt(AMR.shelfPrice(c,b,k))}c</button>`).join('')}
 // o.big: ask twice before selling or salvaging; o.reveal: the forge reveal (Polish is the gold button there)
 function bladeActs(b,o={}){const c=C(),out=[];if(!c||!b||isGift(b))return '';
   if(canPolish(c,b))out.push(`<button class="btn ${o.reveal?'go':''}" data-action="polish" data-id="${b.id}">Polish · ${(AMR.GRIT_PER||{})[TYPES[b.type].wt]||1} grit</button>`);
@@ -2059,10 +2077,10 @@ function vWorkshop(){const c=C();UI.wsOpen=UI.wsOpen||{};const tab=WS_TABS.some(
     top=`<p class="fine wsnow">Stone in use: <b>${S.n}</b> (adds ${S.lo}–${S.hi} quality, Mirror polish ${+(S.mirror*100).toFixed(1)}% × skill²) · liquids ${Object.keys(AMR.LIQUIDS).filter(k=>knows(c,k)).map(k=>AMR.LIQUIDS[k].n).join(', ')} · grit ${fmt(c.grit||0)}</p>`}
   else if(tab==='polish')top='<p class="fine wsnow">Polishing raises a blade’s worth by up to ×2, or ×2.5 for a Mirror polish. It costs grit from the Market.</p>';
   else if(tab==='enchant'&&knows(c,'enchant')){const CH=AMR.CHISELS[c.chisel||0];
-    top=`<p class="fine wsnow">Chisel in use: <b>${CH.n}</b> (${CH.slots} rune${CH.slots>1?'s':''} per blade) · conduits ${Object.keys(AMR.CONDUITS).filter(k=>knows(c,k)).map(k=>AMR.CONDUITS[k].n).join(', ')} · runes ${AMR.RUNE_KEYS.filter(k=>knows(c,k)).map(k=>AMR.RUNES[k].g+' '+AMR.RUNES[k].n).join(', ')} · mana ${Math.floor(c.mana||0)}/${AMR.MANA_MAX}</p>`}
+    top=`<p class="fine wsnow">Chisel in use: <b>${CH.n}</b> (${CH.slots} rune${CH.slots>1?'s':''} per blade) · conduits ${Object.keys(AMR.CONDUITS).filter(k=>knows(c,k)).map(k=>AMR.CONDUITS[k].n).join(', ')} · runes ${AMR.RUNE_KEYS.filter(k=>knows(c,k)).map(k=>AMR.RUNES[k].g+' '+AMR.RUNES[k].n).join(', ')} · mana ${Math.floor(c.mana||0)}/${AMR.manaMax(c)}</p>`}
   else if(tab==='enchant')top='<p class="fine wsnow">Enchanting carves runes into a polished blade with the mouse or a finger. Each rune costs mana, which refills by itself.</p>';
   else if(tab==='shop'){top=`<p class="fine wsnow">Shelves: <b>${c.shelves}</b> of ${AMR.SHELF_MAX} · ${AMR.shelfCount(c)} in use</p>`;
-    if(c.shelves>=AMR.SHELF_MAX){const cost=AMR.renownCost(c);extra=`<h2 class="sect">Renown</h2><div class="ulrow"><div class="ulinfo"><h3>Renown level ${c.renown||0}</h3><p>Every level adds 1% to every shelf sale. Now +${c.renown||0}% on shelf sales.</p><p class="ulcost">Next level: ${fmt(cost)}c</p></div><div class="ulbtn"><button class="btn go small" data-action="renown" ${c.coin>=cost?'':'disabled'}>Raise renown · ${fmt(cost)}c</button></div></div>`}}
+    if(c.shelves>=AMR.SHELF_MAX){const cost=AMR.renownCost(c);extra=`<h2 class="sect">${(AMR.ADVERT||{}).n||'Advertising'}</h2><div class="ulrow"><div class="ulinfo"><h3>Advertising level ${c.renown||0}</h3><p>${(AMR.ADVERT||{}).d||'Flyers and notices around town. Every level adds 1% to every shelf sale.'} Now +${c.renown||0}% on shelf sales.</p><p class="ulcost">Next level: ${fmt(cost)}c</p></div><div class="ulbtn"><button class="btn go small" data-action="renown" ${c.coin>=cost?'':'disabled'}>Advertise · ${fmt(cost)}c</button></div></div>`}}
   return `<section class="page"><div class="pagehead"><h1>Workshop</h1></div>
    <div class="ahtabs wstabs" role="tablist">${WS_TABS.map(([k,n])=>`<button class="ahtab ${tab===k?'on':''}" role="tab" aria-selected="${tab===k}" data-action="wstab" data-t="${k}">${n}</button>`).join('')}</div>
    ${top}<div class="ulist">${rows||'<p class="empty">Nothing here yet.</p>'}</div>${extra}</section>`}
@@ -2087,11 +2105,11 @@ document.addEventListener('change',e=>{const row=e.target.closest('.qrow');if(ro
 function vMarket(){const c=C();
   const up=mealsToday(c)*5;
   // mana draughts (once enchanting is open): +5 mana, up to 40; each one bought today costs 10% more
-  const dp=AMR.draughtPrice?AMR.draughtPrice(c,dayNow()):20,DR=AMR.DRAUGHT||{mana:5},full=(c.mana||0)+DR.mana>(AMR.MANA_CAP||40);
+  const dp=AMR.draughtPrice?AMR.draughtPrice(c,dayNow()):20,DR=AMR.DRAUGHT||{mana:5},full=(c.mana||0)+DR.mana>AMR.manaCap(c);
   const draught=knows(c,'enchant')?`<div class="plate"><div class="platehead"><h2>Mana draughts</h2></div>
-    <div class="mktenergy"><span class="flab">Mana <b>${Math.floor(c.mana||0)}</b> of ${AMR.MANA_MAX||20}</span><div class="ebar mana"><i style="width:${Math.min(100,(c.mana||0)/(AMR.MANA_MAX||20)*100)}%"></i></div></div>
+    <div class="mktenergy"><span class="flab">Mana <b>${Math.floor(c.mana||0)}</b> of ${AMR.manaMax(c)}</span><div class="ebar mana"><i style="width:${Math.min(100,(c.mana||0)/AMR.manaMax(c)*100)}%"></i></div></div>
     <button class="btn go" data-action="drink" ${!full&&c.coin>=dp?'':'disabled'}>Drink a draught · +${DR.mana} mana · ${dp}c</button>
-    <p class="fine mktnote">Mana refills by itself, 1 every 2 minutes up to ${AMR.MANA_MAX||20}. Draughts can fill it to ${AMR.MANA_CAP||40}. Each one today costs 10% more.</p></div>`:'';
+    <p class="fine mktnote">Mana refills by itself, 1 every 2 minutes up to ${AMR.manaMax(c)} (more with each Enchanting level). Draughts can fill it to ${AMR.manaCap(c)}. Each one today costs 10% more.</p></div>`:'';
   return `<section class="page mkt"><div class="pagehead"><h1>Market</h1></div>
   <div class="mktgrid"><div class="mktcol">
    <div class="plate"><div class="platehead"><h2>Supplies</h2><span class="supcoin"><i class="pxi" style="background-image:var(--ico-coin)" aria-hidden="true"></i>${fmt(c.coin)}c to spend</span></div>
@@ -2102,9 +2120,9 @@ function vMarket(){const c=C();
     <p class="fine mktnote">To sell a blade, open it on your Rack or list it in your Shop.</p></div>
   </div><div class="mktcol">
    <div class="plate tavern"><div class="platehead"><h2>The tavern</h2>${up?`<span class="tag up" title="Each meal today raises prices 5%. They reset at dawn.">Prices ▲ ${up}% today</span>`:''}</div>
-    <div class="mktenergy"><span class="flab">Energy <b>${c.fuel}</b> of ${ENERGY_CAP}</span><div class="ebar"><i style="width:${Math.min(100,c.fuel/ENERGY_CAP*100)}%"></i></div></div>
-    <div class="meals">${Object.entries(MEALS).map(([k,m])=>{const p=mealPrice(c,k),full=c.fuel+m.e>ENERGY_CAP,poor=c.coin<p;return `<button class="mealbtn" data-action="eat" data-k="${k}" ${!poor&&!full?'':'disabled'} title="${m.d} ${(p/m.e).toFixed(1)}c per energy."><b>${m.n}</b><span class="mealE">+${m.e} energy</span><span class="mealp">${full?'Too full':poor?`${p}c · can’t afford`:`${p}c`}</span></button>`}).join('')}</div>
-    <p class="fine mktnote">Every forge uses 1 energy. It also refills by itself, 1 every 3 minutes up to 10. Each meal raises today’s prices 5%.</p></div>
+    <div class="mktenergy"><span class="flab">Energy <b>${c.fuel}</b> of ${AMR.fuelMax(c)}</span><div class="ebar"><i style="width:${Math.min(100,c.fuel/AMR.fuelMax(c)*100)}%"></i></div></div>
+    <div class="meals">${Object.entries(MEALS).map(([k,m])=>{const p=mealPrice(c,k),full=c.fuel+m.e>AMR.fuelCap(c),poor=c.coin<p;return `<button class="mealbtn" data-action="eat" data-k="${k}" ${!poor&&!full?'':'disabled'} title="${m.d} ${(p/m.e).toFixed(1)}c per energy."><b>${m.n}</b><span class="mealE">+${m.e} energy</span><span class="mealp">${full?'Too full':poor?`${p}c · can’t afford`:`${p}c`}</span></button>`}).join('')}</div>
+    <p class="fine mktnote">Every forge uses 1 energy. It also refills by itself, 1 every 3 minutes up to ${AMR.fuelMax(c)} (more with each Smithing level). Meals can fill it to ${AMR.fuelCap(c)}. Each meal raises today’s prices 5%.</p></div>
    ${draught}<div class="plate"><div class="platehead"><h2>Selling blades</h2></div>
     <p class="fine">The <b>scrap merchant</b> pays 40% of a blade’s worth at once. A <b>shop shelf</b> sells it for more after a while: 80% after 10 minutes, the full worth after an hour, 125% after 8 hours. Or <b>salvage</b> it for materials.</p>
     <button class="btn" data-action="nav" data-k="shop">Open your Shop</button></div>
@@ -2164,7 +2182,7 @@ function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPic
     <form class="smith new" data-slot="0"><h2>${NET.user?NET.user.username:'New smith'}</h2>
       <p class="cls">You start with light War style blades, a rough anvil and a worn hammer. Forge, polish, enchant and sell from your own shop.</p>
       <button class="btn go" type="submit">Create smith</button></form></div>`+SETTINGS_PLATE()+`</section>`;
-  return `<section class="page"><div class="pagehead"><h1>Your smith</h1><p class="fine">One smith, one purse, one rack and one shop.</p></div>${devPanel()}${accountPlate()}
+  return `<section class="page"><div class="pagehead"><h1>Your smith</h1><p class="fine">One smith, one purse, one rack and one shop.</p></div>${devPanel()}${lvPlate(c)}${accountPlate()}
   <div class="plate smithone"><div class="smithhead"><h2>${portrait(A.look,c.name,'sm')}${c.name} ${(()=>{try{const h=hallSummary();return badgeChip(h.badge)+(h.title?`<span class="htitle">${esc(h.title)}</span>`:'')}catch(e){return ''}})()}</h2><button class="btn go" data-action="hall" data-u="">Open your hall</button></div><dl class="facts"><div><dt>Forged</dt><dd>${c.forged}</dd></div><div><dt>Coin</dt><dd>${fmt(c.coin)}</dd></div><div><dt>On rack</dt><dd>${c.blades.filter(b=>b.status==='owned').length}</dd></div><div><dt>Anvil</dt><dd>${ANVILS[c.anvil].n.replace(' Anvil','')}</dd></div><div><dt>Patterns</dt><dd>${['L','M','H','X'].filter(w=>knows(c,w)).length} of 4</dd></div><div><dt>Styles</dt><dd>${CK.filter(k=>knows(c,k)).length} of ${CK.length}</dd></div><div><dt>Shelves</dt><dd>${c.shelves||3}</dd></div></dl></div>
   `+SETTINGS_PLATE()+`</section>`}
 function SETTINGS_PLATE(){return `  <div class="plate settings"><h2>Your save</h2><p class="fine">${NET.user?'Backed up to your account. A backup code is an extra copy you can keep yourself.':'Saved on this device. Sign in, or copy a backup code, to keep it safe.'}</p>
@@ -2279,7 +2297,7 @@ function strike(){if(!F||F.done||F.strikes.length>=F.need)return;const T=F.T,arc
   if(F.strikes.length>=F.need){$('ctrls').classList.add('hidden');const fs3=$('fsteps');if(fs3)fs3.dataset.s='3';const pg=document.querySelector('.page.forging'),ff=F;setTimeout(()=>{if(F!==ff||!pg)return;pg.classList.add('struck');$('quench').classList.remove('hidden')},650)}}
 async function quickForge(){if(F||revealId||UI.qf)return;const c=C(),t=TYPES[c.sel],w=WT[t.wt];
   if(!knows(c,t.wt))return toast(`Learn the ${WT[t.wt].n.toLowerCase()} blade pattern in the Workshop first.`);if(c.fuel<1||c.iron+(c.bog||0)<w.iron||c.coal<w.coal)return toast('You need more materials.');
-  UI.qf=1;const r=await act('quickForge',{type:c.sel},{hold:true});UI.qf=0;if(!r||!r.blade)return;
+  UI.qf=1;const r=await act('quickForge',{type:c.sel},{hold:true});UI.qf=0;if(!r||!r.blade)return;if(r.xp)XP_OF[r.blade.id]=r.xp;
   SFX.play('strike',.4);showReveal(blade(r.blade.id)||r.blade)}
 // ---- the quench: the blade is carried to the barrel, plunged in with a hiss, and drawn back out cold
 const LIQ={oil:['#5a3a10','#8f6424'],brine:['#5b7480','#8fa7b0'],water:['#2f6fae','#6fb2e8']};window.LIQ_BASE=LIQ;
@@ -2367,13 +2385,14 @@ async function quenchSeq(b,q,o){
 async function forgeResult(q){HEAT_ARC=false;const ff=F;F.done=true;
   const r=await act('forgeEnd',{q,strikes:ff.raw},{hold:true});F=null;
   if(!r||!r.blade){render();return null}
-  return blade(r.blade.id)||r.blade}
+  if(r.xp)XP_OF[r.blade.id]=r.xp;return blade(r.blade.id)||r.blade}
 async function doQuench(q,quiet){if(!F||F.done)return;const b=await forgeResult(q);if(b)showReveal(b,quiet)}
 async function handOver(){if(!F||F.done||!F.labor)return;F.done=true;const ff=F;
   const r=await act('forgeEnd',{strikes:ff.raw});F=null;
   if(r&&r.labor)toast(`The foreman pays you ${r.iron} iron and ${r.coal} coal${r.avg<.4?', and grumbles about your strikes':''}.`,4000);render()}
 
 // =============== STAGED REVEAL ===============
+const XP_OF={};   // the XP each new blade earned (forgeEnd / quickForge ctx.out.xp), shown on its reveal
 function cardHTML(b,stage){const s=SIZES[b.si],r=RAR[b.rarity],ban=[];
   if(stage>=1&&b.si>=4)ban.push(`<div class="banner size">${s.n}</div>`);if(stage>=1&&b.si===0)ban.push('<div class="banner runt">Runt</div>');
   if(stage>=2&&b.cracked)ban.push('<div class="banner crack">Cracked in the quench</div>');
@@ -2392,6 +2411,7 @@ function cardHTML(b,stage){const s=SIZES[b.si],r=RAR[b.rarity],ban=[];
     <h2 class="rtitle" style="--rc:${b.cracked?'var(--mute)':rarC(b)}">${title}</h2><p class="rsub">${sub}</p>`;
   if(stage>=4&&gf){body+=`<dl class="facts big"><div><dt>Grade</dt><dd>${b.grade}</dd></div><div><dt>Rarity</dt><dd style="color:${rarC(b)}">One of a kind</dd></div><div><dt>Forged by</dt><dd>${b.forger}</dd></div><div><dt>Given</dt><dd>${giftDate(b)}</dd></div></dl>
     <p class="fine keep">A keepsake: it can’t be sold, salvaged or traded, but it can fight in ranked Arena duels.</p><div class="actions"><button class="btn go" data-action="giftkeep" data-id="${b.id}">Hang it on the rack</button></div>`;return body}
+  if(stage>=4&&XP_OF[b.id])body+=`<p class="xpgain">${xpTxt(XP_OF[b.id])}</p>`;
   if(stage>=4){body+=`<dl class="facts big"><div><dt>Forge grade</dt><dd>${b.grade}</dd></div><div><dt>Weight</dt><dd>${WT[TYPES[b.type].wt].n}</dd></div><div>${TYPES[b.type]&&TYPES[b.type].c==='arcane'&&!b.quick?`<dt>Binding</dt><dd>${ARC.Q[b.q]||ARC.Q.oil}</dd>`:`<dt>Quench</dt><dd>${(QUENCH[b.q]||QUENCH.oil).n}</dd>`}</div><div><dt>Worth</dt><dd>${fmt(worth(b))}c</dd></div></dl>
     <div class="actions">${b.cracked?`<button class="btn go" data-action="salvage" data-id="${b.id}">Salvage the scrap for ${yieldStr(salvYield(b))}</button>`:
     bladeActs(b,{reveal:true,keepBtn:`<button class="btn ${canPolish(C(),b)?'':'go'}" data-action="keep" data-id="${b.id}">Hang it on the rack</button>`})}</div>`}
@@ -2449,7 +2469,7 @@ function vShop(){const c=C();if(!c)return vChars();const n=c.shelves||3,now=nowS
   const pick=UI.shelfPick&&free>0?`<div class="plate shelfpick"><div class="platehead"><h2>List a blade</h2><button class="btn ghost small" data-action="shelfpick">Close</button></div><p class="fine">The price is fixed now. The blade sells by itself when its time is up${A.testOdds?' (test mode: 20× sooner)':''}. Cancel any time before that.</p>
     ${pickable.length?pickable.map(b=>`<div class="pickrow"><span class="pickart">${bladeSVG(b,{noRuler:1,minW:listW(pickable,330)})}</span><span class="pickinfo"><b>${bname(b)}</b><span class="fine">${b.len} cm · grade ${b.grade} · worth ${fmt(worth(b))}c</span><span class="tags">${craftTags(b)}</span></span><span class="pickbtns">${shelfBtns(c,b)}</span></div>`).join(''):'<p class="empty">Nothing on your rack can be listed. Locked blades and keepsakes stay home.</p>'}</div>`:'';
   const sold=c.blades.filter(b=>b.status==='sold'&&b.shelf).sort((a,b)=>(b.su||0)-(a.su||0)).slice(0,6);
-  return `<section class="page shoppage"><div class="pagehead"><h1>Your shop</h1><p class="fine">${on.length} of ${n} shelves in use${c.renown?` · Renown ${c.renown}: +${c.renown}% on shelf sales`:''}</p></div>
+  return `<section class="page shoppage"><div class="pagehead"><h1>Your shop</h1><p class="fine">${on.length} of ${n} shelves in use${c.renown?` · Advertising ${c.renown}: +${c.renown}% on shelf sales`:''}</p></div>
    ${pick}<div class="shelves">${filled}${empties}${more}</div>
    ${sold.length?`<h2 class="sect">Sold from your shelves</h2><table class="ledger">${sold.map(b=>`<tr><td>${bname(b)}</td><td class="mute">${(AMR.SHELF[b.shelf.k]||{}).n||''}</td><td class="n">${fmt(b.shelf.price)}c</td></tr>`).join('')}</table>`:''}</section>`}
 // Tell the player when a shelf blade has sold, however the sale reached this device (the clock here, or the server's save).
@@ -2498,16 +2518,16 @@ async function polishFlow(id){if(CRAFT.on||F)return;let c=C(),b=blade(id);if(!ca
   if(!res){closeCraftOverlay();toast('Polish abandoned. The grit is used up.');render();return}
   const out=await act('polishEnd',{samples:res.samples},{hold:true});
   if(!out||!out.polish){closeCraftOverlay();render();return}
-  SFX.play(out.polish.mirror?'shine':out.polish.stain?'crack':'reveal',1);
+  SFX.play(out.polish.mirror?'shine':out.polish.stain?'crack':'reveal',1);if(out.xp)toast(`<span class="xpgain">${xpTxt(out.xp)}</span>`,3500);
   await PolishUI.showResult(el,out);closeCraftOverlay();render()}
 // ---- enchanting: pick a rune and a conduit, EnchantUI.open (enchantStart at the first touch pays the mana), enchantEnd, showResult
-function enchantPanel(c,b,rune,con){const CH=AMR.CHISELS[c.chisel||0],on=b.runes||[],rs=AMR.RUNE_KEYS.filter(k=>knows(c,k)&&!on.some(r=>r.k===k)),cs=Object.keys(AMR.CONDUITS).filter(k=>knows(c,k)),R=rune&&AMR.RUNES[rune],mana=Math.floor(c.mana||0),poor=!R||mana<R.mana,DR=AMR.DRAUGHT,dp=AMR.draughtPrice(c,dayNow()),canDrink=(c.mana||0)+DR.mana<=AMR.MANA_CAP&&c.coin>=dp;
+function enchantPanel(c,b,rune,con){const CH=AMR.CHISELS[c.chisel||0],on=b.runes||[],rs=AMR.RUNE_KEYS.filter(k=>knows(c,k)&&!on.some(r=>r.k===k)),cs=Object.keys(AMR.CONDUITS).filter(k=>knows(c,k)),R=rune&&AMR.RUNES[rune],mana=Math.floor(c.mana||0),poor=!R||mana<R.mana,DR=AMR.DRAUGHT,dp=AMR.draughtPrice(c,dayNow()),canDrink=(c.mana||0)+DR.mana<=AMR.manaCap(c)&&c.coin>=dp;
   return `<div class="platehead"><h2>Enchant: ${bname(b)}</h2><button class="btn ghost small" data-cp="cancel">Cancel</button></div>
    <div class="craftart">${bladeSVG(b,{noRuler:1,minW:330})}</div>
    <p class="fine">Trace the rune on the blade before the mana runs out. Your first touch takes the mana. Slot ${on.length+1} of ${CH.slots} · ${CH.n} · worth now ${fmt(worth(b))}c${on.length?` · runes: ${runesTxt(b)}`:''}</p>
    <p class="crafth">Rune</p><div class="craftopts runes">${rs.length?rs.map(k=>{const r=AMR.RUNES[k];return `<button class="btn runebtn ${rune===k?'on':''}" data-cp="rune" data-k="${k}" aria-pressed="${rune===k}" style="--glow:${r.glow}"><span class="rglyph">${r.g}</span><b>${r.n}</b><small>${r.mana} mana · value ${r.v.toFixed(2)} · ${(AMR.runeWindow(k,con)/1000).toFixed(1)} s to carve</small></button>`}).join(''):'<p class="fine">Every rune you know is already on this blade.</p>'}</div>
    <p class="crafth">Conduit</p><div class="craftopts">${cs.map(k=>{const K=AMR.CONDUITS[k];return `<button class="btn qbtn ${con===k?'on':''}" data-cp="con" data-k="${k}" aria-pressed="${con===k}" style="--lc:${K.c}"><b>${K.n}</b><small>${K.d}</small></button>`}).join('')}</div>
-   <p class="${R&&poor?'warn':'fine'}">Mana ${mana}/${AMR.MANA_MAX}${R?` · ${R.n} takes ${R.mana}`:''}</p>
+   <p class="${R&&poor?'warn':'fine'}">Mana ${mana}/${AMR.manaMax(c)}${R?` · ${R.n} takes ${R.mana}`:''}</p>
    <div class="craftgo">${R&&poor?`<button class="btn" data-cp="drink" ${canDrink?'':'disabled'}>Drink a draught · +${DR.mana} mana · ${dp}c</button>`:''}<button class="btn go big" data-cp="go" ${poor?'disabled':''}>Carve</button></div>`}
 async function enchantFlow(id){if(CRAFT.on||F)return;let c=C(),b=blade(id);if(!canEnchant(c,b))return;
   openCraftOverlay();let con=CRAFT.con&&knows(c,CRAFT.con)?CRAFT.con:'copper',rune=null;
@@ -2526,7 +2546,7 @@ async function enchantFlow(id){if(CRAFT.on||F)return;let c=C(),b=blade(id);if(!c
   if(!res){closeCraftOverlay();render();return}   // never started: nothing spent
   const out=await act('enchantEnd',{strokes:res.strokes,tEnd:res.tEnd},{hold:true});
   if(!out||!out.res){closeCraftOverlay();render();return}
-  SFX.play(out.res==='resonant'?'legend':out.res==='set'?'rune':out.res==='backlash'?'crack':'click',.8);
+  SFX.play(out.res==='resonant'?'legend':out.res==='set'?'rune':out.res==='backlash'?'crack':'click',.8);if(out.xp)toast(`<span class="xpgain">${xpTxt(out.xp)}</span>`,3500);
   await EnchantUI.showResult(el,out);closeCraftOverlay();render()}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&CRAFT.on&&CRAFT.ask)CRAFT.ask({cp:'cancel'})});
 
@@ -2641,7 +2661,7 @@ function renderSync(){const el=$('syncst');if(!el)return;const st=!SERVER||!NET.
 const SV={base:null,rev:0,queue:[],busy:false,stale:false};
 let HELD_NOTES=[];
 const noteHTML=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
-function showNotes(ns,hold){for(const n of ns||[]){if(hold)HELD_NOTES.push(n);else toast(noteHTML(n.text),n.ms)}}
+function showNotes(ns,hold){for(const n of ns||[]){if(hold)HELD_NOTES.push(n);else if(/level \d+!/i.test(n.text)){SFX.play('legend');toast(`<span class="lvup">✦ ${noteHTML(n.text)}</span>`,6000);setTimeout(renderHUD,0)}else toast(noteHTML(n.text),n.ms)}}
 function flushNotes(){const h=HELD_NOTES;HELD_NOTES=[];showNotes(h)}
 const actEnv=rng=>({now:nowS(),rng,tz:tzNow(),test:!!A.testOdds,online:online(),user:NET.user?{username:NET.user.username}:null});
 // make A from the server's copy, keeping what only this device decides (page, tips, tour, the blade picked) and
@@ -2821,7 +2841,7 @@ function vHome(){const c=C();if(!c)return vChars();const g=gsState(),nx=g.fin?nu
   const tile=(k,nm,d,b)=>`<button class="hometile ${b?'has':''}" data-action="nav" data-k="${k}"><i class="pxico" style="background-image:var(--ico-${navIco(k)})" aria-hidden="true"></i><span><b>${nm}</b><small>${d}</small></span>${b?`<em>${b}</em>`:''}</button>`;
   const next=nx?`<div class="homenext"><i class="pxico" style="background-image:var(--ico-${navIco(nx[4])})" aria-hidden="true"></i><div><span class="fine">Getting started, step ${dn+1} of ${GS_STEPS.length}</span><h2>${nx[1]}</h2><p>${nx[2]} <b class="homepay">+${nx[3]} coin</b></p></div><button class="btn go big" data-action="nav" data-k="${nx[4]}">${nx[5]}</button></div>
     <details class="homesteps"><summary>All ${GS_STEPS.length} steps <span class="fine">${dn} done</span></summary><ol>${GS_STEPS.map(s=>`<li class="${g.d[s[0]]?'ok':s===nx?'now':''}"><span>${g.d[s[0]]?'✓':''}</span>${s[1]}<small>+${s[3]}c</small></li>`).join('')}</ol><button class="linkbtn" data-action="gsskip" data-confirm="1" data-sure="Skip the rest?">Skip getting started</button></details>`:'';
-  return `<section class="page homepage"><div class="pagehead"><h1>${nx&&!dn?'Welcome':'Welcome back'}, ${esc(c.name)}</h1></div>${devPanel()}${next}
+  return `<section class="page homepage"><div class="pagehead"><h1>${nx&&!dn?'Welcome':'Welcome back'}, ${esc(c.name)}</h1></div>${devPanel()}${next}${lvPlate(c)}
     <h2 class="homeh">Waiting for you</h2>${wait.length?`<div class="hometiles">${wait.map(w=>tile(w[0],w[1],w[3](w[2]),w[2])).join('')}</div>`:'<p class="fine homenone">Nothing right now. Rewards, orders you can fill and mail will show up here.</p>'}
     ${NAV.map(([gr,l])=>`<h2 class="homeh">${gr}</h2><div class="hometiles">${l.filter(i=>navShow(i[0])).map(i=>tile(i[0],i[1],i[2],0)).join('')}</div>`).join('')}</section>`}
 const PAGE_TIPS={forge:['The Forge','Pick a blade, then light the forge. Hold Bellows to heat the metal, tap Strike on the bright mark, and choose a quench.'],
@@ -3390,7 +3410,7 @@ const ACT={
   eat:el=>{const k=el.dataset.k,r=actSync('eat',{k});if(!r)return;setTimeout(()=>{const b=document.querySelector(`[data-action=eat][data-k="${k}"]`);if(b)floatUp(b,'+5%')},0);toast(`You eat the ${r.n.toLowerCase()}. +${r.e} energy.`);render()},
   // the Workshop and the shop: one action buys anything in UNLOCKS
   unlock:el=>{const r=actSync('unlock',{k:el.dataset.k});if(!r)return;SFX.play('coin');toast(`${r.n} bought.`);render()},
-  renown:()=>{const r=actSync('renown');if(!r)return;SFX.play('coin');toast(`Renown level ${r.level}. Shelf sales pay ${r.level}% more.`);render()},
+  renown:()=>{const r=actSync('renown');if(!r)return;SFX.play('coin');toast(`Advertising level ${r.level}. Shelf sales pay ${r.level}% more.`);render()},
   wstab:el=>{UI.wsTab=el.dataset.t;render()},wsgo:el=>{if(F)return;UI.wsTab=el.dataset.t||'forge';navGo('workshop')},
   // shop shelves, the scrap merchant, polishing and enchanting
   shelfpick:()=>{UI.shelfPick=!UI.shelfPick;render()},
