@@ -241,7 +241,8 @@ const COMM_POLISH = .6, COMM_RUNE = .5, COMM_RUNE_K = 1.5, COMM_RUNE_Q = .5;   /
 
 // polishing: the mini-game (docs/redesign/02-polishing.md section 2)
 const POLISH = { TICK: 50, MAX_TICKS: 400, SLACK: 1500, SEG: 24, A: 50, B: 950, R: 50, GRIME: .5, SPOT: [1.0, .5],
-  BITE: .08, SLOW: .4, SLOW_BITE: .35, FAST: 1.4, FAST_END: .55, RAMP: .4, SCRATCH: .08, SCRATCH_W: 1.5 };
+  BITE: .08, SLOW: .4, SLOW_BITE: .35, FAST: 1.4, FAST_END: .55, RAMP: .4, SCRATCH: .08, SCRATCH_W: 1.5,
+  AVG: 20 };   // speed is the average over the last AVG ticks (1 s), so turning round at the ends doesn't count against you
 // polishing: the roll. Stones are bought in order (c.stone 0..4), like anvils.
 const STONES = [
   { n: 'Sandstone',  lo: 0,  hi: 15, mirror: .005, c: '#b59a74', d: 'Comes with the polishing bench.' },
@@ -494,16 +495,21 @@ function polishInit(seed) {
     const c = Math.floor(r() * POLISH.SEG), w = 2 + Math.floor(r() * 3), h = POLISH.SPOT[0] + POLISH.SPOT[1] * r();
     for (let i = c - w; i <= c + w; i++) if (i >= 0 && i < POLISH.SEG) t0[i] += h * (1 - Math.abs(i - c) / (w + 1));
   }
-  return { t0, t: t0.slice(), scr: new Array(POLISH.SEG).fill(0) };
+  return { t0, t: t0.slice(), scr: new Array(POLISH.SEG).fill(0), hist: [], v: 0 };
 }
 // what the liquid does in the mini-game: bite = grime removed x, scr = scratches x
 const polishFx = (liq) => ({ bite: LIQUIDS[liq].bite, scr: LIQUIDS[liq].scr });
-// One 50 ms tick. x2, x1, x0 = where the stone was two ticks ago, one tick ago and now (-1 = lifted).
+// One 50 ms tick. x1, x0 = where the stone was one tick ago and now (-1 = lifted). x2 is no longer used (kept so callers don't change).
+// The speed that counts is the stone's AVERAGE speed over the last POLISH.AVG ticks while pressed (st.v), not this tick's
+// speed, so slowing down to turn round at the ends of a stroke doesn't count: a steady overall pace is what's rewarded.
 // Changes st. Returns how far over the speed limit the stone was (0 = fine, 1 = a full scratch), for the red glow and the scrape sound.
 function polishTick(st, x2, x1, x0, fx) {
-  if (x1 < 0 || x0 < 0 || x1 === x0) return 0;                       // lifted or still: nothing happens
-  const move = x2 < 0 ? Math.abs(x0 - x1) : (Math.abs(x0 - x1) + Math.abs(x1 - x2)) / 2;
-  const v = move / 50;                                                // tracks a second (1000 units over 20 ticks)
+  st.hist = st.hist || [];
+  if (x1 < 0 || x0 < 0) { st.hist.length = 0; st.v = 0; return 0; } // lifted: the average starts again
+  st.hist.push(Math.abs(x0 - x1)); if (st.hist.length > POLISH.AVG) st.hist.shift();
+  const v = st.hist.reduce((a, d) => a + d, 0) / st.hist.length / 50; // tracks a second (1000 units over 20 ticks)
+  st.v = v;
+  if (x1 === x0) return 0;                                            // still this tick: no grinding
   const bite = POLISH.BITE * fx.bite * (v < POLISH.SLOW ? POLISH.SLOW_BITE : 1);
   const lo = Math.min(x0, x1), hi = Math.max(x0, x1), w = (POLISH.B - POLISH.A) / POLISH.SEG;
   let worst = 0;

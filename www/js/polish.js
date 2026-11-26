@@ -465,12 +465,8 @@
       const n = s.length;
       let over = 0;
       if (n >= 2) over = R.polishTick(S.st, n >= 3 ? s[n - 3] : -1, s[n - 2], s[n - 1], S.fx);
-      // speed, the same two-tick average the rules use (0 when lifted or still)
-      let v = 0;
-      if (n >= 2 && s[n - 1] >= 0 && s[n - 2] >= 0 && s[n - 1] !== s[n - 2]) {
-        const move = n >= 3 && s[n - 3] >= 0 ? (Math.abs(s[n - 1] - s[n - 2]) + Math.abs(s[n - 2] - s[n - 3])) / 2 : Math.abs(s[n - 1] - s[n - 2]);
-        v = move / 50;
-      }
+      // speed: the rules' own average speed (st.v, the last 1 s while pressed; 0 when lifted)
+      const v = s[n - 1] >= 0 ? (S.st.v || 0) : 0;
       S.speed = v; S.over = over;
       sfx('rub', v);
       const now = performance.now();

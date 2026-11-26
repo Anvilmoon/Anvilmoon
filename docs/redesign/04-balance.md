@@ -104,6 +104,10 @@ scratches; the safe speed drops as the steel gets clean. The browser records the
 (0..1000, or -1 while lifted) and the server re-scores that list with the same function:
 `skill s = clean³ × finish` (0..1). See 02 section 2 for the full rules; the only change is that **there are no buffing
 tools**, so the speed limit is always the plain one (1.4 tracks a second on dirty steel, down to 0.77 on clean steel).
+**Speed is averaged** (owner's playtest feedback): the speed checked against the limit, and for the slow-bite rule,
+is the stone's average speed over the last second while pressed (`POLISH.AVG` = 20 ticks), not the speed of one
+tick. Slowing down to turn round at the ends of a stroke no longer counts against you; a steady overall pace does.
+With a smooth back-and-forth at about 0.7 tracks a second, the finish went from 0.75 to 0.99 (skill 0.60 → 0.82).
 
 ### The roll
 
