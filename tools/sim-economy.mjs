@@ -11,7 +11,7 @@
 //   node tools/sim-economy.mjs --profile keen        4 x 40 min a day, a little more skilled
 //   node tools/sim-economy.mjs --runs 100 --days 60 --seed 7
 //   node tools/sim-economy.mjs --one                 one player, printing each purchase as it happens
-//   node tools/sim-economy.mjs --no-renown           leave out the repeatable coin sink (to compare)
+//   node tools/sim-economy.mjs --no-renown           leave out Advertising, the repeatable coin sink (to compare)
 //
 // It is a model, not the game: players are greedy and tidy, skill is a smooth curve, challenges are a flat
 // daily amount. Use it to compare numbers against each other, not to predict a real player to the minute.
@@ -36,9 +36,9 @@ const PF = PROFILES[PROFILE]; if (!PF) throw new Error('unknown profile ' + PROF
 const P = {
   start: { coin: 80, iron: 12, coal: 8, fuel: 10 },
   buy: { iron: 4, coal: 3, damascus: 45, dust: 40, grit: 5 },     // market buy prices (grit and star-dust are new)
-  fuelMax: 10, fuelMs: 3 * MIN,                                    // energy: as today
+  fuelMs: 3 * MIN,                                                 // energy: +1 every 3 min up to R.fuelMax (10 + 1 per Smithing level)
   feast: { e: 12, p: 30 }, mealRise: 0.05,                         // the meal the sim buys (as today)
-  mana: { max: 20, ms: 2 * MIN, cap: 40 },                         // ONE mana meter: +1 every 2 min up to 20; draughts may fill it to 40
+  mana: { ms: 2 * MIN },                                           // ONE mana meter: +1 every 2 min up to R.manaMax (20 + 2 per Enchanting level); draughts to R.manaCap
   draught: { mana: 5, p: 20, rise: 0.10 },                         // mana draught: +5 mana, 20c, +10% for each one bought today
   scrap: 0.40,                                                     // scrap merchant: instant, 40% of worth
   lists: { short: { ms: 10 * MIN, f: 0.80 }, medium: { ms: HOUR, f: 1.00 }, long: { ms: 8 * HOUR, f: 1.25 } },
@@ -59,7 +59,7 @@ const P = {
   hammers: { worn: 0, smith: 0.04, master: 0.07 },                 // + average strike score (stand-in for the wider sweet spot)
   quench: { oil: { risk: 0.03, bonus: 0 }, brine: { risk: 0.10, bonus: 6 }, water: { risk: 0.22, bonus: 12 } },
   commission: { base: [15, 40, 100, 280], polishChance: 0.6, runeChance: 0.5, runeK: 1.5 },
-  renown: { step: 10000, per: 0.01 },                              // repeatable sink: level n costs 10,000 x n coin, each level +1% on shelf sales
+  renown: { step: 10000, per: 0.01 },                              // Advertising (save field renown), the repeatable sink: level n costs 10,000 x n coin, each level +1% on shelf sales
   // income the sim does not model in detail: getting-started steps (once), daily and weekly challenges (per day)
   gettingStarted: 220, challengesPerDay: 160,
   // the time each step takes a player, in seconds (incl. heating, reveal, clicking around)
@@ -115,7 +115,8 @@ node('dawn', 'enchant', 'Dawn rune', { coin: 60000, shards: 15 }, (s) => s.r90 >
 // ------------------------------------------------------------------------------------------- the model
 const STYLES_OF = { war: R.typesOf('war'), shadow: R.typesOf('shadow'), arcane: R.typesOf('arcane'), sanct: R.typesOf('sanct') };
 const WT_ORDER = ['L', 'M', 'H', 'X'];
-const forgeWorth = (b) => R.value(b, 1, 1);
+// the forge's part of the worth (R.value now includes polish and runes, so it can't be used here: they are multiplied in below)
+const forgeWorth = (b) => Math.max(1, Math.round(R.forgeWorth(b)));
 const enchMult = (b) => { const ps = (b.runes || []).map((r) => r.p).sort((x, y) => y - x); return 1 + ps.reduce((a, p, i) => a + p * P.slotW[i], 0); };
 const worth = (b) => (b.cracked ? 1 : Math.max(1, Math.round(forgeWorth(b) * (b.polish ? b.polish.m : 1) * enchMult(b))));
 const gauss = (rng) => { let u = 0; for (let i = 0; i < 6; i++) u += rng(); return (u - 3) / Math.sqrt(0.5); };   // ~N(0,1)
@@ -129,16 +130,25 @@ function newState(rng) {
     forged: 0, comms: 0, mw: 0, g70: 0, polished: 0, pgood: 0, runesSet: 0, r70: 0, r80: 0, r90: 0, manaVal: 0,
     meals: { d: -1, n: 0 }, draughts: { d: -1, n: 0 }, playMs: 0, now: 0, day: 0, unlock: {}, coinByDay: [],
     inc: { shelf: 0, quick: 0, comm: 0, other: 0 }, n: { short: 0, medium: 0, long: 0, quick: 0, salv: 0, comm: 0 },
-    spend: { supplies: 0, meals: 0, grit: 0, draughts: 0, dust: 0, unlocks: 0, renown: 0 }, sold: [], gs: 0, chD: -1, chN: 0, mirrors: 0, stains: 0, scars: 0, reson: 0 };
+    spend: { supplies: 0, meals: 0, grit: 0, draughts: 0, dust: 0, unlocks: 0, renown: 0 }, sold: [], gs: 0, chD: -1, chN: 0, mirrors: 0, stains: 0, scars: 0, reson: 0,
+    xp: { smith: 0, ench: 0 }, lvAt: { smith: {}, ench: {} }, lvByDay: { smith: [], ench: [] } };
+}
+// levels come straight from rules.js (levelOf, fuelMax, manaMax, the XP tables)
+const fmax = (s) => R.fuelMax(s), mmax = (s) => R.manaMax(s), mcap = (s) => R.manaCap(s);
+function addXp(s, track, n) {
+  const lv0 = (track === 'smith' ? R.smithLevel(s) : R.enchLevel(s)).lv; s.xp[track] += n;
+  const lv = (track === 'smith' ? R.smithLevel(s) : R.enchLevel(s)).lv;
+  for (let l = lv0 + 1; l <= lv; l++) s.lvAt[track][l] = { min: s.playMs / MIN, day: s.day + 1 };
 }
 
 // ---- clocks: energy and mana refill from the clock, shop listings sell at listedAt + duration
 function tick(s) {
-  if (s.fuel >= P.fuelMax) s.fuelTs = s.now;
-  else { const n = Math.floor((s.now - s.fuelTs) / P.fuelMs); if (n > 0) { s.fuel = Math.min(P.fuelMax, s.fuel + n); s.fuelTs += n * P.fuelMs; } }
+  const fm = fmax(s), mm = mmax(s);
+  if (s.fuel >= fm) s.fuelTs = s.now;
+  else { const n = Math.floor((s.now - s.fuelTs) / P.fuelMs); if (n > 0) { s.fuel = Math.min(fm, s.fuel + n); s.fuelTs += n * P.fuelMs; } }
   if (s.enchantOn) {
-    if (s.mana >= P.mana.max) s.manaTs = s.now;
-    else { const n = Math.floor((s.now - s.manaTs) / P.mana.ms); if (n > 0) { s.mana = Math.min(P.mana.max, s.mana + n); s.manaTs += n * P.mana.ms; if (s.mana >= P.mana.max) s.manaTs = s.now; } }
+    if (s.mana >= mm) s.manaTs = s.now;
+    else { const n = Math.floor((s.now - s.manaTs) / P.mana.ms); if (n > 0) { s.mana = Math.min(mm, s.mana + n); s.manaTs += n * P.mana.ms; if (s.mana >= mm) s.manaTs = s.now; } }
   }
   s.shelf = s.shelf.filter((L) => { if (L.at + P.lists[L.k].ms > s.now) return true; s.coin += L.price; s.inc.shelf += L.price; s.sold.push(L.b); return false; });
 }
@@ -227,7 +237,7 @@ function forge(s) {
   const { len, si } = R.rollSize(s.rng);
   const b = { type, rarity: R.rollIdx(R.ANVILS[tier].t, s.rng), variant: R.rollVariant(R.TYPES[type].c, s.rng), len, si, shine: R.rollShine(s.rng),
     moon: R.rollMoon(isNight, s.rng), grade, cracked: s.rng() < P.quench[q].risk + 0.02 };
-  s.forged++; earnSide(s); spend(s, P.secs[R.TYPES[type].wt]);
+  s.forged++; earnSide(s); spend(s, P.secs[R.TYPES[type].wt]); addXp(s, 'smith', R.forgeXp(b));
   if (b.cracked) { s.iron += Math.round(W.iron * b.len / 100 * 0.3); return true; }
   if (b.rarity >= 2) s.mw++; if (grade >= 70) s.g70++;
   armory(s, b);
@@ -261,7 +271,7 @@ function finish(s, b) {
     if ((fw * (bestM - 1) > gritCost * 1.5 || order || s.enchantOn) && s.coin >= gritCost) {
       s.coin -= gritCost; s.spend.grit += gritCost; s.grit = Math.max(0, s.grit - g);
       const sk = polishSkill(s, liq); b.polish = rollPolish(sk, s.stone, liq, s.rng);
-      s.polished++; if (sk >= 0.7) s.pgood++; if (b.polish.mirror) s.mirrors++; if (b.polish.stain) s.stains++;
+      s.polished++; if (sk >= 0.7) s.pgood++; if (b.polish.mirror) s.mirrors++; if (b.polish.stain) s.stains++; addXp(s, 'smith', R.polishXp(b));
       spend(s, P.secs.polish);
     }
   }
@@ -294,11 +304,11 @@ function enchant(s, b, base) {
     const Rn = P.runes[k];
     // spend mana freely while the meter is high; when it is low, only on blades worth it; buy a draught when the gain pays for it
     const val = s.manaVal || 0;
-    if (s.mana >= Rn.mana && !(s.mana < P.mana.max * 0.5 && gpm < val * 0.7)) { /* use what we have */ }
+    if (s.mana >= Rn.mana && !(s.mana < mmax(s) * 0.5 && gpm < val * 0.7)) { /* use what we have */ }
     else {
       while (s.mana < Rn.mana) {
         const p = dayPrice(P.draught.p, P.draught.rise, s.draughts, s);
-        if (gpm * P.draught.mana < p * 1.2 || s.coin < p + reserve(s) || s.mana + P.draught.mana > P.mana.cap) break;
+        if (gpm * P.draught.mana < p * 1.2 || s.coin < p + reserve(s) || s.mana + P.draught.mana > mcap(s)) break;
         s.coin -= p; s.mana += P.draught.mana; bump(s.draughts, s); s.spend.draughts += p;
       }
       if (s.mana < Rn.mana) break;
@@ -311,7 +321,7 @@ function enchant(s, b, base) {
     if (s.rng() < C.risk) { b.runes.push({ k: 'scar', q: 0, p: 0 }); s.scars++; did++; continue; }   // backlash: a scar fills the slot
     const res = s.rng() < P.chisels[s.chisel].res * q * q; if (res) s.reson++;
     b.runes.push({ k, q, p: Rn.v * q * C.power * (res ? P.resonant : 1) });
-    s.runesSet++; if (q >= 0.7) s.r70++; if (q >= 0.8) s.r80++; if (q >= 0.9) s.r90++; did++;
+    s.runesSet++; if (q >= 0.7) s.r70++; if (q >= 0.8) s.r80++; if (q >= 0.9) s.r90++; did++; addXp(s, 'ench', R.runeXp(b, k, res));
   }
   if (did) spend(s, P.secs.enchant); else delete b.runes;
 }
@@ -395,6 +405,7 @@ function run(seed) {
       (s.log = s.log || []).push({ min: s.playMs / MIN, earned: s.inc.shelf + s.inc.quick + s.inc.comm + s.inc.other - c0, dm: (s.playMs - m0) / MIN });
     });
     s.coinByDay.push(s.coin + s.shelf.reduce((a, L) => a + L.price, 0));
+    s.lvByDay.smith.push(R.smithLevel(s).lv); s.lvByDay.ench.push(R.enchLevel(s).lv); (s.xpByDay = s.xpByDay || []).push({ ...s.xp });
   }
   s.now = DAYS * DAY; tick(s);
   return s;
@@ -424,7 +435,15 @@ for (const [a, b] of windows) {
 }
 const days = [1, 3, 7, 14, 21, 30, 45, 60, 90].filter((d) => d <= DAYS);
 console.log('\nCoin in hand (incl. shelf listings) at the end of day:  ' + days.map((d) => `day ${d}: ${Math.round(pct(runs.map((r) => r.coinByDay[d - 1]), 0.5)).toLocaleString('en')}`).join('   '));
-console.log('Renown level at the end: median ' + pct(runs.map((r) => r.renown), 0.5) + ', p90 ' + pct(runs.map((r) => r.renown), 0.9));
+console.log('Advertising level at the end: median ' + pct(runs.map((r) => r.renown), 0.5) + ', p90 ' + pct(runs.map((r) => r.renown), 0.9));
+// levels
+for (const [track, name, max] of [['smith', 'Smithing', R.SMITH_MAX_LV], ['ench', 'Enchanting', R.ENCH_MAX_LV]]) {
+  const marks = [2, 3, 5, 8, 10, 12, 15, 18, max].filter((l, i, a) => l <= max && a.indexOf(l) === i);
+  console.log(`
+${name} level (max ${max}): reached by   ` + marks.map((l) => { const u = runs.map((r) => r.lvAt[track][l]).filter(Boolean); return `lv${l} ${Math.round(100 * u.length / RUNS)}% ${u.length ? fm(pct(u.map((x) => x.min), 0.5)).trim() + ' (day ' + pct(u.map((x) => x.day), 0.5) + ')' : ''}`; }).join(' | '));
+  console.log(`  level at the end of day: ` + days.map((d) => `day ${d}: ${pct(runs.map((r) => r.lvByDay[track][d - 1]), 0.5)}`).join('   ') + `
+  XP at the end of day:    ` + days.map((d) => `day ${d}: ${Math.round(pct(runs.map((r) => r.xpByDay[d - 1][track]), 0.5)).toLocaleString('en')}`).join('   '));
+}
 const late = runs.flatMap((r) => r.sold.slice(-300));
 const polS = late.filter((b) => b.polish), encS = late.filter((b) => b.runes && b.runes.length);
 const avg = (v) => (v.length ? v.reduce((t, x) => t + x, 0) / v.length : NaN);

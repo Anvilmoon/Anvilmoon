@@ -197,7 +197,7 @@ function sizeIdx(len){for(let i=SIZES.length-1;i>=0;i--)if(len>=SIZES[i].a)retur
 // ============================================================== more data
 const LABOR_MAX = 5;                             // day-labour shifts per day
 const DIG_MS = 45000, DIG_TEST_MS = 8000;        // digging the slag heap
-const ENERGY_CAP = 30;                           // meals can fill energy up to this
+const ENERGY_CAP = 30;                           // meals can fill energy up to this at Smithing level 1 (fuelCap(c) = fuelMax(c) + 20)
 const MIN_STRIKE_MS = 250;                       // a forge with N strikes takes at least N x this long
 const COMPACT_AT = 150;                          // tidy a save once it holds this many sold/salvaged blades
 const SAVE_V = 3;                                // save format version (see upgradeSave)
@@ -229,9 +229,13 @@ const SHELF = {                                      // shop shelf listings: the
   long:   { n: 'Long',   d: '8 hours',    ms: 8 * 3600e3,  f: 1.25 },
 };
 const SHELF_START = 3, SHELF_MAX = 8, SHELF_TEST_DIV = 20;   // test odds (dev only): listings sell 20x sooner
-const RENOWN_STEP = 10000, RENOWN_PER = .01;          // renown level n costs 10,000 x n; each level +1% on shelf sales
+// Advertising (the save field and action are still called `renown`): flyers and notices around town.
+// Level n costs 10,000 x n; each level +1% on shelf sales.
+const RENOWN_STEP = 10000, RENOWN_PER = .01;
+const ADVERT = { n: 'Advertising', d: 'Flyers and notices around town. Every level adds 1% to every shelf sale.' };
 const GRIT_PER = { L: 1, M: 1, H: 2, X: 3 };          // grit used by one polish, by weight
-const MANA_MAX = 20, MANA_MS = 120000, MANA_CAP = 40; // the mana meter: +1 every 2 minutes up to 20; draughts can fill it to 40
+// the mana meter: +1 every 2 minutes up to manaMax(c) (20 at Enchanting level 1); draughts can fill it to manaCap(c) (40 at level 1)
+const MANA_MAX = 20, MANA_MS = 120000, MANA_CAP = 40;
 const DRAUGHT = { mana: 5, p: 20, rise: .10 };        // mana draught: +5 mana for 20c, +10% for each one bought today
 const COMM_POLISH = .6, COMM_RUNE = .5, COMM_RUNE_K = 1.5, COMM_RUNE_Q = .5;   // commission polish/rune requests
 
@@ -268,17 +272,17 @@ const CONDUITS = {
   stormglass: { n: 'Stormglass Conduit', time: 1.6, power: 1.20, risk: .15, c: '#a58cff', d: '60% more carving time, +20% power, 15% backlash risk.' },
 };
 // Runes. s = the guide's strokes: lines of [x, y] points on the 1000 x 1000 plate (x right, y down, blade point at the top).
-// sec = seconds of carving with the Copper conduit. mana = taken from the meter. v = value at full strength.
+// sec = seconds of carving with the Copper conduit. mana = taken from the meter. v = value at full strength. xp = Enchanting XP when set.
 // Rule for new shapes: no two strokes closer than 150 units side by side; strokes meet at 45 degrees or more.
 const RUNES = {
-  ember:   { n: 'Ember',   g: 'ᚲ', glow: '#ff7a2a', sec: 5,   mana: 1, v: .35, s: [[[650, 200], [350, 500], [650, 800]]] },
-  frost:   { n: 'Frost',   g: 'ᚷ', glow: '#8fdcff', sec: 6,   mana: 2, v: .55, s: [[[300, 250], [700, 750]], [[700, 250], [300, 750]]] },
-  valor:   { n: 'Valor',   g: 'ᛏ', glow: '#ff5a4a', sec: 5.5, mana: 2, v: .75, s: [[[500, 150], [500, 850]], [[250, 380], [500, 150], [750, 380]]] },
-  storm:   { n: 'Storm',   g: 'ᛋ', glow: '#c7b8ff', sec: 3.5, mana: 3, v: .95, s: [[[620, 120], [380, 420], [620, 580], [380, 880]]] },
-  fortune: { n: 'Fortune', g: 'ᚠ', glow: '#e9c35a', sec: 5,   mana: 3, v: 1.15, s: [[[380, 150], [380, 850]], [[380, 250], [650, 100]], [[380, 480], [680, 300]]] },
-  ward:    { n: 'Ward',    g: 'ᛉ', glow: '#e8f0ff', sec: 5,   mana: 4, v: 1.40, s: [[[500, 150], [500, 850]], [[220, 200], [500, 450]], [[780, 200], [500, 450]]] },
-  hearth:  { n: 'Hearth',  g: 'ᛟ', glow: '#6fe0b0', sec: 6.5, mana: 4, v: 1.70, s: [[[500, 120], [750, 420], [500, 720], [250, 420], [500, 120]], [[500, 720], [300, 900]], [[500, 720], [700, 900]]] },
-  dawn:    { n: 'Dawn',    g: 'ᛞ', glow: '#fff2c0', sec: 8,   mana: 5, v: 2.10, s: [[[220, 200], [220, 800]], [[780, 200], [780, 800]], [[220, 200], [780, 800]], [[780, 200], [220, 800]]] },
+  ember:   { n: 'Ember',   g: 'ᚲ', glow: '#ff7a2a', sec: 5,   mana: 1, v: .35, xp: 4, s: [[[650, 200], [350, 500], [650, 800]]] },
+  frost:   { n: 'Frost',   g: 'ᚷ', glow: '#8fdcff', sec: 6,   mana: 2, v: .55, xp: 5, s: [[[300, 250], [700, 750]], [[700, 250], [300, 750]]] },
+  valor:   { n: 'Valor',   g: 'ᛏ', glow: '#ff5a4a', sec: 5.5, mana: 2, v: .75, xp: 6, s: [[[500, 150], [500, 850]], [[250, 380], [500, 150], [750, 380]]] },
+  storm:   { n: 'Storm',   g: 'ᛋ', glow: '#c7b8ff', sec: 3.5, mana: 3, v: .95, xp: 7, s: [[[620, 120], [380, 420], [620, 580], [380, 880]]] },
+  fortune: { n: 'Fortune', g: 'ᚠ', glow: '#e9c35a', sec: 5,   mana: 3, v: 1.15, xp: 8, s: [[[380, 150], [380, 850]], [[380, 250], [650, 100]], [[380, 480], [680, 300]]] },
+  ward:    { n: 'Ward',    g: 'ᛉ', glow: '#e8f0ff', sec: 5,   mana: 4, v: 1.40, xp: 9, s: [[[500, 150], [500, 850]], [[220, 200], [500, 450]], [[780, 200], [500, 450]]] },
+  hearth:  { n: 'Hearth',  g: 'ᛟ', glow: '#6fe0b0', sec: 6.5, mana: 4, v: 1.70, xp: 10, s: [[[500, 120], [750, 420], [500, 720], [250, 420], [500, 120]], [[500, 720], [300, 900]], [[500, 720], [700, 900]]] },
+  dawn:    { n: 'Dawn',    g: 'ᛞ', glow: '#fff2c0', sec: 8,   mana: 5, v: 2.10, xp: 12, s: [[[220, 200], [220, 800]], [[780, 200], [780, 800]], [[220, 200], [780, 800]], [[780, 200], [220, 800]]] },
 };
 const RUNE_KEYS = Object.keys(RUNES);
 const RUNE_STEP = 20, RUNE_MAX_PTS = 400, RUNE_MAX_STROKES = 12, RUNE_MAX_MS = 120000;
@@ -328,10 +332,23 @@ const UNLOCKS = {
   shelf5:  { tree: 'shop', n: 'Shelf slot 5', tier: ['shelves', 5], cost: { coin: 500 }, d: 'One more blade on display.' },
   shelf6:  { tree: 'shop', n: 'Shelf slot 6', tier: ['shelves', 6], cost: { coin: 1500 }, d: 'One more blade on display.' },
   shelf7:  { tree: 'shop', n: 'Shelf slot 7', tier: ['shelves', 7], cost: { coin: 6000 }, d: 'One more blade on display.' },
-  shelf8:  { tree: 'shop', n: 'Shelf slot 8', tier: ['shelves', 8], cost: { coin: 25000 }, d: 'A full shop. Opens Renown.' },
+  shelf8:  { tree: 'shop', n: 'Shelf slot 8', tier: ['shelves', 8], cost: { coin: 25000 }, d: 'A full shop. Opens Advertising.' },
 };
 const UNLOCK_KEYS = Object.keys(UNLOCKS);
 const STAT0 = { pol: 0, pgood: 0, runes: 0, r70: 0, r80: 0, r90: 0 };
+
+// Two levels, separate from the Workshop: Smithing (XP from every forge and every polish) raises max energy,
+// Enchanting (XP from every rune that takes) raises max mana. Saved as c.xp = { smith, ench }.
+// Climbing from level n to n + 1 takes round(LV_BASE x n^LV_POW) XP: 80 for level 2, then 260, 520, 850... (see XP_LEVELS).
+const LV_BASE = 80, LV_POW = 1.5;
+const SMITH_MAX_LV = 21, ENCH_MAX_LV = 16;
+const LV_FUEL = 1, LV_MANA = 2;                       // +1 max energy per Smithing level (10 -> 30), +2 max mana per Enchanting level (20 -> 50)
+const MEAL_ROOM = ENERGY_CAP - FUEL_MAX, DRAUGHT_ROOM = MANA_CAP - MANA_MAX;   // meals and draughts can go 20 above the max
+// XP_LEVELS[n] = total XP needed to reach level n (XP_LEVELS[1] = 0)
+const XP_LEVELS = (() => { const t = [0, 0]; for (let n = 1; n < Math.max(SMITH_MAX_LV, ENCH_MAX_LV); n++) t.push(t[n] + Math.round(LV_BASE * Math.pow(n, LV_POW))); return t; })();
+const FORGE_XP = [10, 14, 22, 40, 90], CRACK_XP = 3;   // Smithing XP for a forged blade, by rarity (Common .. Legendary); a cracked blade 3
+const POLISH_XP = [6, 8, 13, 24, 54], MIRROR_XP = 25;  // Smithing XP for a polish, by the blade's rarity; +25 for a Mirror polish
+const ENCH_RAR_XP = [1, 1.2, 1.5, 2, 3], RESONANT_XP = 1.5;   // Enchanting XP = the rune's xp x this (by rarity), x1.5 Resonant; nothing for a fizzle or backlash
 
 // ============================================================== small helpers
 class RuleError extends Error { constructor(msg) { super(msg); this.rule = true; } }
@@ -413,14 +430,43 @@ const scrapPrice = (b) => Math.max(1, Math.round(value(b) * SCRAP));
 const shelfPrice = (c, b, k) => Math.max(1, Math.round(value(b) * SHELF[k].f * (1 + RENOWN_PER * ((c && c.renown) || 0))));
 const renownCost = (c) => RENOWN_STEP * (((c && c.renown) || 0) + 1);
 
+// ============================================================== levels: Smithing and Enchanting
+// Where xp total XP puts you: lv, cur = XP into this level, next = XP this level takes in all (0 at the top level).
+function levelOf(xp, max = SMITH_MAX_LV) {
+  const x = Math.max(0, num(xp)); let lv = 1;
+  while (lv < max && x >= XP_LEVELS[lv + 1]) lv++;
+  return { lv, cur: x - XP_LEVELS[lv], next: lv < max ? XP_LEVELS[lv + 1] - XP_LEVELS[lv] : 0, max };
+}
+const smithLevel = (c) => levelOf(c && c.xp ? c.xp.smith : 0, SMITH_MAX_LV);
+const enchLevel = (c) => levelOf(c && c.xp ? c.xp.ench : 0, ENCH_MAX_LV);
+const fuelMax = (c) => FUEL_MAX + LV_FUEL * (smithLevel(c).lv - 1);      // energy refills to this by itself
+const manaMax = (c) => MANA_MAX + LV_MANA * (enchLevel(c).lv - 1);       // mana refills to this by itself
+const fuelCap = (c) => fuelMax(c) + MEAL_ROOM;                          // meals can fill energy to this
+const manaCap = (c) => manaMax(c) + DRAUGHT_ROOM;                       // draughts can fill mana to this
+// XP for one forged blade / one polish / one rune that took
+const forgeXp = (b) => (b.cracked ? CRACK_XP : FORGE_XP[b.rarity] || FORGE_XP[0]);
+const polishXp = (b) => (POLISH_XP[b.rarity] || POLISH_XP[0]) + (b.polish && b.polish.mirror ? MIRROR_XP : 0);
+const runeXp = (b, rune, resonant) => Math.round(RUNES[rune].xp * (ENCH_RAR_XP[b.rarity] || 1) * (resonant ? RESONANT_XP : 1));
+// add XP to a level (track 'smith' or 'ench'); a level-up says what it gave. Returns the XP added.
+function gainXp(ctx, track, n) {
+  const c = ctx.c; c.xp = c.xp || { smith: 0, ench: 0 };
+  const smith = track === 'smith', before = smith ? smithLevel(c).lv : enchLevel(c).lv;
+  c.xp[track] = (c.xp[track] || 0) + n;
+  const after = smith ? smithLevel(c).lv : enchLevel(c).lv;
+  if (after > before) note(ctx, smith ? `**Smithing level ${after}!** Max energy ${fuelMax(c)}.` : `**Enchanting level ${after}!** Max mana ${manaMax(c)}.`, 4500);
+  ctx.out.xp = { ...(ctx.out.xp || {}), [track]: ((ctx.out.xp && ctx.out.xp[track]) || 0) + n };
+  return n;
+}
+
 // ============================================================== the clock: mana and shop shelves
-// The mana meter refills like energy (called in beginAction). Above MANA_MAX (after draughts) it doesn't refill.
+// The mana meter refills like energy (called in beginAction), up to manaMax(c). Above it (after draughts) it doesn't refill.
 function tickMana(c, now) {
-  if (typeof c.mana !== 'number' || !isFinite(c.mana)) { c.mana = MANA_MAX; c.manaTs = now; }
+  const max = manaMax(c);
+  if (typeof c.mana !== 'number' || !isFinite(c.mana)) { c.mana = max; c.manaTs = now; }
   if (!c.manaTs) c.manaTs = now;
-  if (c.mana >= MANA_MAX) { c.manaTs = now; return; }
+  if (c.mana >= max) { c.manaTs = now; return; }
   const n = Math.floor((now - c.manaTs) / MANA_MS);
-  if (n > 0) { c.mana = Math.min(MANA_MAX, c.mana + n); c.manaTs += n * MANA_MS; if (c.mana >= MANA_MAX) c.manaTs = now; }
+  if (n > 0) { c.mana = Math.min(max, c.mana + n); c.manaTs += n * MANA_MS; if (c.mana >= max) c.manaTs = now; }
 }
 const draughtsToday = (c, day) => (c.draughts && c.draughts.d === day ? c.draughts.n : 0);
 const draughtPrice = (c, day) => Math.round(DRAUGHT.p * (1 + DRAUGHT.rise * draughtsToday(c, day)));
@@ -586,7 +632,7 @@ function freshAcct() { return { v: SAVE_V, slots: [null, null, null, null], acti
 function newChar(name, cls, now, rng) {
   let cid = 's'; for (let i = 0; i < 8; i++) cid += 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(rng() * 36)];
   return { cid, name, coin: 80, iron: 12, coal: 8, fuel: 10, damascus: 0, dust: 0, shards: 0, bog: 0, grit: 0, mana: MANA_MAX, recipes: {}, fuelTs: now, manaTs: now,
-    anvil: 0, stone: 0, chisel: 0, shelves: SHELF_START, renown: 0, hammer: 'worn', hammers: {}, blades: [], commissions: [], forged: 0, stat: { ...STAT0 }, sel: typesOf('war')[0] };
+    anvil: 0, stone: 0, chisel: 0, shelves: SHELF_START, renown: 0, hammer: 'worn', hammers: {}, blades: [], commissions: [], forged: 0, stat: { ...STAT0 }, xp: { smith: 0, ench: 0 }, sel: typesOf('war')[0] };
 }
 // One smith per account. Older saves could hold up to four; they are folded into the one in use.
 function unify(sv) {
@@ -621,8 +667,9 @@ function upgradeSave(S, now) {
   const c = S.slots[S.active];
   if (c) {
     for (const k of ['coin', 'iron', 'coal', 'fuel', 'damascus', 'dust', 'shards', 'bog', 'grit']) c[k] = Math.max(0, num(c[k]));
-    if (typeof c.mana !== 'number' || !isFinite(c.mana)) c.mana = MANA_MAX;
-    c.mana = clamp(c.mana, 0, MANA_CAP);
+    const xp = c.xp && typeof c.xp === 'object' ? c.xp : {}; c.xp = { smith: Math.max(0, Math.floor(num(xp.smith))), ench: Math.max(0, Math.floor(num(xp.ench))) };
+    if (typeof c.mana !== 'number' || !isFinite(c.mana)) c.mana = manaMax(c);
+    c.mana = clamp(c.mana, 0, manaCap(c));
     c.forged = Math.max(0, Math.floor(num(c.forged)));
     c.anvil = clamp(Math.floor(num(c.anvil)), 0, ANVILS.length - 1);
     c.stone = clamp(Math.floor(num(c.stone)), 0, STONES.length - 1); c.chisel = clamp(Math.floor(num(c.chisel)), 0, CHISELS.length - 1);
@@ -663,11 +710,12 @@ function oneName(S, username) {
   }
 }
 
-// ============================================================== energy (follows the clock; mana and shelves are above)
+// ============================================================== energy (follows the clock up to fuelMax(c); mana and shelves are above)
 function tickFuel(c, now) {
-  if (c.fuel >= FUEL_MAX) { c.fuelTs = now; return; }
+  const max = fuelMax(c);
+  if (c.fuel >= max) { c.fuelTs = now; return; }
   const n = Math.floor((now - c.fuelTs) / FUEL_MS);
-  if (n > 0) { c.fuel = Math.min(FUEL_MAX, c.fuel + n); c.fuelTs += n * FUEL_MS; if (c.fuel >= FUEL_MAX) c.fuelTs = now; }
+  if (n > 0) { c.fuel = Math.min(max, c.fuel + n); c.fuelTs += n * FUEL_MS; if (c.fuel >= max) c.fuelTs = now; }
 }
 
 // ============================================================== rolls (rng = a function returning 0..1)
@@ -990,7 +1038,7 @@ def('forgeEnd', true, (ctx, a) => {
   const b = makeBlade(ctx, F.type, tier, grade, ctx.rng() < Q.risk + cold, F.bog ? 1 : 4);
   b.anvil = c.anvil; b.perfect = perfect && tier > c.anvil && !F.bog; b.q = a.q; if (F.bog) b.bog = true;
   c.blades.push(b); c.forged++; S.totalForged++; chEvent(ctx, { k: 'forge', b });
-  ctx.out = { blade: b };
+  ctx.out = { blade: b }; gainXp(ctx, 'smith', forgeXp(b));
 });
 def('quickForge', true, (ctx, a) => {
   const { S, c } = ctx, type = String(a.type || '');
@@ -999,7 +1047,7 @@ def('quickForge', true, (ctx, a) => {
   const b = makeBlade(ctx, type, c.anvil, 30 + Math.floor(rng() * 26), rng() < QUENCH.oil.risk, bog ? 1 : 4);
   b.q = 'oil'; b.quick = true; if (bog) b.bog = true;
   c.blades.push(b); c.forged++; S.totalForged++; chEvent(ctx, { k: 'forge', b });
-  ctx.out = { blade: b };
+  ctx.out = { blade: b }; gainXp(ctx, 'smith', forgeXp(b));
 });
 // first forge of a brand new smith: the guided tour tops up materials if they're short
 def('tourGift', false, (ctx, a) => {
@@ -1024,7 +1072,7 @@ def('salvage', false, (ctx, a) => {
   for (const id of ids) {
     const b = bladeById(c, id); if (!b || b.status !== 'owned' || isGift(b)) continue;
     const y = salvYield(b);
-    for (const [k, v] of Object.entries(y)) { const add = k === 'fuel' ? Math.max(0, Math.min(ENERGY_CAP, c[k] + v) - c[k]) : v; c[k] += add; tot[k] = (tot[k] || 0) + add; }
+    for (const [k, v] of Object.entries(y)) { const add = k === 'fuel' ? Math.max(0, Math.min(fuelCap(c), c[k] + v) - c[k]) : v; c[k] += add; tot[k] = (tot[k] || 0) + add; }
     b.status = 'salvaged'; b.su = ctx.now; chEvent(ctx, { k: 'salv', b }); n++;
   }
   need(n, ids.length === 1 ? 'That blade can’t be salvaged.' : 'Nothing to salvage.');
@@ -1045,7 +1093,7 @@ def('buy', false, (ctx, a) => {
 });
 def('drink', false, (ctx) => {
   const { c } = ctx, day = localDay(ctx.now, ctx.tz), p = draughtPrice(c, day);
-  need(c.mana + DRAUGHT.mana <= MANA_CAP, 'Your mana is as full as a draught can make it.');
+  need(c.mana + DRAUGHT.mana <= manaCap(c), 'Your mana is as full as a draught can make it.');
   need(c.coin >= p, 'Not enough coin.');
   c.coin -= p; c.mana += DRAUGHT.mana;
   if (!c.draughts || c.draughts.d !== day) c.draughts = { d: day, n: 0 }; c.draughts.n++;
@@ -1070,7 +1118,7 @@ def('supfill', false, (ctx, a) => {
 def('eat', false, (ctx, a) => {
   const { c } = ctx, k = String(a.k), m = MEALS[k]; need(m, 'The tavern doesn’t serve that.');
   const day = localDay(ctx.now, ctx.tz), p = mealPrice(c, k, day);
-  need(c.coin >= p, 'Not enough coin.'); need(c.fuel + m.e <= ENERGY_CAP, 'You’re too full.');
+  need(c.coin >= p, 'Not enough coin.'); need(c.fuel + m.e <= fuelCap(c), 'You’re too full.');
   c.coin -= p; c.fuel += m.e; if (!c.meals || c.meals.d !== day) c.meals = { d: day, n: 0 }; c.meals.n++;
   ctx.out = { e: m.e, n: m.n, p };
 });
@@ -1088,10 +1136,11 @@ def('unlock', false, (ctx, a) => {
   if (u.tier) c[u.tier[0]] = u.tier[1]; else { c.recipes = c.recipes || {}; c.recipes[k] = true; }
   ctx.out = { n: u.n };
 });
+// Advertising: flyers and notices around town (the action is still called renown)
 def('renown', false, (ctx) => {
   const { c } = ctx, cost = renownCost(c);
-  need(c.shelves >= SHELF_MAX, `Renown opens once your shop has ${SHELF_MAX} shelves.`);
-  need(c.coin >= cost, `The next level of renown costs ${fmtN(cost)}c.`);
+  need(c.shelves >= SHELF_MAX, `Advertising opens once your shop has ${SHELF_MAX} shelves.`);
+  need(c.coin >= cost, `The next round of advertising costs ${fmtN(cost)}c.`);
   c.coin -= cost; c.renown = (c.renown || 0) + 1;
   ctx.out = { level: c.renown, cost };
 });
@@ -1181,6 +1230,7 @@ def('polishEnd', true, (ctx, a) => {
   c.stat = c.stat || { ...STAT0 }; c.stat.pol++; if (r.s >= .7) c.stat.pgood++;
   chEvent(ctx, { k: 'polish', b });
   ctx.out = { polish: b.polish, name: polishName(b.polish), clean: r.clean, finish: r.finish, s: r.s, before, after: value(b) };
+  gainXp(ctx, 'smith', polishXp(b));
 });
 
 // ---- enchanting: start (pay the mana at the first touch), then end (score the strokes, roll the dice)
@@ -1222,6 +1272,7 @@ def('enchantEnd', true, (ctx, a) => {
     chEvent(ctx, { k: 'rune', b });
   }
   ctx.out = { res: r.res, rune: r.rune, score: sc, before, after: value(b) };
+  if (r.res === 'set' || r.res === 'resonant') gainXp(ctx, 'ench', runeXp(b, E.rune, r.res === 'resonant'));
 });
 
 // ---- challenges, getting started, your hall
@@ -1321,7 +1372,10 @@ G.AMR = {
   SCRAP, SHELF, SHELF_START, SHELF_MAX, SHELF_TEST_DIV, RENOWN_STEP, RENOWN_PER, GRIT_PER, MANA_MAX, MANA_MS, MANA_CAP,
   DRAUGHT, COMM_POLISH, COMM_RUNE, COMM_RUNE_K, COMM_RUNE_Q, POLISH, STONES, LIQUIDS, MIRROR_M, STAIN_M, PERFECT_POLISH,
   CHISELS, CONDUITS, RUNES, RUNE_KEYS, RUNE_STEP, RUNE_MAX_PTS, RUNE_MAX_STROKES, RUNE_MAX_MS, RUNE_FIZZLE, RUNE_FULL_SPARE,
-  RUNE_GRACE_MS, RUNE_SLOT_W, RESONANT, UNLOCKS, UNLOCK_KEYS, STAT0,
+  RUNE_GRACE_MS, RUNE_SLOT_W, RESONANT, UNLOCKS, UNLOCK_KEYS, STAT0, ADVERT,
+  // levels
+  LV_BASE, LV_POW, SMITH_MAX_LV, ENCH_MAX_LV, LV_FUEL, LV_MANA, MEAL_ROOM, DRAUGHT_ROOM, XP_LEVELS, FORGE_XP, CRACK_XP, POLISH_XP, MIRROR_XP, ENCH_RAR_XP, RESONANT_XP,
+  levelOf, smithLevel, enchLevel, fuelMax, manaMax, fuelCap, manaCap, forgeXp, polishXp, runeXp, gainXp,
   forgeWorth, polishMult, enchantMult, scrapPrice, shelfPrice, renownCost, tickMana, draughtsToday, draughtPrice, settleShop,
   shelfCount, polishInit, polishFx, polishTick, polishLimit, polishStrip, polishResult, polishScore, polishCurve, polishName,
   rollPolish, runeWindow, nearCredit, runeScore, cleanStrokes, rollRune, runeSlots, owns, tierPrev,

@@ -261,6 +261,7 @@ test('polishEnd scores the samples, rolls the polish and counts it; too fast and
   assert.ok(b.polish.m > 1 && ctx.out.after > ctx.out.before, JSON.stringify(ctx.out));
   assert.equal(ctx.out.after, R.value(b)); assert.equal(ctx.out.name, R.polishName(b.polish));
   assert.equal(S.polish, null); assert.equal(c.stat.pol, 1); assert.equal(c.stat.pgood, sc.s >= .7 ? 1 : 0);
+  assert.deepEqual(ctx.out.xp, { smith: R.polishXp(b) }); assert.equal(c.xp.smith, R.POLISH_XP[1] + (b.polish.mirror ? R.MIRROR_XP : 0), 'a Fine blade');
   refuses(() => end({ samples }, T0 + 60e3), /aren’t polishing/);
 });
 
@@ -327,6 +328,7 @@ test('enchanting through the actions: mana at the start, a rune or scar at the e
   assert.deepEqual(st.out, { win: 5000, tol: 14 }); assert.equal(c.mana, 19);
   const end = R.runAction(S, 'enchantEnd', { strokes: traced('ember'), tEnd: 2500 }, env(T0 + 2600, () => .5));
   assert.equal(end.out.res, 'set'); assert.deepEqual(end.out.rune, { k: 'ember', q: 1, p: .35 });
+  assert.deepEqual(end.out.xp, { ench: Math.round(R.RUNES.ember.xp * R.ENCH_RAR_XP[1]) }); assert.equal(c.xp.ench, end.out.xp.ench); assert.equal(c.xp.smith, 0);
   assert.equal(end.out.after, R.value(b)); assert.ok(end.out.after > end.out.before);
   assert.deepEqual(c.stat, { ...R.STAT0, runes: 1, r70: 1, r80: 1, r90: 1 }); assert.equal(S.enchant, null);
   refuses(() => act(S, 'enchantStart', { id: b.id, rune: 'ember' }), /can’t fit another rune/);
@@ -343,7 +345,7 @@ test('enchanting through the actions: mana at the start, a rune or scar at the e
   const b2 = seax(++S.serial, { polish: b.polish }); c.blades.push(b2);
   act(S, 'enchantStart', { id: b2.id, rune: 'ember' }, T0 + 20000);
   const fz = R.runAction(S, 'enchantEnd', { strokes: [], tEnd: 100 }, env(T0 + 20100, () => .5));
-  assert.equal(fz.out.res, 'fizzle'); assert.equal(fz.out.rune, null); assert.equal(b2.runes, undefined);
+  assert.equal(fz.out.res, 'fizzle'); assert.equal(fz.out.rune, null); assert.equal(b2.runes, undefined); assert.equal(fz.out.xp, undefined, 'no XP for a fizzle');
   refuses(() => R.runAction(S, 'enchantEnd', { strokes: [], tEnd: 100 }, env(T0 + 20200, () => .5)), /gone dark/);
 });
 
@@ -360,4 +362,54 @@ test('commissions ask for polish and runes once those are open, and qualifies ch
   b.polish = { q: 60, m: 1.46, s: .9, stone: 0, liq: 'spring' }; assert.ok(!R.qualifies(b, q));
   b.runes = [{ k: 'ember', q: .4, p: .14 }]; assert.ok(!R.qualifies(b, q), 'too weak');
   b.runes = [{ k: 'ember', q: .5, p: .175 }]; assert.ok(R.qualifies(b, q));
+});
+
+// ---------------------------------------------------------------------------------------------- levels
+test('levels: the XP table, the caps, and where a total puts you', () => {
+  assert.deepEqual(R.levelOf(0), { lv: 1, cur: 0, next: 80, max: R.SMITH_MAX_LV });
+  assert.equal(R.levelOf(79).lv, 1); assert.deepEqual(R.levelOf(80), { lv: 2, cur: 0, next: R.XP_LEVELS[3] - 80, max: 21 });
+  assert.equal(R.levelOf(R.XP_LEVELS[10] + 5).lv, 10); assert.equal(R.levelOf(R.XP_LEVELS[10] + 5).cur, 5);
+  assert.deepEqual(R.levelOf(1e9), { lv: 21, cur: 1e9 - R.XP_LEVELS[21], next: 0, max: 21 });
+  assert.equal(R.levelOf(1e9, R.ENCH_MAX_LV).lv, 16);
+  for (let n = 2; n < R.XP_LEVELS.length; n++) assert.ok(R.XP_LEVELS[n] - R.XP_LEVELS[n - 1] > (R.XP_LEVELS[n - 1] - R.XP_LEVELS[n - 2] || 0), 'each level takes longer than the one before');
+  const top = { xp: { smith: 1e9, ench: 1e9 } };
+  assert.equal(R.fuelMax(top), 30); assert.equal(R.manaMax(top), 50); assert.equal(R.fuelCap(top), 50); assert.equal(R.manaCap(top), 70);
+  const fresh = smith().slots[0];
+  assert.deepEqual(fresh.xp, { smith: 0, ench: 0 });
+  assert.equal(R.fuelMax(fresh), R.FUEL_MAX); assert.equal(R.manaMax(fresh), R.MANA_MAX); assert.equal(R.fuelCap(fresh), R.ENERGY_CAP); assert.equal(R.manaCap(fresh), R.MANA_CAP);
+  assert.equal(R.forgeXp(seax(1, { rarity: 4 })), 90); assert.equal(R.forgeXp(seax(1, { cracked: true })), R.CRACK_XP);
+  assert.equal(R.polishXp(seax(1, { rarity: 0, polish: { q: 100, m: 2.5, mirror: 1 } })), R.POLISH_XP[0] + R.MIRROR_XP);
+  assert.equal(R.runeXp(seax(1, { rarity: 4 }), 'dawn', true), Math.round(12 * 3 * 1.5));
+});
+
+test('every forge (hand and quick) gives Smithing XP by rarity', () => {
+  const S = smith(), c = S.slots[0]; c.fuel = 30; c.iron = 50; c.coal = 50;
+  const q = R.runAction(S, 'quickForge', { type: 'seax' }, env(T0 + 1000, seq(4)));
+  assert.deepEqual(q.out.xp, { smith: R.forgeXp(q.out.blade) }); assert.equal(c.xp.smith, R.forgeXp(q.out.blade));
+  act(S, 'forgeStart', { type: 'seax' }, T0 + 2000);
+  const f = R.runAction(S, 'forgeEnd', { q: 'oil', strikes: [[0, .7], [0, .7], [0, .7], [0, .7]] }, env(T0 + 4000, seq(5)));
+  assert.equal(f.out.xp.smith, R.forgeXp(f.out.blade)); assert.equal(c.xp.smith, R.forgeXp(q.out.blade) + R.forgeXp(f.out.blade));
+});
+
+test('a level-up says so, raises max energy and mana, and the clock refills to the new max', () => {
+  const S = smith(), c = S.slots[0], ctx = { c, notes: [], out: {} };
+  c.xp.smith = 79; c.fuel = 10; c.fuelTs = T0;
+  R.gainXp(ctx, 'smith', 5);
+  assert.equal(R.smithLevel(c).lv, 2); assert.equal(R.fuelMax(c), 11);
+  assert.ok(ctx.notes.some((n) => /Smithing level 2!.*Max energy 11\./.test(n.text)), JSON.stringify(ctx.notes));
+  assert.deepEqual(ctx.out.xp, { smith: 5 });
+  R.tickFuel(c, T0 + R.FUEL_MS); assert.equal(c.fuel, 11, 'refills past the old 10');
+  R.tickFuel(c, T0 + 1e9); assert.equal(c.fuel, 11, 'but not past the new max');
+  c.xp.ench = 0; c.mana = 20; c.manaTs = T0;
+  R.gainXp(ctx, 'ench', R.XP_LEVELS[3]);
+  assert.equal(R.enchLevel(c).lv, 3); assert.equal(R.manaMax(c), 24);
+  assert.ok(ctx.notes.some((n) => /Enchanting level 3!.*Max mana 24\./.test(n.text)));
+  R.tickMana(c, T0 + 1e9); assert.equal(c.mana, 24);
+  // meals and draughts can go 20 above the new max
+  c.coin = 1000; c.fuel = 20;
+  const lv1 = smith(), l = lv1.slots[0]; l.coin = 1000; l.fuel = 20;
+  refuses(() => act(lv1, 'eat', { k: 'feast' }), /too full/);
+  c.xp.smith = R.XP_LEVELS[3]; c.fuelTs = T0 + 1000;
+  act(S, 'eat', { k: 'feast' }); assert.equal(c.fuel, 32, '20 + 12 fits under 12 + 20');
+  c.mana = 39; act(S, 'drink', {}); assert.equal(c.mana, 44, 'over the level-1 cap of 40');
 });

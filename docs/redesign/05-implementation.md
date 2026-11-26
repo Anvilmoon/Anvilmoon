@@ -32,12 +32,13 @@ a fresh dev database just works.
 | Field | Default | Meaning |
 |---|---|---|
 | `grit` | 0 | grit in stock |
-| `mana` | `MANA_MAX` (20) | the mana meter (may be up to `MANA_CAP` 40 after draughts) |
+| `mana` | `MANA_MAX` (20) | the mana meter: refills to `manaMax(c)` (20 + 2 per Enchanting level); up to `manaCap(c)` (max + 20) after draughts |
 | `manaTs` | now | when mana last ticked (like `fuelTs`) |
 | `stone` | 0 | best stone owned, 0..4 (like `anvil`) |
 | `chisel` | 0 | best chisel owned, 0..3 |
 | `shelves` | 3 | shop shelf slots, 3..8 |
-| `renown` | 0 | renown level |
+| `renown` | 0 | **Advertising** level (the field keeps its old name) |
+| `xp` | `{ smith: 0, ench: 0 }` | total Smithing and Enchanting XP (section 2.4); levels are worked out from it |
 | `stat` | `{ pol:0, pgood:0, runes:0, r70:0, r80:0, r90:0 }` | counters for requirements: polishes, polishes with skill ≥ 0.7, runes set, runes set at strength ≥ 0.7 / 0.8 / 0.9 |
 | `draughts` | absent | `{ d: localDay, n }` like `meals` |
 | `recipes` | `{}` | now also holds styles (`shadow`, `arcane`, `sanct`), `polish`, `camellia`, `acid`, `enchant`, `silver`, `stormglass`, runes `frost`…`dawn` |
@@ -93,9 +94,9 @@ const SHELF = {                                      // shop shelf listings: the
   long:   { n: 'Long',   d: '8 hours',    ms: 8 * 3600e3,  f: 1.25 },
 };
 const SHELF_START = 3, SHELF_MAX = 8, SHELF_TEST_DIV = 20;   // test odds (dev only): listings sell 20x sooner
-const RENOWN_STEP = 10000, RENOWN_PER = .01;          // renown level n costs 10,000 x n; each level +1% on shelf sales
+const RENOWN_STEP = 10000, RENOWN_PER = .01;          // Advertising level n costs 10,000 x n; each level +1% on shelf sales
 const GRIT_PER = { L: 1, M: 1, H: 2, X: 3 };          // grit used by one polish, by weight
-const MANA_MAX = 20, MANA_MS = 120000, MANA_CAP = 40; // the mana meter: +1 every 2 minutes up to 20; draughts can fill it to 40
+const MANA_MAX = 20, MANA_MS = 120000, MANA_CAP = 40; // level-1 values: +1 every 2 minutes up to manaMax(c); draughts to manaCap(c)
 const DRAUGHT = { mana: 5, p: 20, rise: .10 };        // mana draught: +5 mana for 20c, +10% for each one bought today
 const COMM_POLISH = .6, COMM_RUNE = .5, COMM_RUNE_K = 1.5, COMM_RUNE_Q = .5;   // commission polish/rune requests
 
@@ -196,7 +197,7 @@ const UNLOCKS = {
   shelf5:  { tree: 'shop', n: 'Shelf slot 5', tier: ['shelves', 5], cost: { coin: 500 }, d: 'One more blade on display.' },
   shelf6:  { tree: 'shop', n: 'Shelf slot 6', tier: ['shelves', 6], cost: { coin: 1500 }, d: 'One more blade on display.' },
   shelf7:  { tree: 'shop', n: 'Shelf slot 7', tier: ['shelves', 7], cost: { coin: 6000 }, d: 'One more blade on display.' },
-  shelf8:  { tree: 'shop', n: 'Shelf slot 8', tier: ['shelves', 8], cost: { coin: 25000 }, d: 'A full shop. Opens Renown.' },
+  shelf8:  { tree: 'shop', n: 'Shelf slot 8', tier: ['shelves', 8], cost: { coin: 25000 }, d: 'A full shop. Opens Advertising.' },
 };
 const UNLOCK_KEYS = Object.keys(UNLOCKS);
 const STAT0 = { pol: 0, pgood: 0, runes: 0, r70: 0, r80: 0, r90: 0 };
@@ -205,6 +206,40 @@ const STAT0 = { pol: 0, pgood: 0, runes: 0, r70: 0, r80: 0, r90: 0 };
 Key check (all recipe keys must be different): `M H X brine water shadow arcane sanct polish camellia acid enchant
 silver stormglass frost valor storm fortune ward hearth dawn`; built-in `L oil war spring copper ember`; tiers
 `anvil1-4 stone1-4 chisel1-3 shelf4-8`. The quench `water` and the liquid `spring` don't clash.
+
+### 2.4 Levels: Smithing and Enchanting (second pass)
+
+Numbers and reasons: `04-balance.md` section 11. Each `RUNES` row also has an `xp` field (Ember 4, Frost 5, Valor 6,
+Storm 7, Fortune 8, Ward 9, Hearth 10, Dawn 12).
+
+```js
+// Advertising (the save field and action are still called `renown`)
+const ADVERT = { n: 'Advertising', d: 'Flyers and notices around town. Every level adds 1% to every shelf sale.' };
+// Climbing from level n to n + 1 takes round(LV_BASE x n^LV_POW) XP
+const LV_BASE = 80, LV_POW = 1.5;
+const SMITH_MAX_LV = 21, ENCH_MAX_LV = 16;
+const LV_FUEL = 1, LV_MANA = 2;            // +1 max energy per Smithing level (10 -> 30), +2 max mana per Enchanting level (20 -> 50)
+const MEAL_ROOM = ENERGY_CAP - FUEL_MAX, DRAUGHT_ROOM = MANA_CAP - MANA_MAX;   // 20: meals and draughts can go this far above the max
+const XP_LEVELS = [0, 0, 80, 306, 722, 1362, ...];   // XP_LEVELS[n] = total XP to reach level n, built from the formula
+const FORGE_XP = [10, 14, 22, 40, 90], CRACK_XP = 3;
+const POLISH_XP = [6, 8, 13, 24, 54], MIRROR_XP = 25;
+const ENCH_RAR_XP = [1, 1.2, 1.5, 2, 3], RESONANT_XP = 1.5;
+
+levelOf(xp, max = SMITH_MAX_LV) -> { lv, cur, next, max }   // cur = XP into this level, next = XP this level takes (0 at the top)
+smithLevel(c), enchLevel(c)                                  // levelOf(c.xp.smith, 21), levelOf(c.xp.ench, 16)
+fuelMax(c) = FUEL_MAX + LV_FUEL x (Smithing lv - 1)          // tickFuel refills to this
+manaMax(c) = MANA_MAX + LV_MANA x (Enchanting lv - 1)        // tickMana refills to this
+fuelCap(c) = fuelMax(c) + 20                                 // eat (and salvaged energy) can fill to this
+manaCap(c) = manaMax(c) + 20                                 // drink can fill to this
+forgeXp(b), polishXp(b), runeXp(b, rune, resonant)           // XP for one blade / polish / rune
+gainXp(ctx, 'smith' | 'ench', n)                             // adds XP, notes a level-up, adds n to ctx.out.xp[track]
+```
+
+`FUEL_MAX`, `MANA_MAX`, `ENERGY_CAP` and `MANA_CAP` stay exported as the level-1 values; code that shows or checks a
+limit should call the functions instead. XP is given by `forgeEnd` (not day labour) and `quickForge` (`forgeXp`),
+`polishEnd` (`polishXp`) and `enchantEnd` when the result is `set` or `resonant` (`runeXp`); nothing for a fizzle or
+a backlash. Those actions add `xp: { smith: n }` or `xp: { ench: n }` to `ctx.out`. A level-up adds a note:
+"**Smithing level 4!** Max energy 13." / "**Enchanting level 3!** Max mana 24."
 
 ---
 
@@ -245,13 +280,15 @@ const shelfPrice = (c, b, k) => Math.max(1, Math.round(value(b) * SHELF[k].f * (
 const renownCost = (c) => RENOWN_STEP * (((c && c.renown) || 0) + 1);
 
 // ============================================================== the clock: mana and shop shelves
-// The mana meter refills like energy (called in beginAction). Above MANA_MAX (after draughts) it doesn't refill.
+// The mana meter refills like energy (called in beginAction), up to manaMax(c). Above it (after draughts) it doesn't refill.
+// (tickFuel likewise refills to fuelMax(c) instead of FUEL_MAX.)
 function tickMana(c, now) {
-  if (typeof c.mana !== 'number' || !isFinite(c.mana)) { c.mana = MANA_MAX; c.manaTs = now; }
+  const max = manaMax(c);
+  if (typeof c.mana !== 'number' || !isFinite(c.mana)) { c.mana = max; c.manaTs = now; }
   if (!c.manaTs) c.manaTs = now;
-  if (c.mana >= MANA_MAX) { c.manaTs = now; return; }
+  if (c.mana >= max) { c.manaTs = now; return; }
   const n = Math.floor((now - c.manaTs) / MANA_MS);
-  if (n > 0) { c.mana = Math.min(MANA_MAX, c.mana + n); c.manaTs += n * MANA_MS; if (c.mana >= MANA_MAX) c.manaTs = now; }
+  if (n > 0) { c.mana = Math.min(max, c.mana + n); c.manaTs += n * MANA_MS; if (c.mana >= max) c.manaTs = now; }
 }
 const draughtsToday = (c, day) => (c.draughts && c.draughts.d === day ? c.draughts.n : 0);
 const draughtPrice = (c, day) => Math.round(DRAUGHT.p * (1 + DRAUGHT.rise * draughtsToday(c, day)));
@@ -474,7 +511,7 @@ const qualifies = (b, q) => b.status === 'owned' && !b.cracked && b.type === q.t
 
 | Where | Change |
 |---|---|
-| `newChar(name, cls, now, rng)` | Keep the signature (ignore `cls`). Return `{ cid, name, coin: 80, iron: 12, coal: 8, fuel: 10, damascus: 0, dust: 0, shards: 0, bog: 0, grit: 0, mana: MANA_MAX, recipes: {}, fuelTs: now, manaTs: now, anvil: 0, stone: 0, chisel: 0, shelves: SHELF_START, renown: 0, hammer: 'worn', hammers: {}, blades: [], commissions: [], forged: 0, stat: { ...STAT0 }, sel: typesOf('war')[0] }` |
+| `newChar(name, cls, now, rng)` | Keep the signature (ignore `cls`). Return `{ cid, name, coin: 80, iron: 12, coal: 8, fuel: 10, damascus: 0, dust: 0, shards: 0, bog: 0, grit: 0, mana: MANA_MAX, recipes: {}, fuelTs: now, manaTs: now, anvil: 0, stone: 0, chisel: 0, shelves: SHELF_START, renown: 0, hammer: 'worn', hammers: {}, blades: [], commissions: [], forged: 0, stat: { ...STAT0 }, xp: { smith: 0, ench: 0 }, sel: typesOf('war')[0] }` |
 | `unify` | Drop the `demand`, `classes`, `freeWar`, `selBy` lines; add `'grit'` to the summed keys. |
 | `needsUnify` | `all.length > 1 \|\| (all.length === 1 && (sv.slots[0] !== all[0] \|\| sv.active !== 0))` |
 | `clsN`, `classOffer`, `slotsOpen`, `relaxDemand`, `settleDemand`, `clamorType` | **Delete.** |
@@ -512,13 +549,15 @@ new `qualifies` through `deliverable`), `refreshBoard`, `jobFlag`, `chClaim`, `g
 | `buy` | false | `{ m, n }`, m ∈ iron coal damascus grit dust | `{ n, cost }` |
 | `drink` (mana draught) | false | `{}` | `{ mana, p }` |
 | `unlock` | false | `{ k }` | `{ n }` |
-| `renown` | false | `{}` | `{ level, cost }` |
+| `renown` (Advertising) | false | `{}` | `{ level, cost }` |
 | `shelfList` | false | `{ id, k }`, k ∈ short medium long | `{ price, until }` |
 | `shelfCancel` | false | `{ id }` | `{}` |
 | `polishStart` | false | `{ id, liq }` | `{ seed, stone, liq }` |
-| `polishEnd` | **true** | `{ samples }` | `{ polish, name, clean, finish, s, before, after }` |
+| `polishEnd` | **true** | `{ samples }` | `{ polish, name, clean, finish, s, before, after, xp: { smith } }` |
 | `enchantStart` | false | `{ id, rune, con }` | `{ win, tol }` |
-| `enchantEnd` | **true** | `{ strokes, tEnd }` | `{ res, rune, score, before, after }` |
+| `enchantEnd` | **true** | `{ strokes, tEnd }` | `{ res, rune, score, before, after }`, plus `xp: { ench }` when a rune took |
+| `forgeEnd`, `quickForge` | **true** | as before | `{ blade, xp: { smith } }` (day labour: unchanged, no XP) |
+| `eat` / `drink` | false | as before | limits are now `fuelCap(c)` / `manaCap(c)` instead of `ENERGY_CAP` / `MANA_CAP` |
 
 ```js
 // ---- selling: the scrap merchant pays 40% at once
@@ -539,7 +578,7 @@ def('buy', false, (ctx, a) => {
 });
 def('drink', false, (ctx) => {
   const { c } = ctx, day = localDay(ctx.now, ctx.tz), p = draughtPrice(c, day);
-  need(c.mana + DRAUGHT.mana <= MANA_CAP, 'Your mana is as full as a draught can make it.');
+  need(c.mana + DRAUGHT.mana <= manaCap(c), 'Your mana is as full as a draught can make it.');
   need(c.coin >= p, 'Not enough coin.');
   c.coin -= p; c.mana += DRAUGHT.mana;
   if (!c.draughts || c.draughts.d !== day) c.draughts = { d: day, n: 0 }; c.draughts.n++;
@@ -560,8 +599,8 @@ def('unlock', false, (ctx, a) => {
 });
 def('renown', false, (ctx) => {
   const { c } = ctx, cost = renownCost(c);
-  need(c.shelves >= SHELF_MAX, `Renown opens once your shop has ${SHELF_MAX} shelves.`);
-  need(c.coin >= cost, `The next level of renown costs ${fmtN(cost)}c.`);
+  need(c.shelves >= SHELF_MAX, `Advertising opens once your shop has ${SHELF_MAX} shelves.`);
+  need(c.coin >= cost, `The next round of advertising costs ${fmtN(cost)}c.`);
   c.coin -= cost; c.renown = (c.renown || 0) + 1;
   ctx.out = { level: c.renown, cost };
 });
@@ -684,7 +723,8 @@ function beginAction(S, env) {
 
 ### 5.2 upgradeSave (inside `if (c) { … }`)
 
-- Non-negative numbers: add `'grit'` to the list; `if (typeof c.mana !== 'number' || !isFinite(c.mana)) c.mana = MANA_MAX; c.mana = clamp(c.mana, 0, MANA_CAP);`
+- `c.xp = { smith, ench }`, each a whole number ≥ 0 (missing = 0). Do this first: the mana limits below depend on it.
+- Non-negative numbers: add `'grit'` to the list; `if (typeof c.mana !== 'number' || !isFinite(c.mana)) c.mana = manaMax(c); c.mana = clamp(c.mana, 0, manaCap(c));`
 - `c.stone = clamp(Math.floor(num(c.stone)), 0, STONES.length - 1); c.chisel = clamp(Math.floor(num(c.chisel)), 0, CHISELS.length - 1);`
 - `c.shelves = clamp(Math.floor(num(c.shelves)) || SHELF_START, SHELF_START, SHELF_MAX); c.renown = Math.max(0, Math.floor(num(c.renown)));`
 - `const st = c.stat && typeof c.stat === 'object' ? c.stat : {}; c.stat = {}; for (const k of Object.keys(STAT0)) c.stat[k] = Math.max(0, Math.floor(num(st[k])));`
@@ -699,7 +739,9 @@ It must stay idempotent (running it twice changes nothing the second time).
 Add: `SCRAP, SHELF, SHELF_START, SHELF_MAX, SHELF_TEST_DIV, RENOWN_STEP, RENOWN_PER, GRIT_PER, MANA_MAX, MANA_MS, MANA_CAP,
 DRAUGHT, COMM_POLISH, COMM_RUNE, COMM_RUNE_K, COMM_RUNE_Q, POLISH, STONES, LIQUIDS, MIRROR_M, STAIN_M, PERFECT_POLISH,
 CHISELS, CONDUITS, RUNES, RUNE_KEYS, RUNE_STEP, RUNE_MAX_PTS, RUNE_MAX_STROKES, RUNE_MAX_MS, RUNE_FIZZLE, RUNE_FULL_SPARE,
-RUNE_GRACE_MS, RUNE_SLOT_W, RESONANT, UNLOCKS, UNLOCK_KEYS, STAT0,`
+RUNE_GRACE_MS, RUNE_SLOT_W, RESONANT, UNLOCKS, UNLOCK_KEYS, STAT0, ADVERT,`
+`LV_BASE, LV_POW, SMITH_MAX_LV, ENCH_MAX_LV, LV_FUEL, LV_MANA, MEAL_ROOM, DRAUGHT_ROOM, XP_LEVELS, FORGE_XP, CRACK_XP, POLISH_XP,
+MIRROR_XP, ENCH_RAR_XP, RESONANT_XP, levelOf, smithLevel, enchLevel, fuelMax, manaMax, fuelCap, manaCap, forgeXp, polishXp, runeXp, gainXp,`
 `forgeWorth, polishMult, enchantMult, scrapPrice, shelfPrice, renownCost, tickMana, draughtsToday, draughtPrice, settleShop,
 shelfCount, polishInit, polishFx, polishTick, polishLimit, polishStrip, polishResult, polishScore, polishCurve, polishName,
 rollPolish, runeWindow, nearCredit, runeScore, cleanStrokes, rollRune, runeSlots, owns, tierPrev`.
@@ -885,7 +927,7 @@ name, `d`, cost (`costStr(u.cost)`), its requirement with progress (`AMR.reqProg
 button: Owned (`AMR.owns`), Locked ("Needs the X" when `u.after` or the previous tier is missing), or Buy (disabled
 unless `canPay` and `reqMet`). Buy → `actSync('unlock', { k })`, toast `${out.n} bought.`. Hide the Polish and Enchant
 trees' rows (except their gate row) until the gate is owned. The Forge tab keeps today's hammer rows (hammer, equip,
-repair). The Shop tab adds a **Renown** row once `c.shelves >= AMR.SHELF_MAX`: level, "+N% on shelf sales", next cost
+repair). The Shop tab adds an **Advertising** row (`AMR.ADVERT.n`, `AMR.ADVERT.d`: flyers and notices around town) once `c.shelves >= AMR.SHELF_MAX`: level, "+N% on shelf sales", next cost
 `AMR.renownCost(c)`, button → `actSync('renown')`. Polish tab also shows the current stone; Enchant tab the current
 chisel, the conduits and runes owned.
 
@@ -960,8 +1002,8 @@ then continue with the `null` / partial result.
 
 ### 9.8 HUD, Market, clock
 
-- HUD: show **grit** once `knows(c,'polish')`; show **Mana N/20** (and "+1 in m:ss" when below 20, from `c.manaTs` and
-  `AMR.MANA_MS`) once `knows(c,'enchant')`.
+- HUD: show **grit** once `knows(c,'polish')`; show **Mana N/max** (`AMR.manaMax(c)`; "+1 in m:ss" when below it, from
+  `c.manaTs` and `AMR.MANA_MS`) once `knows(c,'enchant')`. Energy likewise shows **N/max** with `AMR.fuelMax(c)`.
 - Market: rows for **Grit** (5c), **Star-dust** (40c) using `buy`; **Mana draught** "+5 mana · Nc" (`AMR.draughtPrice(c, dayNow())`)
   → `actSync('drink')`, shown once enchanting is known.
 - `rebuild()`: after replaying predictions, call `AMR.tickFuel(c, nowS()); AMR.tickMana(c, nowS()); AMR.settleShop(c, nowS());`
@@ -971,7 +1013,23 @@ then continue with the `null` / partial result.
 - Commission cards: show the polish request ("Polish 60+") and rune request ("Rune: Frost 50%+"); the deliver list uses
   `AMR.qualifies` as today.
 
-### 9.9 sw.js
+### 9.9 Levels and Advertising (second pass)
+
+- **Show levels.** Somewhere always visible (the HUD, or the Account/hall page plus a small badge in the HUD): "Smithing 4"
+  with an XP bar `cur / next` from `AMR.smithLevel(c)`, and once enchanting is known "Enchanting 3" from
+  `AMR.enchLevel(c)`. At the top level (`next === 0`) show "max". A tooltip can say what the next level gives
+  ("Level 5: max energy 14", using `AMR.LV_FUEL` / `AMR.LV_MANA`).
+- **Every energy and mana limit uses the functions:** HUD and Market "Energy N of max" → `AMR.fuelMax(c)`; meal buttons
+  "Too full" → `c.fuel + m.e > AMR.fuelCap(c)`; mana bar and "Mana N/max" → `AMR.manaMax(c)`; the draught button
+  → `AMR.manaCap(c)`; the Market note "Mana refills … up to N. Draughts can fill it to M" with those values. The old
+  constants (`FUEL_MAX`, `ENERGY_CAP`, `MANA_MAX`, `MANA_CAP`) are only the level-1 values.
+- `ctx.out.xp` (from `forgeEnd`, `quickForge`, `polishEnd`, `enchantEnd`) can be shown as "+14 Smithing XP" on the
+  reveal or result; the level-up itself arrives as a note like any other.
+- **Advertising:** every player-facing "Renown" becomes "Advertising" (Workshop Shop tab, shelf tooltips, the shop
+  page header, the toast after buying: "Advertising level N. Shelf sales pay N% more."). The action key `renown`, the
+  field `c.renown` and `AMR.renownCost` keep their names.
+
+### 9.10 sw.js
 
 `VERSION = 'anvilmoon-1.15.0-shop'`; add `'./js/polish.js', './js/enchant.js'` to `SHELL`.
 
@@ -1000,6 +1058,9 @@ then continue with the `null` / partial result.
       (or scar/fizzle); halved timestamps are stretched (q drops). `shelfList` works, cancel returns the blade, full
       shelves refused (the sale itself is tested in the rules tests with a later `now`, since the server uses the real clock). AH listing of a polished blade keeps `polish` on the buyer's copy.
 - [ ] Upgrading a save twice changes nothing; a patch still turns the old save into the new one.
+- [ ] Levels: the XP table grows every level; hand and quick forges, polishes and runes that take give the right XP
+      (`ctx.out.xp`), a fizzle gives none; a level-up notes it and raises `fuelMax` / `manaMax`; the clock refills to the
+      new max but not past it; meals and draughts may go 20 above the new max.
 
 ### POLISH UI (`www/js/polish.js`)
 

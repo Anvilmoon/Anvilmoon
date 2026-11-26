@@ -15,14 +15,17 @@ wins**. `05-implementation.md` turns it into code. Every number here was checked
 - **Worth = forge worth × polish × enchant.** Polish ×0.8 (stained) to ×2.0, a **Mirror polish ×2.5**. Enchant ×1.2
   (one first rune) to ×4.8 (three top runes, carved well), a rare **Resonant** rune can push it past ×6.
 - **Polishing costs grit** (5c each; Light 1, Medium 1, Heavy 2, Massive 3). No energy.
-- **Enchanting costs mana** from **one mana meter**: 20 at most, +1 every 2 minutes, like energy. **Mana draughts** at
+- **Two levels, separate from the unlocks** (section 11): **Smithing** (XP from every forge and polish) raises max
+  energy from 10 to 30; **Enchanting** (XP from every rune that takes) raises max mana from 20 to 50. Level 2 comes in
+  the first few minutes; the top levels take about two months (Smithing) and six weeks (Enchanting) of typical play.
+- **Enchanting costs mana** from **one mana meter**: 20 at most at first, +1 every 2 minutes, like energy. **Mana draughts** at
   the market add 5 (20c, +10% for each one bought that day).
 - **Selling:** scrap merchant (instant, 40%), salvage (materials), or **a shop shelf**: 10 minutes for 80%, 1 hour for
   100%, 8 hours for 125%. Price fixed when you list; the blade sells by the clock, even with the game closed.
-- **Three trees** (Forge, Polish, Enchant) and the **shop** (shelf slots, then **Renown**), all bought with one
+- **Three trees** (Forge, Polish, Enchant) and the **shop** (shelf slots, then **Advertising**), all bought with one
   `unlock` action from one table.
-- **Coin no longer piles up:** late income is about a third lower than in 01, and **Renown** is a never-ending thing to
-  buy (level n costs 10,000 × n coin, +1% on every shelf sale). A keen player holds about 100,000 coin on day 60
+- **Coin no longer piles up:** late income is about a third lower than in 01, and **Advertising** (flyers and notices
+  around town) is a never-ending thing to buy (level n costs 10,000 × n coin, +1% on every shelf sale). A keen player holds about 100,000 coin on day 60
   (saving for the next level) instead of 2 million.
 
 ---
@@ -32,7 +35,7 @@ wins**. `05-implementation.md` turns it into code. Every number here was checked
 | Resource | Key | Source | Use |
 |---|---|---|---|
 | Coin | `coin` | Selling, commissions, challenges, Armory | Everything |
-| Energy | `fuel` | +1 every 3 min up to 10; meals up to 30 (unchanged) | 1 per forge |
+| Energy | `fuel` | +1 every 3 min up to **max energy** (10, +1 per Smithing level, 30 at the top); meals up to max + 20 | 1 per forge |
 | Iron | `iron` | Market 4c, salvage, day labour | Forging, some unlocks |
 | Bog iron | `bog` | Digging the slag heap when broke (unchanged) | Stands in for iron |
 | Coal | `coal` | Market 3c, labour, digging | Forging |
@@ -40,15 +43,15 @@ wins**. `05-implementation.md` turns it into code. Every number here was checked
 | Star-dust | `dust` | **Market 40c (new)**, salvage, Armory, **salvaging an enchanted blade (new)** | Refine 10 into 1 shard |
 | Star-shards | `shards` | Refining, Starforged salvage, Armory | Higher unlocks |
 | **Grit** (new) | `grit` | Market 5c, salvaging a polished blade | Each polish: Light 1, Medium 1, Heavy 2, Massive 3 |
-| **Mana** (new) | `mana` | The meter refills: +1 every 2 min up to 20. Mana draughts can fill it to 40 | Each rune carved: 1 to 5 |
+| **Mana** (new) | `mana` | The meter refills: +1 every 2 min up to **max mana** (20, +2 per Enchanting level, 50 at the top). Mana draughts can fill it to max + 20 | Each rune carved: 1 to 5 |
 
 ### The mana meter
 
 | | Value |
 |---|---|
-| Most it refills to | **20** |
+| Most it refills to | **20** at Enchanting level 1, +2 a level, **50** at level 16 (`manaMax(c)`) |
 | Refill | **+1 every 2 minutes** (30 an hour), worked out from the clock like energy |
-| Most it can hold (with draughts) | **40** (above 20 it doesn't refill, like energy above 10) |
+| Most it can hold (with draughts) | max mana + 20: **40** at level 1, 70 at the top (`manaCap(c)`); above the max it doesn't refill, like energy |
 | Mana draught (market) | **+5 mana for 20c**, price +10% for each draught bought that day (resets at local midnight) |
 | Starts | full (20) |
 
@@ -68,7 +71,7 @@ worth      = max(1, round(forgeWorth · polishMult · enchantMult))     (a crack
 | Price | Formula |
 |---|---|
 | Scrap merchant | `max(1, round(worth × 0.40))` |
-| Shop shelf | `max(1, round(worth × listing factor × (1 + 0.01 × renown)))` |
+| Shop shelf | `max(1, round(worth × listing factor × (1 + 0.01 × Advertising level)))` (the save field is still `renown`) |
 | Auction House deposit | as today, from `worth` |
 
 ### Ranges
@@ -295,7 +298,7 @@ bought in order. Hammers keep their own Workshop rows (they wear out and are rep
 | `shelf6` | Shelf slot 6 | 1,500c |
 | `shelf7` | Shelf slot 7 | 6,000c |
 | `shelf8` | Shelf slot 8 | 25,000c |
-| (renown) | **Renown** level n (repeatable, opens with slot 8) | 10,000 × n coin: +1% on every shelf sale per level |
+| (`renown`) | **Advertising** level n (repeatable, opens with slot 8): flyers and notices around town | 10,000 × n coin: +1% on every shelf sale per level |
 
 ---
 
@@ -365,7 +368,7 @@ pay = [15, 40, 100, 280][minR] · WT.v · (Large 1.6 | Huge 3 | 1) · (minGrade 
 | Draughts: +5 mana for 20c, +10% per draught a day (was +10 for 15c, +5%). | Draughts are the steady late-game sink; the steeper rise keeps them self-limiting. |
 | Commission rune factor 1 + 1.5·v (was 1 + 2·v). | Rune values are higher now. |
 | Top costs re-tuned: Steel Chisel 4,000c, Starsteel 40,000c, Dawn 60,000c + 15 shards, Ward 12,000c, Hearth 25,000c. | Keep the top tier over weeks with the new (lower) late income. |
-| **Renown** added (10,000 × n, +1%/level). | Fixes the coin pile (section 10). |
+| **Advertising** added (10,000 × n, +1%/level; first called Renown). | Fixes the coin pile (section 10). |
 | Shelf listings sell 20× faster with test odds. | So the owner can test shelves in a short session. |
 
 ### From 02-polishing
@@ -392,8 +395,9 @@ pay = [15, 40, 100, 280][minR] · WT.v · (Large 1.6 | Huge 3 | 1) · (minGrade 
 
 ## 10. Simulation results
 
-`node tools/sim-economy.mjs --runs 300 --days 60` for each profile. Typical: 3 sessions of 25 minutes a day.
-Casual: 2 × 20 minutes, slightly less skilled. Keen: 4 × 40 minutes, slightly more skilled. Medians.
+`node tools/sim-economy.mjs --runs 300 --days 60` for each profile (re-run with the levels of section 11). Typical: 3
+sessions of 25 minutes a day. Casual: 2 × 20 minutes, slightly less skilled. Keen: 4 × 40 minutes, slightly more
+skilled. Medians.
 
 ### Pacing (typical player)
 
@@ -403,107 +407,171 @@ Casual: 2 × 20 minutes, slightly less skilled. Keen: 4 × 40 minutes, slightly 
 | Medium pattern | 5 min | 3 .. 5 min | 1 |
 | Shelf slot 4 | 7 min | 6 .. 12 min | 1 |
 | **Polishing bench** | **24 min** | 18 .. 26 min | 1 |
-| Camellia oil | 48 min | 25 .. 76 min | 1 |
-| Whetstone | 75 min | 50 .. 101 min | 1 |
-| Heavy pattern | 105 min | 77 .. 152 min | 2 |
-| Steel Anvil | 127 min | 101 .. 161 min | 2 |
-| Shadow style | 150 min | 104 .. 178 min | 2 |
-| Shelf slot 5 | 152 min | 125 .. 186 min | 3 |
-| **Enchanter's table** | **180 min** | 152 .. 228 min | 3 |
-| Water quench, Frost rune | 3.4 h | | 3 |
-| Waterstone | 3.9 h | 3.4 .. 4.7 h | 4 |
+| Camellia oil | 48 min | 25 .. 74 min | 1 |
+| Whetstone | 75 min | 50 .. 100 min | 1 |
+| Heavy pattern | 102 min | 77 .. 150 min | 2 |
+| Steel Anvil | 127 min | 101 .. 153 min | 2 |
+| Shadow style | 129 min | 113 .. 176 min | 2 |
+| Shelf slot 5 | 152 min | 125 .. 178 min | 2 |
+| **Enchanter's table** | **179 min** | 152 .. 219 min | 3 |
+| Water quench, Frost rune | 3.3 h | | 3 |
+| Waterstone | 3.9 h | 3.3 .. 4.7 h | 4 |
 | Iron Chisel | 4.3 h | 3.7 .. 5.1 h | 4 |
-| Silver Conduit | 5.0 h | 4.2 .. 5.6 h | 4 |
-| Valor rune | 5.5 h | 4.7 .. 6.4 h | 5 |
-| Massive pattern | 6.3 h | 5.5 .. 7.1 h | 5 |
-| Acid wash | 6.4 h | 5.6 .. 7.3 h | 6 |
-| Arcane style | 6.5 h | 5.6 .. 7.5 h | 6 |
-| Steel Chisel | 7.3 h | 6.5 .. 8.2 h | 6 |
-| Shelf slot 6 | 7.7 h | 6.9 .. 8.6 h | 7 |
+| Silver Conduit | 4.9 h | 4.1 .. 5.6 h | 4 |
+| Valor rune | 5.5 h | 4.6 .. 6.3 h | 5 |
+| Massive pattern | 6.1 h | 5.2 .. 7.1 h | 5 |
+| Acid wash | 6.4 h | 5.3 .. 7.3 h | 5 |
+| Arcane style | 6.5 h | 5.6 .. 7.4 h | 6 |
+| Steel Chisel | 7.3 h | 6.4 .. 8.2 h | 6 |
+| Shelf slot 6 | 7.7 h | 6.5 .. 8.6 h | 6 |
 | Storm rune | 8.2 h | 7.3 .. 9.4 h | 7 |
-| Master Hammer | 8.6 h | 7.7 .. 9.7 h | 7 |
-| **Damascus Anvil** | **9.4 h** | 8.2 .. 10.7 h | **8** |
-| Stormglass Conduit | 10.6 h | 9.5 .. 11.8 h | 9 |
-| Fortune rune | 11.7 h | 10.4 .. 12.9 h | 10 |
-| Moonstone | 12.9 h | 11.3 .. 13.9 h | 10 |
-| Sanctum style | 13.3 h | 12.0 .. 14.4 h | 11 |
-| Shelf slot 7 | 13.9 h | 12.5 .. 15.1 h | 11 |
-| Ward rune | 15.6 h | 14.1 .. 16.9 h | 13 |
-| **Dragonbone Anvil** | **20.7 h** | 19.0 .. 22.5 h | **16** |
-| Starsteel Chisel | 25.9 h | 23.8 .. 27.7 h | 20 |
-| Hearth rune | 29.1 h | 26.9 .. 31.1 h | 23 |
-| Starstone | 32.9 h | 30.6 .. 35.1 h | 26 |
-| Shelf slot 8 (Renown opens) | 34.9 h | 32.6 .. 37.3 h | 27 |
-| **Dawn rune (tree complete)** | **40.4 h** | 37.9 .. 42.9 h | **31** |
+| Master Hammer | 8.6 h | 7.4 .. 9.5 h | 7 |
+| **Damascus Anvil** | **9.3 h** | 8.2 .. 10.4 h | **8** |
+| Stormglass Conduit | 10.4 h | 9.4 .. 11.6 h | 9 |
+| Fortune rune | 11.6 h | 10.3 .. 12.9 h | 9 |
+| Moonstone | 12.5 h | 11.2 .. 13.8 h | 10 |
+| Sanctum style | 13.0 h | 11.7 .. 14.3 h | 11 |
+| Shelf slot 7 | 13.7 h | 12.4 .. 15.0 h | 11 |
+| Ward rune | 15.2 h | 13.8 .. 16.8 h | 12 |
+| **Dragonbone Anvil** | **20.3 h** | 18.7 .. 22.1 h | **16** |
+| Starsteel Chisel | 25.2 h | 23.4 .. 27.2 h | 20 |
+| Hearth rune | 28.2 h | 26.3 .. 30.4 h | 22 |
+| Starstone | 32.4 h | 30.0 .. 34.3 h | 25 |
+| Shelf slot 8 (Advertising opens) | 34.3 h | 31.9 .. 36.6 h | 27 |
+| **Dawn rune (tree complete)** | **39.5 h** | 36.9 .. 42.1 h | **31** |
+
+The levels change the pacing only a little: the tree completes about an hour of play sooner than without them (40.4 h),
+mostly because a bigger mana meter means fewer draughts (4% of coin spent instead of 8%).
 
 ### Pacing per profile
 
 | Profile | Play a day | Polishing | Enchanting | Damascus Anvil | Dragonbone | Tree complete |
 |---|---|---|---|---|---|---|
-| Casual | 40 min | 20 min, day 1 | 175 min, day 5 | day 14 | day 30 | day 56 (91% by day 60) |
-| Typical | 75 min | 24 min, day 1 | 180 min, day 3 | day 8 | day 16 | day 31 |
-| Keen | 160 min | 23 min, day 1 | 202 min, day 2 | day 4 | day 8 | day 15 |
+| Casual | 40 min | 20 min, day 1 | 170 min, day 5 | day 14 | day 29 | day 56 (97% by day 60) |
+| Typical | 75 min | 24 min, day 1 | 179 min, day 3 | day 8 | day 16 | day 31 |
+| Keen | 160 min | 23 min, day 1 | 198 min, day 2 | day 4 | day 8 | day 15 |
+
+### Levels per profile (level at the end of the day)
+
+| | Day 1 | 3 | 7 | 14 | 21 | 30 | 45 | 60 |
+|---|---|---|---|---|---|---|---|---|
+| Smithing, casual | 4 | 6 | 7 | 9 | 11 | 12 | 14 | 16 |
+| Smithing, typical | 5 | 7 | 9 | 12 | 14 | 16 | 18 | 20 |
+| Smithing, keen | 6 | 9 | 12 | 16 | 18 | **21** (day 28) | 21 | 21 |
+| Enchanting, casual | 1 | 1 | 2 | 5 | 6 | 8 | 10 | 13 |
+| Enchanting, typical | 1 | 2 | 4 | 7 | 9 | 12 | 15 | **16** (day 46) |
+| Enchanting, keen | 1 | 4 | 8 | 12 | 15 | **16** (day 22) | 16 | 16 |
+
+Typical player: Smithing level 2 after **4 minutes** of play, level 3 after 15 minutes, level 5 at the end of the first
+hour, level 10 on day 8, level 21 around day 60 (40% of runs by day 60). Enchanting level 2 about half an hour after the
+enchanter's table, level 8 on day 15, level 16 on day 46.
 
 ### Coin per hour of play (typical, all income)
 
 | Play | Coin/hour | (01's sim) |
 |---|---|---|
 | 0 – 30 min | 2,600 (Armory first finds, getting started) | 3,280 |
-| 30 – 60 min | 950 | 1,870 |
-| 1 – 2 h | 1,270 | 2,450 |
-| 2 – 3 h | 2,070 | 3,390 |
-| 3 – 5 h | 1,940 | 3,510 |
-| 5 – 10 h | 3,000 | 5,780 |
-| 10 – 20 h | 4,600 | 9,930 |
-| 20 – 40 h | 5,670 | 12,270 |
-| 40 – 80 h | 8,200 | 19,750 |
+| 30 – 60 min | 970 | 1,870 |
+| 1 – 2 h | 1,260 | 2,450 |
+| 2 – 3 h | 2,160 | 3,390 |
+| 3 – 5 h | 1,960 | 3,510 |
+| 5 – 10 h | 3,100 | 5,780 |
+| 10 – 20 h | 4,630 | 9,930 |
+| 20 – 40 h | 5,660 | 12,270 |
+| 40 – 80 h | 7,990 | 19,750 |
 
-Keen player after 80 hours: 12,800 coin/hour (01: 20,400).
+Keen player after 40 hours: 11,500 coin/hour (01: 20,400).
 
 ### Coin in hand (incl. listed blades), end of day, median
 
 | Day | 1 | 3 | 7 | 14 | 21 | 30 | 45 | 60 |
 |---|---|---|---|---|---|---|---|---|
-| Casual | 346 | 748 | 1,525 | 4,373 | 7,714 | 21,562 | 23,111 | 22,358 |
-| Typical | 500 | 1,342 | 3,426 | 24,041 | 17,428 | 37,658 | 46,766 | 65,078 |
-| Keen | 896 | 3,329 | 30,375 | 35,076 | 42,858 | 69,382 | 89,654 | 101,342 |
-| Keen **without Renown** | 896 | 3,329 | 30,375 | 35,956 | 243,986 | 595,196 | 1,170,523 | 1,745,546 |
+| Casual | 347 | 771 | 1,534 | 4,258 | 8,034 | 20,114 | 22,191 | 22,827 |
+| Typical | 509 | 1,373 | 3,623 | 26,802 | 17,355 | 31,821 | 48,472 | 62,837 |
+| Keen | 980 | 3,301 | 32,015 | 40,897 | 40,955 | 63,311 | 97,972 | 114,384 |
+| Keen **without Advertising** | 980 | 3,301 | 32,015 | 43,649 | 266,901 | 627,050 | 1,226,247 | 1,826,748 |
 
-Renown level on day 60: casual 2, typical 10, keen 19 (+19% on shelf sales). The coin a keen player holds is now what
+Advertising level on day 60: casual 2, typical 10, keen 19 (+19% on shelf sales). The coin a keen player holds is what
 they are saving for the next level (200,000c).
 
 ### Other results (typical, last 300 blades sold)
 
-- 100% polished, average ×1.73; 97% enchanted, average ×3.73, best ×6.5, 2.45 runes per enchanted blade.
-- Over 60 days: 1,848 polishes (70 Mirror, 58 stained), 3,472 runes set (152 Resonant, 414 scars).
-- Income: shop shelves 95%, commissions 4%, challenges and Armory 1%, scrap merchant under 1%.
-- Blades: 49% Short listings, 28% Medium, 15% Long, 5% commissions, 3% scrap merchant, 1% salvage.
-- Coin spent: unlocks 33%, renown 52%, mana draughts 8%, iron and coal 5%, grit 2%.
+- 100% polished, average ×1.73; 99% enchanted, average ×3.96, best ×6.5, 2.74 runes per enchanted blade.
+- Over 60 days: 1,804 polishes (68 Mirror, 56 stained), 3,692 runes set (162 Resonant, 442 scars).
+- Income: shop shelves 95%, commissions 3%, challenges and Armory 1%, scrap merchant under 1%.
+- Blades: 49% Short listings, 29% Medium, 15% Long, 4% commissions, 3% scrap merchant, 1% salvage.
+- Coin spent: unlocks 33%, Advertising 56%, iron and coal 5%, mana draughts 4%, grit 2%.
 
 ### What the sim tells us
 
 - **Targets met:** polishing in the first session, enchanting in the 3rd hour, the top tier over two to eight weeks.
 - **The first two hours earn less than in 01** (polish starts at about ×1.2 with Sandstone). Pacing still holds; if
   playtesters find hour 1–2 slow, lower the Whetstone and Steel Anvil costs first.
-- **Energy stops mattering late** (polishing and enchanting don't use it). Mana and shelf slots are the late limits.
-- **Coin pile fixed:** income is lower and Renown absorbs the rest, with a small, lasting reward.
+- **Energy matters less late** (polishing and enchanting don't use it), but the Smithing level keeps raising it, so a
+  long session needs fewer meals. Mana and shelf slots are the late limits; Enchanting levels loosen mana slowly.
+- **Coin pile fixed:** income is lower and Advertising absorbs the rest, with a small, lasting reward.
 
 ### How the sim works
 
-It uses the real `rules.js` for blade types, rarity, sizes, shine and the forge formula, and the `P` table and `NODES`
-list (= this document) for everything new. Polish uses the exact roll above with a skill curve (0.55 rising to 0.87 with
+It uses the real `rules.js` for blade types, rarity, sizes, shine, the forge formula and the levels (`levelOf`,
+`fuelMax`, `manaMax`, `forgeXp`, `polishXp`, `runeXp`), and the `P` table and `NODES` list (= this document) for
+everything else that is new. Polish uses the exact roll above with a skill curve (0.55 rising to 0.87 with
 practice); rune strength is a curve too (0.58 rising to about 0.82 with the Flint chisel, +0.04/+0.07/+0.10 for better
 chisels, +0.03/+0.05 for more carving time, a little lower for long runes). The imaginary player forges the heaviest
 blade they can afford, polishes everything once enchanting is open, picks the rune and conduit with the best gain per
 mana, buys draughts when they pay for themselves, lists Short in a session and Medium/Long before a break, and buys
-unlocks in the order of `NODES` (Renown only once the tree is complete). Times: forge 25–48 s, polish 25 s, each rune
-15 s, all × 1.35. It compares numbers; it does not predict a real player to the minute.
+unlocks in the order of `NODES` (Advertising only once the tree is complete). Times: forge 25–48 s, polish 25 s, each
+rune 15 s, all × 1.35. It compares numbers; it does not predict a real player to the minute.
+
+---
+
+## 11. Levels: Smithing and Enchanting
+
+Two levels that grow on their own as you play, separate from everything bought in the Workshop. Saved as
+`c.xp = { smith, ench }` (total XP); the level is worked out from the total.
+
+| | Smithing | Enchanting |
+|---|---|---|
+| XP from | every forged blade (hand forge and quick forge) and every polish | every rune that takes (set or Resonant) |
+| No XP for | day labour | a fizzle or a backlash (the scar is punishment enough, and risky conduits shouldn't pay XP for failing) |
+| Each level gives | **+1 max energy** | **+2 max mana** |
+| Levels | 1 to **21**: max energy 10 → **30** | 1 to **16**: max mana 20 → **50** |
+| Meals / draughts | can fill energy to max + 20 (30 → 50) | can fill mana to max + 20 (40 → 70) |
+
+Energy and mana keep refilling by themselves (+1 every 3 min / every 2 min) up to the current max, so a new level is
+felt at once: the meter climbs past the old limit. A level-up shows a note: "**Smithing level 4!** Max energy 13."
+
+### XP per action
+
+| Action | Common | Fine | Masterwork | Heirloom | Legendary |
+|---|---|---|---|---|---|
+| Forge (Smithing) | 10 | 14 | 22 | 40 | 90 |
+| Cracked blade (any) | 3 | | | | |
+| Polish (Smithing) | 6 | 8 | 13 | 24 | 54 |
+| Mirror polish | +25 | | | | |
+| Rune (Enchanting) | rune xp × 1 | × 1.2 | × 1.5 | × 2 | × 3 |
+
+Rune xp: Ember 4, Frost 5, Valor 6, Storm 7, Fortune 8, Ward 9, Hearth 10, Dawn 12; a Resonant rune ×1.5 (rounded).
+So a Dawn rune on a Legendary blade gives 36, or 54 if Resonant.
+
+### The curve (both levels share it)
+
+Climbing from level n to n + 1 takes `round(80 × n^1.5)` XP:
+
+| Level | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12 | 14 | 16 | 18 | 21 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| This level takes | 80 | 226 | 416 | 640 | 894 | 1,482 | 2,160 | 2,919 | 3,750 | 4,648 | 5,607 | 7,155 |
+| Total XP | 80 | 306 | 722 | 1,362 | 2,256 | 4,914 | 8,884 | 14,333 | 21,409 | 30,248 | 40,975 | 60,865 |
+
+Early levels come every few minutes (a typical player forges over 20 blades in the first 15 minutes, 10 to 14 XP each);
+later ones take a week. Late in the game a typical player earns about 1,000 XP a day on each level. Enchanting has
+fewer levels because it opens later (day 3) and its XP comes faster once three runes go on every blade.
 
 ---
 
 ## Decisions for the owner to review
 
-1. **Renown** (10,000 × level coin, +1% on shelf sales each) as the endless coin sink. Alternatives: shop decorations, a
+1. **Advertising** (10,000 × level coin, +1% on shelf sales each; first called Renown) as the endless coin sink. Alternatives: shop decorations, a
    prestige reset.
 2. **Fixed mana meter** (20, +1 every 2 min) with conduits as a per-carving choice. Mana draughts get pricier fast
    (+10% each per day).
@@ -512,3 +580,5 @@ unlocks in the order of `NODES` (Renown only once the tree is complete). Times: 
 5. **Scrap merchant at 40%** (a feel question; pacing barely changes from 35% to 50%).
 6. **Backlash scars are permanent** (about 12% of runes in the sim, mostly from Stormglass).
 7. **Styles cost coin and need Armory finds** (10/25/45 types).
+8. **Levels** (section 11): Smithing to 21 (energy 30), Enchanting to 16 (mana 50), one shared curve. No XP for a
+   backlash. If the top levels feel too far away, lower the 1.5 power; if early levels come too fast, raise the 80.

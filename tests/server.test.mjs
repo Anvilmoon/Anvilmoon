@@ -56,6 +56,7 @@ test('forging: the server rolls the blade, a perfect hand forge is grade 88 in o
   assert.equal(r.status, 200, r.error);
   assert.equal(r.out.blade.grade, 88);
   assert.equal(r.out.blade.forger, 'bob');
+  assert.deepEqual(r.out.xp, { smith: R.forgeXp(r.out.blade) }, 'Smithing XP for the forge');
   const c = a.c(); assert.equal(c.fuel, 9); assert.equal(c.iron, 11); assert.equal(c.coal, 7); assert.equal(c.forged, 1);
   if (!r.out.blade.cracked) assert.ok(r.notes.some((n) => /first find/.test(n.text)), 'armory reward note');   // a cracked blade (3% in oil) finds nothing
   assert.deepEqual(a.save, (await B.call('/api/save', { token: a.token })).save);
