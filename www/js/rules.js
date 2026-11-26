@@ -858,8 +858,10 @@ def('chClaim', false, (ctx, a) => {
   Gt[t.id] = 1; s.done++; c.coin += t.pay; gsMark(ctx, 'task'); ctx.out = { pay: t.pay };
 });
 def('gs', false, (ctx, a) => {
-  const id = String(a.id); need(GS_VISITS.includes(id), 'Unknown step.');
+  const id = String(a.id); need(GS_VISITS.includes(id) || id === 'forge' || id === 'task', 'Unknown step.');
   if (id === 'rack') need(ownedOf(ctx.c).length, 'Your rack is empty.');
+  if (id === 'forge') need(ctx.S.slots.some((x) => x && x.forged), 'Forge a blade first.');      // saves from before the step existed
+  if (id === 'task') need(ctx.S.ch && ctx.S.ch.done >= 1, 'Collect a challenge reward first.');
   gsMark(ctx, id);
 });
 def('gsSkip', false, (ctx) => { gsState(ctx.S).fin = 1; });
