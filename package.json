@@ -1,0 +1,16 @@
+{
+  "name": "anvilmoon",
+  "private": true,
+  "description": "Anvilmoon development tools. The game itself (www/) and the server (supabase/) need no build step.",
+  "type": "module",
+  "scripts": {
+    "sync": "node tools/sync-rules.mjs",
+    "test": "node tools/sync-rules.mjs --check && node --test --test-concurrency=1 tests/*.test.mjs",
+    "dev": "node tools/dev.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.6.0",
+    "@electric-sql/pglite-socket": "0.3.0",
+    "deno": "2.9.6"
+  }
+}
