@@ -992,7 +992,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 .qseq.arc .qsteam{background:radial-gradient(circle,rgba(214,196,255,.85),rgba(143,107,255,.35) 45%,transparent 70%) center/100% 100% no-repeat!important;transform-origin:50% 100%}
 .qseq.arc img.qbb{filter:drop-shadow(0 0 10px rgba(143,107,255,.8))}
 @media (prefers-reduced-motion:reduce){.hearth.arc .hearthblade{animation:none}}
-@media (max-width:760px){.hearth.arc{padding:52px 6px 0}.shdmoon{top:46px;width:30%}.hearth.shd .hearthblade{margin-top:24%}}
+@media (max-width:760px){.hearth.arc{padding:52px 6px 0}}
 /* ===== header fit (phones and tablets), records tabs, toasts ===== */
 #toast>*{pointer-events:auto;cursor:pointer}
 .authform input::placeholder{font-size:inherit;opacity:.55}
@@ -1063,11 +1063,11 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
-.hearth.shd{background:radial-gradient(ellipse 60% 70% at 50% 78%,var(--glow,transparent),transparent 75%),radial-gradient(ellipse 34% 60% at 50% 0,rgba(170,160,230,.13),transparent 70%),var(--bricks) 0 0/96px 48px repeat,#14121c;background-blend-mode:normal,normal,luminosity,normal}
-.shdmoon{position:absolute;left:50%;top:44px;width:min(26%,200px);transform:translateX(-50%);image-rendering:pixelated;z-index:0;pointer-events:none}
-.hearth.shd .hearthblade{margin-top:13%}
-.shdveil{position:absolute;left:0;top:34%;bottom:34%;width:0;background:rgba(8,6,16,.62);border-right:3px solid #c9b8ff;z-index:2;pointer-events:none}
-.shdmark{position:absolute;left:50%;top:26%;bottom:26%;width:4px;margin-left:-2px;z-index:3;pointer-events:none;background:linear-gradient(#8a84a6 0 18%,transparent 18% 82%,#8a84a6 82%)}
+.hearth.shd{background:#0e0c14;box-shadow:inset 0 0 0 3px #141110;padding:0!important}
+.shdmoon{display:block;width:100%;height:auto;aspect-ratio:240/96;image-rendering:pixelated;pointer-events:none}
+.hearth.shd .pxanvil{display:none}.hearth.shd .hearthblade{position:absolute;left:50%;top:63%;width:min(760px,76%);max-width:none;margin:0!important;transform:translate(-50%,-50%)}.hearth.shd .heatind{z-index:4}
+.shdveil{position:absolute;left:0;top:30%;bottom:30%;width:3px;margin-left:-1px;background:#c9b8ff;box-shadow:0 0 6px #c9b8ff;z-index:2;pointer-events:none}
+.shdmark{position:absolute;left:50%;top:24%;bottom:24%;width:4px;margin-left:-2px;z-index:3;pointer-events:none;background:linear-gradient(#8a84a6 0 18%,transparent 18% 82%,#8a84a6 82%)}
 .shdmark.ok{background:linear-gradient(#fff6c8 0 18%,transparent 18% 82%,#fff6c8 82%);filter:drop-shadow(0 0 3px #fff6c8)}
 .hearth.shd .spark{background:#cdb8ff}.hearth.shd .spark:nth-child(3n){background:#8f6bff}.hearth.shd .spark:nth-child(4n){background:#fff}
 .hearth.shd ~ .strikebar .z1{background:rgba(143,107,255,.3)}.hearth.shd ~ .strikebar .z2{background:rgba(232,226,255,.6)}.hearth.shd .heatind.ok{color:#d9ccff}
@@ -2379,14 +2379,17 @@ function arcRing(cv,ts){const c=cv.getContext('2d'),{W,H,cx,cy,rx,ry}=ARC,T=F.T,
   for(let k=6;k>=0;k--){const[sx,sy]=arcPos(F.ang-k*.09);P(sx-(k?0:1),sy-(k?0:1),k?1:3,k?1:3,k?`rgba(255,240,200,${(.7-k*.1).toFixed(2)})`:'#ffffff')}const[sx,sy]=arcPos(F.ang);P(sx-2,sy,5,1,'rgba(255,240,200,.6)');P(sx,sy-2,1,5,'rgba(255,240,200,.6)')}
 // Shadowsmiths forge by eclipse: the same anvil and the same billet drawn out into a blade, but the 'heat' is the dark drawn across the moon,
 // and the timing cue is a shadow whose edge sweeps along the blade.
-function shdDraw(ts){const cv=$('shdmoon');if(cv){const c=cv.getContext('2d'),T=F.T,ok=T>=.48&&T<=.88,P=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(Math.round(x),Math.round(y),w,h)},
-    disc=(ex,ey,r,f)=>{c.fillStyle=f;for(let y=-r;y<=r;y++){const w=Math.round(Math.sqrt(r*r-y*y));c.fillRect(ex-w,ey+y,w*2,1)}};
-    c.clearRect(0,0,64,40);if(ok){const a=(.2+.15*Math.sin(ts/170)).toFixed(2);disc(32,20,17,`rgba(190,170,255,${a})`)}
-    disc(32,20,13,'#d9d4ee');disc(28,17,3,'#bdb7da');disc(37,24,2,'#bdb7da');disc(30,26,1,'#c9c3e2');
-    const off=Math.round(30*(1-Math.min(1,T/.7)));c.save();c.globalCompositeOperation='destination-out';disc(32+off,20,13,'#000');c.restore();
-    if(off<26){c.fillStyle=`rgba(20,16,34,.92)`;for(let y=-13;y<=13;y++){const w=Math.round(Math.sqrt(169-y*y));for(let x=-w;x<w;x++){const X=32+off+x,dx=X-32;if(dx*dx+y*y<=169)c.fillRect(X,20+y,1,1)}}}
-    if(ok){c.fillStyle='rgba(225,210,255,.9)';for(let a=0;a<6.283;a+=.035)c.fillRect(Math.round(32+Math.cos(a)*14),Math.round(20+Math.sin(a)*14),1,1)}}
-  const v=$('shdveil');if(v)v.style.width=(F.mx*100).toFixed(2)+'%';const m=$('shdmark');if(m)m.classList.toggle('ok',F.T>=.48&&F.T<=.88)}
+function shdDraw(ts){const cv=$('shdmoon');if(cv){const W=240,H=96,c=cv.getContext('2d'),T=F.T,ok=T>=.48&&T<=.88,P=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(Math.round(x),Math.round(y),w,h)},
+    ell=(ex,ey,rx,ry,f)=>{c.fillStyle=f;for(let y=-ry;y<=ry;y++){const w=Math.round(rx*Math.sqrt(Math.max(0,1-y*y/(ry*ry))));c.fillRect(Math.round(ex)-w,Math.round(ey)+y,w*2,1)}};
+    P(0,0,W,H,'#0e0c14');for(let i=0;i<70;i++)P((i*53)%W,(i*29)%46,1,1,i%3?'#1c1830':'#2a2444');
+    ell(120,30,13,13,'#d9d4ee');ell(116,27,3,3,'#bdb7da');ell(125,34,2,2,'#bdb7da');ell(118,36,1,1,'#c9c3e2');
+    const off=Math.round(30*(1-Math.min(1,T/.7)));ell(120+off,30,13,13,'#0e0c14');
+    if(ok){c.fillStyle=`rgba(215,200,255,${(.55+.3*Math.sin(ts/170)).toFixed(2)})`;for(let a=0;a<6.283;a+=.03)c.fillRect(Math.round(120+Math.cos(a)*14),Math.round(30+Math.sin(a)*14),1,1)}
+    c.fillStyle=`rgba(190,180,240,${(.14*(1-Math.min(1,T/.7))+.035).toFixed(3)})`;c.beginPath();c.moveTo(108,41);c.lineTo(132,41);c.lineTo(182,66);c.lineTo(58,66);c.fill();
+    ell(120,72,106,16,'#15121c');ell(120,69,106,16,'#2a2634');ell(120,67,106,16,'#3a3546');ell(120,66,98,13,'#2f2b3a');
+    const n=F.need,x0=120-(n-1)*8;for(let i=0;i<n;i++){const sc=F.strikes[i],x=x0+i*16;if(sc==null){ell(x,90,4,4,'#3a3546')}else{ell(x,90,4,4,sc>.8?'#e9dcff':sc>.55?'#c9b8ff':sc>.3?'#8a78b8':'#5a4a6a');ell(x+2,90,4,4,'#0e0c14')}}
+    if(T>.88){c.fillStyle=`rgba(0,0,0,${Math.min(.6,(T-.88)*5).toFixed(2)})`;c.fillRect(0,0,W,H)}}
+  const v=$('shdveil');if(v)v.style.left=(F.mx*100).toFixed(2)+'%';const m=$('shdmark');if(m)m.classList.toggle('ok',F.T>=.48&&F.T<=.88)}
 function startForge(labor){const c=C(),t=TYPES[labor?typesOf(c.cls)[1]:c.sel],w=WT[t.wt];let bog=0;
   if(!labor){if(!knows(c,t.wt))return toast(`Learn the ${WT[t.wt].n.toLowerCase()} blade pattern in the Workshop first.`);if(c.fuel<1||c.iron+(c.bog||0)<w.iron||c.coal<w.coal)return toast('You need more materials. Buy supplies at the Market.');
     bog=Math.max(0,w.iron-c.iron);if(c.fuel>=FUEL_MAX)c.fuelTs=Date.now();c.fuel--;c.iron-=w.iron-bog;c.bog=(c.bog||0)-bog;c.coal-=w.coal}
@@ -2395,7 +2398,7 @@ function startForge(labor){const c=C(),t=TYPES[labor?typesOf(c.cls)[1]:c.sel],w=
   F={arc,shd,ang:-Math.PI/2,target:-1,runes:arc?Array.from({length:w.strikes},(_,i)=>({a:i*2*Math.PI/w.strikes-Math.PI/2+.3,g:Math.floor(Math.random()*ARC.GLYPH.length),s:null})):[],type:labor?typesOf(c.cls)[1]:c.sel,labor:!!labor,bog,need:w.strikes,zone:h.zone,cool:h.cool,T:.15,strikes:[],burns:0,cold:0,t0:performance.now(),last:performance.now(),bell:false,mx:0,done:false};
   if(arc)arcNext();renderHUD();renderTabs();
   $('view').innerHTML=`<section class="page forging${arc?' arcforge':''}${shd?' shdforge':''}"><div class="pagehead"><h1>${labor?'A shift at the foreman’s forge':arc?`Enchanting a ${t.n}`:shd?`Forging a ${t.n} under the eclipse`:`Forging a ${t.n}`}</h1><p class="fine">${labor?'His iron, his blade, his coin. ':''}${arc?'Hold to channel mana until it says <b>Inscribe now</b>, then inscribe as the spark crosses the glowing rune.':shd?'Hold to draw the dark across the moon until it says <b>Strike now</b>, then strike as the shadow’s edge crosses the bright mark on the blade.':'Hold the bellows until it says <b>Strike now</b>, then strike as the marker crosses the bright centre.'}</p></div>
-   <div class="hearth${PX.off?'':' px'}${arc?' arc':''}${shd?' shd':''}" id="anvil">${shd?'<canvas id="shdmoon" class="shdmoon" width="64" height="40"></canvas>':''}<div class="hearthblade">${shd?'<div class="shdveil" id="shdveil"></div><i class="shdmark" id="shdmark"></i>':''}${PX.off?bladeSVG({type:F.type,len:100,rarity:0,si:2},{heat:'rgb(52,48,46)',heatId:'hot',noRuler:1,minW:330}):'<canvas id="hotpx" class="pxcv"></canvas>'}</div>${PX.off?ANVIL_SVG:arc?`<canvas id="arcring" class="pxanvil arcring" width="${ARC.W}" height="${ARC.H}"></canvas>`:'<img id="pxanvil" class="pxanvil" alt="">'}<div id="sparks"></div><div class="heatind" id="heatind" aria-live="polite"></div></div>
+   <div class="hearth${PX.off?'':' px'}${arc?' arc':''}${shd?' shd':''}" id="anvil">${shd?'<canvas id="shdmoon" class="shdmoon" width="240" height="96"></canvas>':''}<div class="hearthblade">${shd?'<div class="shdveil" id="shdveil"></div><i class="shdmark" id="shdmark"></i>':''}${PX.off?bladeSVG({type:F.type,len:100,rarity:0,si:2},{heat:'rgb(52,48,46)',heatId:'hot',noRuler:1,minW:330}):'<canvas id="hotpx" class="pxcv"></canvas>'}</div>${PX.off?ANVIL_SVG:arc?`<canvas id="arcring" class="pxanvil arcring" width="${ARC.W}" height="${ARC.H}"></canvas>`:'<img id="pxanvil" class="pxanvil" alt="">'}<div id="sparks"></div><div class="heatind" id="heatind" aria-live="polite"></div></div>
    <div class="forgebar"><div class="pips" id="pips" aria-label="Strikes">${'<span class="pip"></span>'.repeat(F.need)}</div><div class="msg" id="fmsg" aria-live="polite">${arc?'The circle is dark.':shd?'The moon is bright.':'The metal is cold.'}</div></div>
    <div class="strikebar"><div class="z1" style="width:${(arc?9.2:25)*F.zone}%"></div><div class="z2" style="width:${(arc?3.4:9.4)*F.zone}%"></div><div class="mk" id="mk"></div></div>
    <div class="controls" id="ctrls" data-s="cold"><button class="btn big" id="bellows">${arc?'Hold to channel':shd?'Hold to draw the dark':'Hold the bellows'} <kbd>F</kbd></button><button class="btn go big" id="strike">${arc?'Inscribe':'Strike'} <kbd>Space</kbd></button></div>
