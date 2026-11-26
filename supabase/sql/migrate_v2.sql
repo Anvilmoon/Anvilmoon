@@ -44,7 +44,7 @@ alter table public.am_mail enable row level security;
 alter table public.am_auctions enable row level security;
 revoke all on public.am_users, public.am_sessions, public.am_links, public.am_limits, public.am_mail, public.am_auctions from anon, authenticated;
 
--- copy the data across
+-- copy the data across (if an earlier run left copies behind, they are brought up to date)
 insert into public.am_users (uid, username, uname_lc, pass, created, rating, wins, losses, rc, links)
 select u.key, u.value->>'username', lower(u.value->>'username'), u.value->>'pass',
        coalesce((u.value->>'created')::numeric, 0)::bigint, coalesce((u.value->>'rating')::numeric, 1000)::int,
@@ -52,32 +52,33 @@ select u.key, u.value->>'username', lower(u.value->>'username'), u.value->>'pass
        u.value->>'rc', coalesce(u.value->'links', '{}'::jsonb)
 from public.am_state s, jsonb_each(coalesce(s.blob->'users', '{}'::jsonb)) u
 where s.id = 1
-on conflict do nothing;
+on conflict (uid) do update set username = excluded.username, uname_lc = excluded.uname_lc, pass = excluded.pass, created = excluded.created,
+  rating = excluded.rating, wins = excluded.wins, losses = excluded.losses, rc = excluded.rc, links = excluded.links;
 
 insert into public.am_sessions (hash, uid, exp)
 select x.key, x.value->>'uid', (x.value->>'exp')::numeric::bigint
 from public.am_state s, jsonb_each(coalesce(s.blob->'sessions', '{}'::jsonb)) x
 where s.id = 1 and x.value->>'uid' is not null
-on conflict do nothing;
+on conflict (hash) do update set uid = excluded.uid, exp = excluded.exp;
 
 insert into public.am_links (sub, uid)
 select x.key, x.value from public.am_state s, jsonb_each_text(coalesce(s.blob->'links', '{}'::jsonb)) x where s.id = 1
-on conflict do nothing;
+on conflict (sub) do update set uid = excluded.uid;
 
 insert into public.am_limits (key, n, t)
 select x.key, coalesce((x.value->>'n')::numeric, 0)::int, coalesce((x.value->>'t')::numeric, 0)::bigint
 from public.am_state s, jsonb_each(coalesce(s.blob->'limits', '{}'::jsonb)) x where s.id = 1
-on conflict do nothing;
+on conflict (key) do update set n = excluded.n, t = excluded.t;
 
 insert into public.am_mail (id, uid, t, body)
 select x.key, x.value->>'to', coalesce((x.value->>'t')::numeric, 0)::bigint, x.value - 'id' - 'to' - 't'
 from public.am_state s, jsonb_each(coalesce(s.blob->'mail', '{}'::jsonb)) x where s.id = 1 and x.value->>'to' is not null
-on conflict do nothing;
+on conflict (id) do update set uid = excluded.uid, t = excluded.t, body = excluded.body;
 
 insert into public.am_auctions (id, seller, expires, changed, data)
 select x.key, x.value->>'seller', (x.value->>'expires')::numeric::bigint, coalesce((x.value->>'created')::numeric, 0)::bigint, x.value
 from public.am_state s, jsonb_each(coalesce(s.blob->'ah', '{}'::jsonb)) x where s.id = 1
-on conflict do nothing;
+on conflict (id) do update set seller = excluded.seller, expires = excluded.expires, changed = excluded.changed, data = excluded.data;
 
 -- 3. am_state keeps only the Arena, gift campaigns (which gifts went out) and settings (config)
 update public.am_state
