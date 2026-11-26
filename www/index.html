@@ -1197,6 +1197,7 @@ body.rackopen{overflow:visible!important}.drawer{overscroll-behavior:contain}
 .craftopts .qbtn{border-left:6px solid var(--lc,var(--rule))!important}
 .runebtn .rglyph{font-size:28px;color:var(--glow);line-height:1}
 .craftgo{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:12px}
+.devpanel{border:3px dashed #8fb8ff!important;margin-bottom:16px}.devpanel .row2{display:flex;flex-wrap:wrap;gap:8px}
 /* ===== challenges ===== */
 .chstreak{display:flex;align-items:center;gap:14px;margin-bottom:18px}.chfire{font:400 40px/1 var(--display);color:var(--straw);min-width:44px;text-align:center}.chstreak span{display:grid;gap:2px}.chstreak small{color:var(--mute);font-size:14px}
 .chhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin:6px 0 8px}.chhead h2{margin:0}.chhead h2 small{font-size:15px;color:var(--mute);margin-left:8px}
@@ -1241,7 +1242,7 @@ function wealthNow(){let w=0;(A.slots||[]).forEach(c=>{if(c)w+=Math.floor(c.coin
 // keeps this device's copy in local storage, so the game opens instantly next time. Nothing is uploaded: changes reach
 // the server as actions.
 function save(){ENT=null;try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){toast('Your progress couldn’t be saved on this device. It may be out of storage.')}}
-let A=load()||freshAcct();if(!DEV)A.testOdds=false;
+let A=load()||freshAcct();if(!DEV)A.testOdds=false;else if(window.ANVILMOON_TEST)A.testOdds=true;   // npm run dev:test starts in test mode
 A.slots.forEach(c=>c&&c.blades.forEach(b=>{if(b.status==='pending')b.status=b.cracked?'salvaged':'owned'}));
 let F=null,UID=0,revealTok=0,revealId=null;
 const C=()=>AMR.smithOf(A);
@@ -1735,7 +1736,7 @@ function renderTabs(){setHH();const c=needAcct()?null:C();
   if(!['home','forge','workshop','market','shop','auction','arena','chars','armory','records','hall','tasks'].includes(A.tab)||(!c&&!['chars','hall'].includes(A.tab)))A.tab=c?(gsOn()?'home':'forge'):'chars';if(!c)UI.more=false;
   $('tabs').innerHTML=c?navHTML():'';
   let rh=$('rackhandle');if(!rh){rh=document.createElement('div');rh.id='rackhandle';document.body.appendChild(rh)}rh.innerHTML=c&&!F?`<button class="rackhandle" data-action="nav" data-k="rack" aria-expanded="${!!UI.rack}"><span class="rharrow" aria-hidden="true">▲</span><i class="pxico" style="background-image:var(--ico-rack)" aria-hidden="true"></i>Rack <b class="rackn">${owned().length}</b></button>`:'';
-  $('opts').innerHTML=!DEV?'':`<label title="For trying things out: Tempered 1 in 10, Starforged 1 in 40, more Titans, an 8-second dig, auctions of 1 to 6 minutes, and it counts as night with Moonlit at 1 in 3. Real shine odds are 1 in 200 and 1 in 2,000."><input type="checkbox" data-action="odds" ${A.testOdds?'checked':''}> Test mode</label><button class="btn ghost small" data-action="reset" data-confirm="1">Reset all</button>`}
+  $('opts').innerHTML=(DEVSRV&&c?'<button class="btn ghost small" data-action="nav" data-k="chars">Playtest tools</button>':'')+(!DEV?'':`<label title="For trying things out: Tempered 1 in 10, Starforged 1 in 40, more Titans, an 8-second dig, auctions of 1 to 6 minutes, and it counts as night with Moonlit at 1 in 3. Real shine odds are 1 in 200 and 1 in 2,000."><input type="checkbox" data-action="odds" ${A.testOdds?'checked':''}> Test mode</label><button class="btn ghost small" data-action="reset" data-confirm="1">Reset all</button>`)}
 function render(){if(needAcct()){if(!(A.tab==='hall'&&HALL.user))A.tab='chars';UI.rack=false;UI.board=false;UI.mail=false;RACK.open=null}if(TOUR.on)requestAnimationFrame(tourPlace);else if(!needAcct()&&!A.tourDone&&!F&&!revealId&&C()&&!C().forged&&!A.slots.some(x=>x&&x.forged)&&A.tab==='forge'){A.tourDone=1;setTimeout(tourStart,400)}gsVisit();renderHUD();renderTabs();renderDrawer();renderMailbox();renderBoard();if(F)return;
   if(window.__lastTab!==A.tab){window.__lastTab=A.tab;window.scrollTo(0,0)}$('view').innerHTML=conflictBanner()+codeBanner()+tipHTML()+({home:vHome,forge:vForge,rack:vRack,workshop:vWorkshop,market:vMarket,shop:vShop,auction:vAuction,arena:vArena,armory:vArmory,records:vRecords,chars:vChars,hall:vHall,tasks:vTasks}[A.tab]||vChars)();$('view').scrollTop=0;faceTick()}
 
@@ -2163,7 +2164,7 @@ function vChars(){if(needAcct()){const had=A.slots.some(Boolean);if(!NET.authPic
     <form class="smith new" data-slot="0"><h2>${NET.user?NET.user.username:'New smith'}</h2>
       <p class="cls">You start with light War style blades, a rough anvil and a worn hammer. Forge, polish, enchant and sell from your own shop.</p>
       <button class="btn go" type="submit">Create smith</button></form></div>`+SETTINGS_PLATE()+`</section>`;
-  return `<section class="page"><div class="pagehead"><h1>Your smith</h1><p class="fine">One smith, one purse, one rack and one shop.</p></div>${accountPlate()}
+  return `<section class="page"><div class="pagehead"><h1>Your smith</h1><p class="fine">One smith, one purse, one rack and one shop.</p></div>${devPanel()}${accountPlate()}
   <div class="plate smithone"><div class="smithhead"><h2>${portrait(A.look,c.name,'sm')}${c.name} ${(()=>{try{const h=hallSummary();return badgeChip(h.badge)+(h.title?`<span class="htitle">${esc(h.title)}</span>`:'')}catch(e){return ''}})()}</h2><button class="btn go" data-action="hall" data-u="">Open your hall</button></div><dl class="facts"><div><dt>Forged</dt><dd>${c.forged}</dd></div><div><dt>Coin</dt><dd>${fmt(c.coin)}</dd></div><div><dt>On rack</dt><dd>${c.blades.filter(b=>b.status==='owned').length}</dd></div><div><dt>Anvil</dt><dd>${ANVILS[c.anvil].n.replace(' Anvil','')}</dd></div><div><dt>Patterns</dt><dd>${['L','M','H','X'].filter(w=>knows(c,w)).length} of 4</dd></div><div><dt>Styles</dt><dd>${CK.filter(k=>knows(c,k)).length} of ${CK.length}</dd></div><div><dt>Shelves</dt><dd>${c.shelves||3}</dd></div></dl></div>
   `+SETTINGS_PLATE()+`</section>`}
 function SETTINGS_PLATE(){return `  <div class="plate settings"><h2>Your save</h2><p class="fine">${NET.user?'Backed up to your account. A backup code is an extra copy you can keep yourself.':'Saved on this device. Sign in, or copy a backup code, to keep it safe.'}</p>
@@ -2529,6 +2530,15 @@ async function enchantFlow(id){if(CRAFT.on||F)return;let c=C(),b=blade(id);if(!c
   await EnchantUI.showResult(el,out);closeCraftOverlay();render()}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&CRAFT.on&&CRAFT.ask)CRAFT.ask({cp:'cancel'})});
 
+// =============== PLAYTEST TOOLS: only on the local copy (tools/dev.mjs answers /dev/ping and /dev/grant; the real server doesn't) ===============
+let DEVSRV=null;
+const DEV_GRANTS=[['materials','+5,000 coin & materials'],['polish','Unlock polishing'],['enchant','Unlock enchanting'],['all','Unlock everything']];
+const devPanel=()=>DEVSRV&&C()?`<div class="plate devpanel"><div class="platehead"><h2>Playtest tools</h2><span class="fine">local copy only${DEVSRV.test?' · test mode':''}</span></div><p class="fine">These change your save in the local database. See docs/redesign/PLAYTEST.md.</p><div class="row2">${DEV_GRANTS.map(([k,n])=>`<button class="btn small" data-action="devgrant" data-k="${k}" title="${esc((DEVSRV.grants||{})[k]||'')}">${n}</button>`).join('')}</div></div>`:'';
+async function devGrant(kind){if(!DEVSRV)return;if(!NET.token)return toast('Sign in first.');
+  try{const r=await fetch('/dev/grant',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+NET.token},body:JSON.stringify({kind})}),j=await r.json().catch(()=>({}));
+    if(!r.ok)return toast(esc(j.error||'That didn’t work.'));await loadServerSave(true);SFX.play('coin');toast(esc(j.d||'Done.'),4000)}catch(e){toast('The local server didn’t answer.')}}
+if(/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname))fetch('/dev/ping',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.dev===true){DEVSRV=j;if(!F&&!revealId)render()}}).catch(()=>{});
+
 // =============== ACTIONS ===============
 const blade=id=>C().blades.find(b=>String(b.id)===String(id));
 // what selling these one after another pays (each sale of a type lowers its price a little)
@@ -2811,7 +2821,7 @@ function vHome(){const c=C();if(!c)return vChars();const g=gsState(),nx=g.fin?nu
   const tile=(k,nm,d,b)=>`<button class="hometile ${b?'has':''}" data-action="nav" data-k="${k}"><i class="pxico" style="background-image:var(--ico-${navIco(k)})" aria-hidden="true"></i><span><b>${nm}</b><small>${d}</small></span>${b?`<em>${b}</em>`:''}</button>`;
   const next=nx?`<div class="homenext"><i class="pxico" style="background-image:var(--ico-${navIco(nx[4])})" aria-hidden="true"></i><div><span class="fine">Getting started, step ${dn+1} of ${GS_STEPS.length}</span><h2>${nx[1]}</h2><p>${nx[2]} <b class="homepay">+${nx[3]} coin</b></p></div><button class="btn go big" data-action="nav" data-k="${nx[4]}">${nx[5]}</button></div>
     <details class="homesteps"><summary>All ${GS_STEPS.length} steps <span class="fine">${dn} done</span></summary><ol>${GS_STEPS.map(s=>`<li class="${g.d[s[0]]?'ok':s===nx?'now':''}"><span>${g.d[s[0]]?'✓':''}</span>${s[1]}<small>+${s[3]}c</small></li>`).join('')}</ol><button class="linkbtn" data-action="gsskip" data-confirm="1" data-sure="Skip the rest?">Skip getting started</button></details>`:'';
-  return `<section class="page homepage"><div class="pagehead"><h1>${nx&&!dn?'Welcome':'Welcome back'}, ${esc(c.name)}</h1></div>${next}
+  return `<section class="page homepage"><div class="pagehead"><h1>${nx&&!dn?'Welcome':'Welcome back'}, ${esc(c.name)}</h1></div>${devPanel()}${next}
     <h2 class="homeh">Waiting for you</h2>${wait.length?`<div class="hometiles">${wait.map(w=>tile(w[0],w[1],w[3](w[2]),w[2])).join('')}</div>`:'<p class="fine homenone">Nothing right now. Rewards, orders you can fill and mail will show up here.</p>'}
     ${NAV.map(([gr,l])=>`<h2 class="homeh">${gr}</h2><div class="hometiles">${l.filter(i=>navShow(i[0])).map(i=>tile(i[0],i[1],i[2],0)).join('')}</div>`).join('')}</section>`}
 const PAGE_TIPS={forge:['The Forge','Pick a blade, then light the forge. Hold Bellows to heat the metal, tap Strike on the bright mark, and choose a quench.'],
@@ -3389,6 +3399,7 @@ const ACT={
   shelfcancel:el=>{const r=actSync('shelfCancel',{id:el.dataset.id});if(!r)return;shopWatch();toast('Taken off the shelf. It’s back on your rack.');render()},
   polish:el=>{const id=el.dataset.id;if(revealId)closeReveal();polishFlow(id)},
   enchant:el=>{const id=el.dataset.id;if(revealId)closeReveal();enchantFlow(id)},
+  devgrant:el=>devGrant(el.dataset.k),
   drink:()=>{const r=actSync('drink');if(!r)return;toast(`You drink a mana draught: +${r.mana} mana for ${r.p}c.`);render()},
   labor:()=>{const c=C();if(!isBroke(c))return toast('The foreman only hires smiths who are broke.');if(laborLeft(c)<=0)return toast('No more shifts today. Come back tomorrow.');startForge(true)},
   handover:()=>handOver(),

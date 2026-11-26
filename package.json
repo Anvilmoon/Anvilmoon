@@ -6,7 +6,8 @@
   "scripts": {
     "sync": "node tools/sync-rules.mjs",
     "test": "node tools/sync-rules.mjs --check && node --test --test-concurrency=1 tests/*.test.mjs",
-    "dev": "node tools/dev.mjs"
+    "dev": "node tools/dev.mjs",
+    "dev:test": "node tools/dev.mjs --test"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.6.0",
