@@ -1080,6 +1080,9 @@ td.rank{width:38px}span.rank{width:auto}.rectail{margin-top:8px;border-top:3px d
 .mktenergy{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.ebar{height:14px;background:#1e1b19;border:3px solid var(--ink)}.ebar i{display:block;height:100%;background:#e0a24f}
 .mktdem td:first-child{width:45%}
 @media (max-width:1100px){.mktgrid{grid-template-columns:minmax(0,1fr)}}
+.mktcol{container-type:inline-size}.mkt .plate{min-width:0;overflow:hidden}.mkt .qrow{min-width:0}.mkt .qgo{white-space:nowrap}
+@container (max-width:600px){.mkt .qrow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name go" "ctl ctl"}.mkt .qgo{width:auto;min-width:118px}}
+@container (max-width:430px){.mkt .meals{grid-template-columns:1fr 1fr}}
 @media (max-width:760px){.mkt .qrow{grid-template-columns:1fr auto;grid-template-areas:"name go" "ctl ctl"}.mkt .qgo{width:auto;min-width:118px}.mkt .meals{grid-template-columns:1fr 1fr}}
 .fhname{display:flex;align-items:center;gap:12px}.fhname .tag{flex:none;font:700 14px var(--body);margin:0}
 @media (min-width:761px){nav.rail{top:var(--hh,57px)!important;height:calc(100vh - var(--hh,57px))!important}}
@@ -1125,7 +1128,7 @@ body.rackopen{overflow:visible!important}.drawer{overscroll-behavior:contain}
 .pinrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;margin-bottom:12px}
 .pin{display:flex;align-items:center;gap:12px;background:#eadcb6;color:#3a2716;border:3px solid #1a100a;box-shadow:inset 3px 3px 0 #f8efd6,inset -3px -3px 0 #c8b383;padding:8px 12px}
 .pinart{width:110px;flex:none}.pinart>*{width:100%;display:block}.pintxt{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}.pinwant{font:700 20px/1.1 var(--display)}.pinreq{font-size:14px;font-weight:600}.pinreq b{text-shadow:0 0 1px #3a2716,0 1px 0 #3a2716}.pinfrom{font-size:13px;color:#6b563a}
-.pinact{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}.pinact .linkbtn{color:#6b563a;font-size:13px}.pinact .fine{color:#6b563a}.pin.fit{border-color:#3f6b2a}
+.pin{min-width:0;overflow:hidden}.pinact{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 1 auto;max-width:42%;text-align:right;min-width:0}.pinact .btn{white-space:nowrap}.pinact .linkbtn{color:#6b563a;font-size:13px}.pinact .fine{color:#6b563a}.pin.fit{border-color:#3f6b2a}
 @media (max-width:760px){.pinrow{grid-template-columns:1fr}.pinart{width:70px}}
 .fhlab{margin:0 0 5px;font:600 13px var(--body);color:var(--mute)}.fhlab span{color:var(--dim);font-weight:400}
 .cost em{font-style:normal;font-size:13px;color:var(--mute);margin-left:2px}
