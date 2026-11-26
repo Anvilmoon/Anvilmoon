@@ -163,7 +163,10 @@ Do not do any of it without deciding to: it changes the live database.
    in the SQL editor.
 2. **Move the database.** In the SQL editor, run `supabase/sql/migrate_v2.sql`, then `supabase/sql/am_records.sql`.
    (The migration keeps its own copy of the old shared row in `am_state_backup` too.)
-3. **Deploy the server.** `node tools/sync-rules.mjs`, then `supabase functions deploy api`.
+3. **Deploy the server.** `node tools/sync-rules.mjs`, then
+   `supabase functions deploy api --project-ref macpadytmqfjmczimoid --use-api --no-verify-jwt`.
+   The `--no-verify-jwt` flag matters: the game signs in with its own tokens, not Supabase ones, and without the flag
+   Supabase refuses every request with "Missing authorization header".
 4. **Deploy the game.** Merge to `main`; Vercel publishes `www/`. The new `sw.js` version makes installed games
    update. A tab still open on the old game gets "Anvilmoon was updated. Reload the page" when it tries to save.
 5. **Check.** Sign in, forge a blade, sell it, look at Records.
