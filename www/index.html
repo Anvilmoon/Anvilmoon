@@ -1063,6 +1063,17 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+.mktgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}.mktcol{display:flex;flex-direction:column;gap:16px;min-width:0}.mktcol .plate{margin:0}
+.mkt .platehead{gap:12px;margin-bottom:10px}.mkt .platehead h2{margin:0}.mktnote{margin:10px 0 0}
+.mkt .qrow{grid-template-columns:minmax(120px,1fr) auto auto;grid-template-areas:"name ctl go";padding:8px 10px;margin-bottom:6px;background:var(--plate2);border-bottom:0}
+.mkt .qname{flex-direction:column;gap:0;padding-left:34px;position:relative}.mkt .qname b{font-size:17px}.mkt .qname::before{content:'';position:absolute;left:0;top:50%;width:24px;height:24px;margin-top:-12px;background:center/24px 24px no-repeat;image-rendering:pixelated}
+.mkt .qrow[data-m=iron] .qname::before{background-image:var(--ico-iron)}.mkt .qrow[data-m=coal] .qname::before{background-image:var(--ico-coal)}.mkt .qrow[data-m=damascus] .qname::before{background-image:var(--ico-damascus)}.mkt .qrow[data-m=shards] .qname::before{background-image:var(--ico-shards)}.mkt .qrow[data-m=dust] .qname::before{background-image:var(--ico-dust)}
+.mkt .qgo{min-width:140px}.mkt .qrow[data-op=buy] .qgo:not([disabled]){background:var(--straw);color:#2a2018;box-shadow:inset 3px 3px 0 #fbe7a1,inset -3px -3px 0 #a8742c}
+.mkt .meals{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.mktenergy{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.ebar{height:14px;background:#1e1b19;border:3px solid var(--ink)}.ebar i{display:block;height:100%;background:#e0a24f}
+.mktdem td:first-child{width:45%}
+@media (max-width:1100px){.mktgrid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.mkt .qrow{grid-template-columns:1fr auto;grid-template-areas:"name go" "ctl ctl"}.mkt .qgo{width:auto;min-width:118px}.mkt .meals{grid-template-columns:1fr 1fr}}
 .fhname{display:flex;align-items:center;gap:12px}.fhname .tag{flex:none;font:700 14px var(--body);margin:0}
 @media (min-width:761px){nav.rail{top:var(--hh,57px)!important;height:calc(100vh - var(--hh,57px))!important}}
 body.rackopen{overflow:visible!important}.drawer{overscroll-behavior:contain}
@@ -2202,18 +2213,25 @@ document.addEventListener('change',e=>{if(e.target.id&&e.target.id.startsWith('s
 // the rack search filters as you type
 document.addEventListener('input',e=>{const rs=e.target.closest&&e.target.closest('[data-rack=q],[data-rack=minL]');if(rs){RACK[rs.dataset.rack]=rs.value;render()}});
 document.addEventListener('change',e=>{const row=e.target.closest('.qrow');if(row&&e.target.matches('input'))qSync(row,+e.target.value)});
-function vMarket(){const c=C(),own=owned(),mine=typesOf(c.cls);
-  const dem=mine.map(k=>{const d=c.demand[k],col=d>1.1?'var(--verd)':d<.8?'var(--red)':'var(--straw)';return `<tr><td>${TYPES[k].n}</td><td><div class="dbar"><i style="width:${Math.min(100,d/1.6*100)}%;background:${col}"></i></div></td><td class="n" style="color:${col}">×${d.toFixed(2)}</td></tr>`}).join('');
-  const sup=(lbl,note,btn)=>`<tr><td>${lbl}<span class="fine"> ${note}</span></td><td class="n">${btn}</td></tr>`;
-  return `<section class="page"><div class="pagehead"><h1>Market</h1></div>
-  <div class="marketstack"><div>
-   <div class="plate tavern"><div class="platehead"><h2>The tavern</h2>${mealsToday(c)?`<span class="tag up" title="Each meal today raises prices 5%. They reset at dawn.">Prices ▲ ${mealsToday(c)*5}%</span>`:''}</div>
-    ${Object.entries(MEALS).map(([k,m])=>{const p=mealPrice(c,k),full=c.fuel+m.e>ENERGY_CAP;return `<div class="meal" title="${m.d} ${(p/m.e).toFixed(1)}c per energy."><div><b>${m.n}</b> <span class="mealE">+${m.e} energy</span></div><button class="btn small" data-action="eat" data-k="${k}" ${c.coin>=p&&!full?'':'disabled'}>${full?'Full':`${p}c${p>m.p?' <span class="pup">▲</span>':''}`}</button></div>`}).join('')}</div>
-   <div class="plate"><h2>Supplies</h2>
-    <h3 class="qhead">Buy</h3>${qRow('buy','iron','Iron',PRICES.iron,Math.floor(c.coin/PRICES.iron),c.iron)}${qRow('buy','coal','Coal',PRICES.coal,Math.floor(c.coin/PRICES.coal),c.coal)}${qRow('buy','damascus','Damascus',PRICES.damascus,Math.floor(c.coin/PRICES.damascus),c.damascus,'from the smelter')}
-    <h3 class="qhead">Sell</h3>${qRow('sell','damascus','Damascus',SELLMAT.damascus,c.damascus,c.damascus)}${qRow('sell','shards','Star-shards',SELLMAT.shards,c.shards,c.shards)}
-    <h3 class="qhead">Refine</h3>${qRow('refine','dust','Star-shards from star-dust',10,Math.floor(c.dust/10),c.dust,'10 dust each')}
-</div>
+function vMarket(){const c=C(),mine=typesOf(c.cls);
+  const hot=mine.map(k=>[k,c.demand[k]]).filter(([k,d])=>d!=null&&(d>1.1||d<.8)).sort((a,b)=>b[1]-a[1]),top=hot.filter(x=>x[1]>1.1).slice(0,6),low=hot.filter(x=>x[1]<.8).slice(-4);
+  const dem=[...top,...low].map(([k,d])=>{const col=d>1.1?'var(--verd)':'var(--red)';return `<tr><td>${TYPES[k].n}</td><td><div class="dbar"><i style="width:${Math.min(100,d/1.6*100)}%;background:${col}"></i></div></td><td class="n" style="color:${col}">${d>1.1?'▲':'▼'} ×${d.toFixed(2)}</td></tr>`}).join('');
+  const up=mealsToday(c)*5;
+  return `<section class="page mkt"><div class="pagehead"><h1>Market</h1></div>
+  <div class="mktgrid"><div class="mktcol">
+   <div class="plate"><div class="platehead"><h2>Supplies</h2><span class="supcoin"><i class="pxi" style="background-image:var(--ico-coin)" aria-hidden="true"></i>${fmt(c.coin)}c to spend</span></div>
+    ${qRow('buy','iron','Iron',PRICES.iron,Math.floor(c.coin/PRICES.iron),c.iron)}${qRow('buy','coal','Coal',PRICES.coal,Math.floor(c.coin/PRICES.coal),c.coal)}${qRow('buy','damascus','Damascus',PRICES.damascus,Math.floor(c.coin/PRICES.damascus),c.damascus,'from the smelter')}</div>
+   <div class="plate"><div class="platehead"><h2>Sell and refine</h2></div>
+    ${qRow('sell','damascus','Damascus',SELLMAT.damascus,c.damascus,c.damascus)}${qRow('sell','shards','Star-shards',SELLMAT.shards,c.shards,c.shards)}${qRow('refine','dust','Star-dust',10,Math.floor(c.dust/10),c.dust,'10 make 1 star-shard')}
+    <p class="fine mktnote">To sell a blade, open it on your Rack.</p></div>
+  </div><div class="mktcol">
+   <div class="plate tavern"><div class="platehead"><h2>The tavern</h2>${up?`<span class="tag up" title="Each meal today raises prices 5%. They reset at dawn.">Prices ▲ ${up}% today</span>`:''}</div>
+    <div class="mktenergy"><span class="flab">Energy <b>${c.fuel}</b> of ${ENERGY_CAP}</span><div class="ebar"><i style="width:${Math.min(100,c.fuel/ENERGY_CAP*100)}%"></i></div></div>
+    <div class="meals">${Object.entries(MEALS).map(([k,m])=>{const p=mealPrice(c,k),full=c.fuel+m.e>ENERGY_CAP,poor=c.coin<p;return `<button class="mealbtn" data-action="eat" data-k="${k}" ${!poor&&!full?'':'disabled'} title="${m.d} ${(p/m.e).toFixed(1)}c per energy."><b>${m.n}</b><span class="mealE">+${m.e} energy</span><span class="mealp">${full?'Too full':poor?`${p}c · can’t afford`:`${p}c`}</span></button>`}).join('')}</div>
+    <p class="fine mktnote">Every forge uses 1 energy. It also refills by itself, 1 every 3 minutes up to 10. Each meal raises today’s prices 5%.</p></div>
+   <div class="plate"><div class="platehead"><h2>What merchants are paying</h2></div>
+    ${dem?`<table class="ledger tight mktdem"><tbody>${dem}</tbody></table>`:'<p class="fine">Every blade sells at its usual price right now.</p>'}
+    <p class="fine mktnote">Prices for your blades today. Selling a type pushes its price down for a while.</p></div>
   </div></div></section>`}
 
 const UI={armCls:null,recCls:null};
