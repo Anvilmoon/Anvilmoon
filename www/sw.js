@@ -1,6 +1,6 @@
 // Anvilmoon offline support: caches the game so it loads with no connection.
 // Bump VERSION whenever you deploy changes so players get the new files.
-const VERSION = 'anvilmoon-1.16.0-scenes';
+const VERSION = 'anvilmoon-1.16.1-scene-art';
 const SHELL = [
   './', './index.html', './js/rules.js', './js/polish.js', './js/enchant.js', './js/scene.js', './art/art.json', './manifest.webmanifest',
   './fonts/jacquarda-bastarda-9-latin-400-normal.woff2', './fonts/pixelify-sans-latin-400-normal.woff2',

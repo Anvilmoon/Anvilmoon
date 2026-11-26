@@ -1,3 +1,29 @@
 {
-  "files": []
+  "files": [
+    "workshop_bg.png",
+    "shop_bg.png",
+    "workshop_forge.png",
+    "workshop_patterns.png",
+    "workshop_hammers.png",
+    "workshop_anvil.png",
+    "workshop_barrel.png",
+    "workshop_coal.png",
+    "workshop_iron.png",
+    "workshop_bench.png",
+    "workshop_stone.png",
+    "workshop_bottles.png",
+    "workshop_table.png",
+    "workshop_runebook.png",
+    "workshop_chisel.png",
+    "workshop_conduit.png",
+    "workshop_door.png",
+    "shop_backdoor.png",
+    "shop_board.png",
+    "shop_racks.png",
+    "shop_counter.png",
+    "shop_crate.png",
+    "shop_flyers.png",
+    "shop_scrap.png",
+    "shop_street.png"
+  ]
 }

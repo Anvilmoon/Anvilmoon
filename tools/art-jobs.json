@@ -1,0 +1,177 @@
+[
+ {
+  "name": "workshop_bg",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Redraw this exact room as an empty background for a 2D game, in exactly the same pixel art style, pixel size, palette, camera and room shape. Keep the brick back wall, the wooden ceiling beam, the wooden corner posts and side walls, and the plank floor. REMOVE every object: no forge, no chimney hood, no fire, no bellows, no anvil, no barrel, no sacks, no hammers or rack, no workbench, no grinding wheel, no table, no book, no crystal, no door. Where those things were, the back wall is plain brick and the floor is plain planks. Add one small square window with a wooden frame high on the back wall slightly right of the centre, showing a dark blue night sky with a small moon. A warm orange firelight glow comes from the left side of the room; the right side is darker. No text, no characters, no UI."
+ },
+ {
+  "name": "shop_bg",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Using the attached picture as the style reference (same pixel art style, chunky pixel size, warm dark palette, camera and room shape, seen straight from the front like a stage), draw the front room of the same smithy: its small shop, completely empty. The back wall has dark vertical wooden panels on the upper part, a horizontal wooden dado rail at about 45% of the image height, darker wooden wainscot panels below it; a wooden ceiling beam on top and wooden posts at both sides; a grey-brown stone flagstone floor across the lower quarter. One window high on the right part of the back wall shows night rooftops under a dark blue sky. One iron oil lamp hangs on a chain from the ceiling beam in the middle and casts a warm yellow pool of light on the wall. Leave everything else empty: no counter, no shelves, no doors, no furniture, no characters, no text, no UI."
+ },
+ {
+  "name": "workshop_forge",
+  "size": "1024x1536",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a blacksmith forge like the one in the reference: a tall dark brick chimney hood on top, below it a brick body with an arched opening in the middle with glowing orange fire and coals, a stone hearth ledge, and a wooden leather bellows leaning against its right side. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_patterns",
+  "size": "1024x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a small wooden board hanging on a nail, with four pinned parchment sheets showing simple dark sword blade outline drawings. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_hammers",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a short wooden wall rack holding three blacksmith hammers hanging head-up side by side, like the hammer rack in the reference. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_anvil",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a heavy dark iron anvil with its horn pointing to the left, standing on a short wide tree stump. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_barrel",
+  "size": "1024x1536",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a wooden quench barrel with dark iron hoops and dark water on top, like the barrel in the reference. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_coal",
+  "size": "1024x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: an open burlap sack full of black coal lumps, like the sacks in the reference. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_iron",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a small neat pyramid stack of grey iron ingot bars, three rows. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_bench",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a sturdy empty wooden workbench like the one in the reference, with a flat empty top and a lower shelf holding a few folded cloth rags. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_stone",
+  "size": "1024x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a round grey grinding whetstone wheel on a small wooden frame with a hand crank, a small wooden water trough under the wheel, like the one in the reference. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_bottles",
+  "size": "1024x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: three small corked glass bottles standing in a row, one with blue liquid, one with amber liquid, one with green liquid. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_table",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a dark carved wooden enchanting table like the one in the reference, with a purple gold-trimmed cloth draped over the top and hanging down the front, the top empty. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure green (#00FF00) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_runebook",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: an open old leather-bound book lying flat, seen slightly from above, cream pages with a few large bold glowing violet rune symbols on each page. It will be shown very small (about 24 pixels wide in the game), so use big simple shapes, very few large pixels, strong contrast and a clear silhouette. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure green (#00FF00) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_chisel",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a steel chisel and a wooden mallet lying flat on their sides next to each other, both pointing to the right: the mallet on the left, the chisel on the right, both horizontal. It will be shown very small (about 24 pixels wide in the game), so use big simple shapes, very few large pixels, strong contrast and a clear silhouette. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_conduit",
+  "size": "1024x1536",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a glowing violet crystal standing on a slim tall bronze stand, like the crystal in the reference. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure green (#00FF00) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "workshop_door",
+  "size": "1024x1536",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a closed heavy wooden plank door in a stone frame, with black iron strap hinges and a ring handle, and a small wooden sign with a painted gold coin hanging on the door. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_backdoor",
+  "size": "1024x1536",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a closed plain wooden plank door in a wooden frame, with iron hinges and a handle, and a small wooden sign with a painted iron anvil hanging on the door. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_board",
+  "size": "1024x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a cork notice board in a wooden frame with three small paper notices pinned to it (blank paper with faint grey scribble lines, no readable text). Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_racks",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: two long empty wooden wall shelves, one above the other with a gap between them, each a thick plank on dark iron brackets, nothing on them. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_counter",
+  "size": "1536x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a long wooden shop counter seen from the front, with a small brass cash box and a few gold coins on top. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_crate",
+  "size": "1024x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a low open wooden crate, wider than tall, with four long flat new pale-yellow wooden boards lying in it and sticking out of the top at a slant, each board a clean straight rectangle with a dark outline. It will be shown very small (about 24 pixels wide in the game), so use big simple shapes, very few large pixels, strong contrast and a clear silhouette. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_flyers",
+  "size": "1024x1536",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: three small paper flyers nailed up overlapping and slightly crooked, blank paper with faint scribble lines (no readable text). Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_scrap",
+  "size": "1024x1024",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a small wooden hand cart with two wheels, heaped with scrap metal, rusty iron pieces and broken sword blades, with a little blank paper sign on a stick. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ },
+ {
+  "name": "shop_street",
+  "size": "1024x1536",
+  "quality": "medium",
+  "ref": "art-src/style_a.png",
+  "prompt": "Match the attached reference picture exactly in art style: side-view 16-bit pixel art with crisp chunky square pixels (no anti-aliasing, no blur, no smooth gradients), the same limited warm dark palette (dark brick, timber browns, iron greys, warm orange firelight), dark outlines and simple 2-3 tone shading, lit warmly from the left. Draw only ONE isolated object as a game sprite: a closed wooden front door with a small glass window pane in its upper part showing dark blue night, an iron handle, and a small wooden sign with a painted burlap sack hanging on it. Straight front/side view like the reference, the whole object visible and centred, filling about 85% of the image. The background must be a perfectly flat, uniform solid pure magenta (#FF00FF) everywhere around the object, with no gradient, no floor, no wall, no cast shadow, no other objects, no text, no border."
+ }
+]

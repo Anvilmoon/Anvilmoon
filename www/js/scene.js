@@ -9,34 +9,36 @@
   // ---------------------------------------------------------------- the elements
   // key: { scene, src, x, y, w, h (scene units), z (layer order), hot: [x, y, w, h] (optional, relative to the element), draw }
   // bg: the background layer (not clickable). fx: an ambient effect drawn by CSS over the element.
+  // over: a drawing put on top of the PNG (for what changes with the save, like the blades on the racks).
   const ART = {
-    // ---- the Workshop
+    // ---- the Workshop (floor line y 138: the boxes are the generated art's own sizes, docs/redesign/06-scenes.md)
     ws_bg:       { scene: 'workshop', src: 'art/workshop_bg.png',       x: 0,   y: 0,   w: 320, h: 180, z: 0, bg: true, draw: drawWorkshopBg },
-    ws_forge:    { scene: 'workshop', src: 'art/workshop_forge.png',    x: 6,   y: 34,  w: 64,  h: 104, z: 2, fx: 'fire', draw: drawForge },
-    ws_patterns: { scene: 'workshop', src: 'art/workshop_patterns.png', x: 76,  y: 24,  w: 36,  h: 30,  z: 2, draw: drawPatterns },
-    ws_hammer:   { scene: 'workshop', src: 'art/workshop_hammers.png',  x: 78,  y: 60,  w: 32,  h: 24,  z: 2, draw: drawHammers },
-    ws_anvil:    { scene: 'workshop', src: 'art/workshop_anvil.png',    x: 72,  y: 108, w: 42,  h: 30,  z: 4, draw: drawAnvil },
-    ws_barrel:   { scene: 'workshop', src: 'art/workshop_barrel.png',   x: 118, y: 104, w: 24,  h: 34,  z: 4, draw: drawBarrel },
-    ws_coal:     { scene: 'workshop', src: 'art/workshop_coal.png',     x: 30,  y: 146, w: 30,  h: 28,  z: 6, draw: drawCoal },
-    ws_iron:     { scene: 'workshop', src: 'art/workshop_iron.png',     x: 62,  y: 152, w: 34,  h: 22,  z: 6, draw: drawIron },
-    ws_polish:   { scene: 'workshop', src: 'art/workshop_bench.png',    x: 148, y: 98,  w: 58,  h: 40,  z: 3, draw: drawBench },
-    ws_stone:    { scene: 'workshop', src: 'art/workshop_stone.png',    x: 156, y: 72,  w: 28,  h: 30,  z: 4, draw: drawStone },
-    ws_bottles:  { scene: 'workshop', src: 'art/workshop_bottles.png',  x: 186, y: 82,  w: 18,  h: 20,  z: 4, draw: drawBottles },
-    ws_ench:     { scene: 'workshop', src: 'art/workshop_table.png',    x: 212, y: 98,  w: 60,  h: 40,  z: 3, draw: drawTable },
-    ws_book:     { scene: 'workshop', src: 'art/workshop_runebook.png', x: 216, y: 88,  w: 24,  h: 14,  z: 4, draw: drawBook },
-    ws_chisel:   { scene: 'workshop', src: 'art/workshop_chisel.png',   x: 242, y: 92,  w: 16,  h: 10,  z: 4, draw: drawChisel },
-    ws_conduit:  { scene: 'workshop', src: 'art/workshop_conduit.png',  x: 258, y: 62,  w: 14,  h: 40,  z: 4, fx: 'glow', draw: drawConduit },
-    ws_door:     { scene: 'workshop', src: 'art/workshop_door.png',     x: 280, y: 50,  w: 36,  h: 88,  z: 2, draw: drawDoorShop },
-    // ---- the Shop
+    ws_forge:    { scene: 'workshop', src: 'art/workshop_forge.png',    x: 4,   y: 38,  w: 64,  h: 100, z: 2, fx: 'fire', draw: drawForge },
+    ws_patterns: { scene: 'workshop', src: 'art/workshop_patterns.png', x: 80,  y: 20,  w: 29,  h: 30,  z: 2, draw: drawPatterns },
+    ws_hammer:   { scene: 'workshop', src: 'art/workshop_hammers.png',  x: 78,  y: 56,  w: 32,  h: 19,  z: 2, draw: drawHammers },
+    ws_anvil:    { scene: 'workshop', src: 'art/workshop_anvil.png',    x: 72,  y: 102, w: 35,  h: 36,  z: 4, draw: drawAnvil },
+    ws_barrel:   { scene: 'workshop', src: 'art/workshop_barrel.png',   x: 110, y: 104, w: 22,  h: 34,  z: 4, draw: drawBarrel },
+    ws_coal:     { scene: 'workshop', src: 'art/workshop_coal.png',     x: 24,  y: 130, w: 27,  h: 28,  z: 6, draw: drawCoal },
+    ws_iron:     { scene: 'workshop', src: 'art/workshop_iron.png',     x: 54,  y: 136, w: 33,  h: 22,  z: 6, draw: drawIron },
+    ws_polish:   { scene: 'workshop', src: 'art/workshop_bench.png',    x: 140, y: 104, w: 58,  h: 34,  z: 3, draw: drawBench },
+    ws_stone:    { scene: 'workshop', src: 'art/workshop_stone.png',    x: 146, y: 81,  w: 28,  h: 29,  z: 4, draw: drawStone },
+    ws_bottles:  { scene: 'workshop', src: 'art/workshop_bottles.png',  x: 176, y: 97,  w: 20,  h: 13,  z: 4, draw: drawBottles },
+    ws_ench:     { scene: 'workshop', src: 'art/workshop_table.png',    x: 206, y: 99,  w: 60,  h: 39,  z: 3, draw: drawTable },
+    ws_book:     { scene: 'workshop', src: 'art/workshop_runebook.png', x: 207, y: 93,  w: 23,  h: 14,  z: 4, draw: drawBook },
+    ws_chisel:   { scene: 'workshop', src: 'art/workshop_chisel.png',   x: 229, y: 96,  w: 20,  h: 10,  z: 4, draw: drawChisel },
+    ws_conduit:  { scene: 'workshop', src: 'art/workshop_conduit.png',  x: 250, y: 69,  w: 14,  h: 38,  z: 4, fx: 'glow', draw: drawConduit },
+    ws_door:     { scene: 'workshop', src: 'art/workshop_door.png',     x: 268, y: 58,  w: 51,  h: 80,  z: 2, draw: drawDoorShop },
+    // ---- the Shop (floor line y 138)
     sh_bg:       { scene: 'shop', src: 'art/shop_bg.png',         x: 0,   y: 0,   w: 320, h: 180, z: 0, bg: true, draw: drawShopBg },
-    sh_back:     { scene: 'shop', src: 'art/shop_backdoor.png',   x: 4,   y: 50,  w: 34,  h: 88,  z: 2, draw: drawDoorBack },
-    sh_board:    { scene: 'shop', src: 'art/shop_board.png',      x: 44,  y: 24,  w: 46,  h: 38,  z: 2, draw: drawBoard },
-    sh_racks:    { scene: 'shop', src: 'art/shop_racks.png',      x: 96,  y: 18,  w: 100, h: 74,  z: 2, draw: drawRacks },
-    sh_counter:  { scene: 'shop', src: 'art/shop_counter.png',    x: 88,  y: 92,  w: 96,  h: 46,  z: 3, draw: drawCounter },
-    sh_slots:    { scene: 'shop', src: 'art/shop_crate.png',      x: 186, y: 116, w: 24,  h: 22,  z: 4, draw: drawCrate },
-    sh_flyer:    { scene: 'shop', src: 'art/shop_flyers.png',     x: 256, y: 26,  w: 20,  h: 28,  z: 2, draw: drawFlyers },
-    sh_scrap:    { scene: 'shop', src: 'art/shop_scrap.png',      x: 222, y: 102, w: 40,  h: 36,  z: 4, draw: drawScrap },
-    sh_street:   { scene: 'shop', src: 'art/shop_street.png',     x: 282, y: 50,  w: 34,  h: 88,  z: 2, draw: drawDoorStreet },
+    sh_back:     { scene: 'shop', src: 'art/shop_backdoor.png',   x: 2,   y: 62,  w: 43,  h: 76,  z: 2, draw: drawDoorBack },
+    sh_board:    { scene: 'shop', src: 'art/shop_board.png',      x: 171, y: 26,  w: 31,  h: 30,  z: 2, draw: drawBoard },
+    // the racks PNG is only the two shelves; over: the stands, blades and price tags drawn on top (shelf tops at y 24 and 53)
+    sh_racks:    { scene: 'shop', src: 'art/shop_racks.png',      x: 48,  y: 14,  w: 100, h: 74,  z: 2, draw: drawRacks, over: drawRackItems },
+    sh_counter:  { scene: 'shop', src: 'art/shop_counter.png',    x: 92,  y: 92,  w: 96,  h: 46,  z: 3, draw: drawCounter },
+    sh_slots:    { scene: 'shop', src: 'art/shop_crate.png',      x: 192, y: 122, w: 24,  h: 16,  z: 4, draw: drawCrate },
+    sh_flyer:    { scene: 'shop', src: 'art/shop_flyers.png',     x: 178, y: 62,  w: 18,  h: 23,  z: 2, draw: drawFlyers },
+    sh_scrap:    { scene: 'shop', src: 'art/shop_scrap.png',      x: 219, y: 104, w: 40,  h: 34,  z: 4, draw: drawScrap },
+    sh_street:   { scene: 'shop', src: 'art/shop_street.png',     x: 275, y: 62,  w: 43,  h: 76,  z: 2, draw: drawDoorStreet },
   };
 
   // ---------------------------------------------------------------- PNGs: only files listed in art/art.json are tried
@@ -58,7 +60,8 @@
   // one layer's picture: the PNG, or a canvas drawn by mount()
   function layer(k, st) {
     const a = ART[k]; STATE[k] = st || {};
-    if (HAVE.has(a.src)) return `<img class="scimg" src="${a.src}" alt="" draggable="false" data-art="${k}" onerror="SCENE.fail(this)">`;
+    if (HAVE.has(a.src)) return `<img class="scimg" src="${a.src}" alt="" draggable="false" data-art="${k}" onerror="SCENE.fail(this)">` +
+      (a.over ? `<canvas class="scimg" width="${a.w}" height="${a.h}" data-art="${k}" data-over="1" data-st="${esc(JSON.stringify(st || {}))}" style="position:absolute;left:0;top:0"></canvas>` : '');
     return `<canvas class="scimg" width="${a.w}" height="${a.h}" data-art="${k}" data-st="${esc(JSON.stringify(st || {}))}"></canvas>`;
   }
   // items: { key: { label, short (phones), sub, lock, part (no padlock: a part of a locked station), badge, quiet, hide, st, count } }; o: { night }
@@ -77,20 +80,21 @@
     return `<div class="scene sc-${scene} ${o.night ? 'night' : ''}"><div class="scbox">${els}<div class="scnight" aria-hidden="true"></div></div></div>`;
   };
   // a small picture of one element (popups use it)
-  SCENE.icon = function (k, st) { const a = ART[k]; if (!a) return ''; return `<span class="scicon" style="aspect-ratio:${a.w}/${a.h}">${layer(k, st)}</span>`; };
+  SCENE.icon = function (k, st) { const a = ART[k]; if (!a) return ''; return `<span class="scicon" style="position:relative;aspect-ratio:${a.w}/${a.h}">${layer(k, st)}</span>`; };
   // draw every canvas inside root that hasn't been drawn
   SCENE.mount = function (root) {
     (root || document).querySelectorAll('canvas[data-art]:not([data-done])').forEach((cv) => {
       const k = cv.dataset.art, a = ART[k]; if (!a) return;
       let st = {}; try { st = JSON.parse(cv.dataset.st || '{}'); } catch (e) { /* empty */ }
       const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
-      try { a.draw(G(ctx), a.w, a.h, st); } catch (e) { /* a drawing bug never breaks the page */ }
+      try { (cv.dataset.over ? a.over : a.draw)(G(ctx), a.w, a.h, st); } catch (e) { /* a drawing bug never breaks the page */ }
       cv.dataset.done = '1';
     });
   };
   // a PNG that fails to load: swap in the drawing and stop trying that file
   SCENE.fail = function (img) {
     const k = img.dataset.art, a = ART[k]; if (!a) return; HAVE.delete(a.src);
+    const ov = img.parentElement && img.parentElement.querySelector('canvas[data-over]'); if (ov) ov.remove();
     const cv = document.createElement('canvas'); cv.width = a.w; cv.height = a.h; cv.className = 'scimg'; cv.dataset.art = k;
     cv.dataset.st = JSON.stringify(STATE[k] || {}); img.replaceWith(cv); SCENE.mount(cv.parentElement);
   };
@@ -351,6 +355,19 @@
         g.r(x + 1, base - 7, 9, 2, c); g.r(x + 4, base - 5, 3, 3, K.woodHi);
       } else { g.r(x + 3, base - 4, 5, 2, '#2c2118'); }
       g.r(x + 2, base + 6, 7, 4, K.paper); g.r(x + 3, base + 7, 4, 1, '#8a7a62');                 // a price tag
+    }
+  }
+  // over the racks PNG: a stand on every open slot, the listed blades in their rarity colour, a price tag under each
+  function drawRackItems(g, w, h, st) {
+    const slots = Math.max(1, st.slots || 3), filled = st.cols || [];
+    for (let i = 0; i < Math.min(8, slots); i++) {
+      const x = 12 + (i % 4) * 22, base = i < 4 ? 24 : 53, c = filled[i];
+      g.r(x - 1, base - 4, 12, 4, K.ink); g.r(x, base - 3, 10, 2, K.woodHi); g.r(x, base - 1, 10, 1, K.woodLo); // a stand
+      if (c) {                                                                                     // a blade on display, point up
+        g.r(x + 4, base - 19, 3, 14, K.ink); g.r(x + 5, base - 19, 1, 13, K.steel); g.p(x + 5, base - 20, K.ink);
+        g.r(x + 1, base - 7, 9, 2, c); g.r(x + 4, base - 5, 3, 3, K.woodHi);
+      } else g.r(x + 3, base - 3, 5, 1, K.woodDk);
+      g.r(x + 1, base + 2, 9, 5, K.ink); g.r(x + 2, base + 3, 7, 3, K.paper); g.r(x + 3, base + 4, 4, 1, '#8a7a62');     // a price tag on the shelf edge
     }
   }
   function drawCounter(g, w, h, st) {

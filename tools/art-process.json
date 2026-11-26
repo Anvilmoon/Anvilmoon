@@ -1,0 +1,204 @@
+[
+ {
+  "src": "art-src/workshop_bg.png",
+  "out": "www/art/workshop_bg.png",
+  "mode": "bg",
+  "box": [320, 180],
+  "cropY": 0.5,
+  "colors": 64
+ },
+ {
+  "src": "art-src/shop_bg.png",
+  "out": "www/art/shop_bg.png",
+  "mode": "bg",
+  "box": [320, 180],
+  "cropY": 0.5,
+  "colors": 64
+ },
+ {
+  "src": "art-src/workshop_forge.png",
+  "out": "www/art/workshop_forge.png",
+  "mode": "sprite",
+  "box": [64, 104],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_patterns.png",
+  "out": "www/art/workshop_patterns.png",
+  "mode": "sprite",
+  "box": [36, 30],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_hammers.png",
+  "out": "www/art/workshop_hammers.png",
+  "mode": "sprite",
+  "box": [32, 24],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_anvil.png",
+  "out": "www/art/workshop_anvil.png",
+  "mode": "sprite",
+  "box": [36, 36],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_barrel.png",
+  "out": "www/art/workshop_barrel.png",
+  "mode": "sprite",
+  "box": [24, 34],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_coal.png",
+  "out": "www/art/workshop_coal.png",
+  "mode": "sprite",
+  "box": [30, 28],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_iron.png",
+  "out": "www/art/workshop_iron.png",
+  "mode": "sprite",
+  "box": [34, 22],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_bench.png",
+  "out": "www/art/workshop_bench.png",
+  "mode": "sprite",
+  "box": [58, 40],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_stone.png",
+  "out": "www/art/workshop_stone.png",
+  "mode": "sprite",
+  "box": [28, 30],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_bottles.png",
+  "out": "www/art/workshop_bottles.png",
+  "mode": "sprite",
+  "box": [20, 14],
+  "key": "#FF00FF",
+  "colors": 12
+ },
+ {
+  "src": "art-src/workshop_table.png",
+  "out": "www/art/workshop_table.png",
+  "mode": "sprite",
+  "box": [60, 40],
+  "key": "#00FF00",
+  "colors": 20
+ },
+ {
+  "src": "art-src/workshop_runebook.png",
+  "out": "www/art/workshop_runebook.png",
+  "mode": "sprite",
+  "box": [24, 14],
+  "key": "#00FF00",
+  "colors": 12
+ },
+ {
+  "src": "art-src/workshop_chisel.png",
+  "out": "www/art/workshop_chisel.png",
+  "mode": "sprite",
+  "box": [20, 10],
+  "key": "#FF00FF",
+  "colors": 12,
+  "canvas": true
+ },
+ {
+  "src": "art-src/workshop_conduit.png",
+  "out": "www/art/workshop_conduit.png",
+  "mode": "sprite",
+  "box": [14, 40],
+  "key": "#00FF00",
+  "colors": 12
+ },
+ {
+  "src": "art-src/workshop_door.png",
+  "out": "www/art/workshop_door.png",
+  "mode": "sprite",
+  "box": [60, 80],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/shop_backdoor.png",
+  "out": "www/art/shop_backdoor.png",
+  "mode": "sprite",
+  "box": [60, 76],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/shop_board.png",
+  "out": "www/art/shop_board.png",
+  "mode": "sprite",
+  "box": [32, 30],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/shop_racks.png",
+  "out": "www/art/shop_racks.png",
+  "mode": "sprite",
+  "box": [100, 74],
+  "key": "#FF00FF",
+  "colors": 20,
+  "canvas": true
+ },
+ {
+  "src": "art-src/shop_counter.png",
+  "out": "www/art/shop_counter.png",
+  "mode": "sprite",
+  "box": [96, 46],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/shop_crate.png",
+  "out": "www/art/shop_crate.png",
+  "mode": "sprite",
+  "box": [24, 20],
+  "key": "#FF00FF",
+  "colors": 12
+ },
+ {
+  "src": "art-src/shop_flyers.png",
+  "out": "www/art/shop_flyers.png",
+  "mode": "sprite",
+  "box": [18, 24],
+  "key": "#FF00FF",
+  "colors": 12
+ },
+ {
+  "src": "art-src/shop_scrap.png",
+  "out": "www/art/shop_scrap.png",
+  "mode": "sprite",
+  "box": [40, 36],
+  "key": "#FF00FF",
+  "colors": 20
+ },
+ {
+  "src": "art-src/shop_street.png",
+  "out": "www/art/shop_street.png",
+  "mode": "sprite",
+  "box": [60, 76],
+  "key": "#FF00FF",
+  "colors": 20
+ }
+]
