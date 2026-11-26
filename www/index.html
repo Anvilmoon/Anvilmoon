@@ -2383,7 +2383,6 @@ function shdDraw(ts){const cv=$('shdmoon');if(cv){const W=240,H=96,c=cv.getConte
     const off=Math.round(30*(1-Math.min(1,T/.88)));ell(120+off,30,13,13,'#0e0c14');
     c.fillStyle=`rgba(190,180,240,${(.14*(1-Math.min(1,T/.88))+.035).toFixed(3)})`;c.beginPath();c.moveTo(108,41);c.lineTo(132,41);c.lineTo(182,66);c.lineTo(58,66);c.fill();
     ell(120,72,106,16,'#15121c');ell(120,69,106,16,'#2a2634');ell(120,67,106,16,'#3a3546');ell(120,66,98,13,'#2f2b3a');
-    const n=F.need,x0=120-(n-1)*8;for(let i=0;i<n;i++){const sc=F.strikes[i],x=x0+i*16;if(sc==null){ell(x,90,4,4,'#3a3546')}else{ell(x,90,4,4,sc>.8?'#e9dcff':sc>.55?'#c9b8ff':sc>.3?'#8a78b8':'#5a4a6a');ell(x+2,90,4,4,'#0e0c14')}}
     if(T>.88){c.fillStyle=`rgba(0,0,0,${Math.min(.6,(T-.88)*5).toFixed(2)})`;c.fillRect(0,0,W,H)}}}
 function startForge(labor){const c=C(),t=TYPES[labor?typesOf(c.cls)[1]:c.sel],w=WT[t.wt];let bog=0;
   if(!labor){if(!knows(c,t.wt))return toast(`Learn the ${WT[t.wt].n.toLowerCase()} blade pattern in the Workshop first.`);if(c.fuel<1||c.iron+(c.bog||0)<w.iron||c.coal<w.coal)return toast('You need more materials. Buy supplies at the Market.');
