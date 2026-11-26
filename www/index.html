@@ -1962,7 +1962,7 @@ const tourGo=(tab,extra)=>()=>{UI.rack=false;UI.mail=false;UI.board=false;RACK.o
 const TOUR_STEPS=[
  {go:tourGo('forge'),t:'Welcome to Anvilmoon',x:'You’re a smith. Forge blades, hunt for rare ones, sell them, and fight other players. Let’s forge your first blade together. It takes about a minute.'},
  {go:tourGo('forge'),act:1,sel:'.bprow .bp',t:'Pick a blade',x:'Tap a blade to choose what you’ll forge. Heavier blades stay locked until you learn their pattern in the Workshop.'},
- {go:tourGo('forge'),act:1,sel:'[data-action=begin]',skipIf:()=>{if(TOUR.noForge==null)TOUR.noForge=!tourCanForge();return TOUR.noForge},t:'Forge it for real',x:'Tap <b>Light the forge</b>. This uses your real supplies, and the blade is yours to keep.'},
+ {go:tourGo('forge'),act:1,sel:'[data-action=begin]',skipIf:()=>{if(TOUR.noForge==null){tourEnsure();TOUR.noForge=!tourCanForge()}return TOUR.noForge},t:'Forge it for real',x:'Tap <b>Light the forge</b>. This uses your real supplies, and the blade is yours to keep.'},
  {go:()=>{},live:1,noBack:1,sel:'.hearth',skipIf:()=>TOUR.noForge===true,done:()=>!F||F.T>=.48||F.strikes.length>0,t:'Heat the metal',x:()=>F&&F.arc?'Hold <b>Channel</b> (or the F key) until it reads <b>Inscribe now</b>.':'Hold <b>Bellows</b> (or the F key) until the heat reads <b>Strike now</b>.'},
  {go:()=>{},live:1,noBack:1,sel:'.hearth',skipIf:()=>TOUR.noForge===true,done:()=>!F||F.done||F.qing||F.strikes.length>=F.need,t:'Strike',x:()=>F&&F.arc?'Tap <b>Inscribe</b> (or Space) as the spark crosses the glowing rune. Keep channelling between runes. Set every rune.':'Tap <b>Strike</b> (or Space) as the marker crosses the bright centre. Keep the heat up between strikes with the Bellows. Land every strike.'},
  {go:()=>{},act:1,noBack:1,waitSel:1,sel:'#quench .qbtn:not(:disabled)',skipIf:()=>TOUR.noForge===true,done:()=>!F&&!revealId,t:'Quench it',x:()=>document.querySelector('.arcforge')?'Pick a binding. The salt circle is safe. Moonwater and starfire add grade, but the blade might unravel.':'Pick a quench. Oil is safe. Brine and water add grade, but the blade might crack.'},
@@ -2013,7 +2013,11 @@ function tourCanForge(){const c=C();if(!c||F)return !!F;const t=TYPES[c.sel],w=t
 function tourPoll(){clearInterval(TOUR.poll);TOUR.poll=setInterval(()=>{if(!TOUR.on){clearInterval(TOUR.poll);return}const st=TOUR_STEPS[TOUR.i];
   if(st.done&&st.done()){const tg=st.waitSel&&document.querySelector(st.sel);if(!tg){tourStep(1);return}}
   if(st.live||st.waitSel||st.act)tourPlace(true)},220)}
-function tourStart(){if(!C())return;TOUR.on=true;TOUR.i=0;TD.fin={};TOUR.noForge=null;tourShow();tourPoll()}
+const tourNew=()=>!A.slots.some(x=>x&&x.forged);
+// The tour always ends in a real forge: pick a blade the smith can make, and stake a brand-new smith the materials for it.
+function tourEnsure(){const c=C();if(!c||F)return;if(!knows(c,TYPES[c.sel].wt)){c.sel=typesOf(c.cls).find(k=>knows(c,TYPES[k].wt))||c.sel;c.selW=TYPES[c.sel].wt}
+  if(!tourCanForge()&&tourNew()){const w=WT[TYPES[c.sel].wt];c.fuel=Math.max(c.fuel,1);c.iron=Math.max(c.iron,w.iron);c.coal=Math.max(c.coal,w.coal);save()}}
+function tourStart(){if(!C())return;tourEnsure();if(!F&&!tourCanForge()){UI.sup=true;A.tab='forge';render();return toast('The tour has you forge a real blade. Stock up for one forge, then press <b>How to forge</b> again.',5200)}TOUR.on=true;TOUR.i=0;TD.fin={};TOUR.noForge=null;tourShow();tourPoll()}
 function tourEnd(){TOUR.on=false;clearInterval(TOUR.poll);if(F||revealId||document.querySelector('.qseq')){A.tourDone=1;A.tutDone=1;save();const el=$('tour');if(el)el.innerHTML='';return}tourDemoRun(null);A.tourDone=1;A.tutDone=1;save();const el=$('tour');if(el)el.innerHTML='';UI.rack=false;UI.sup=false;A.tab=gsOn()?'home':'forge';render()}
 function tourStep(d){let i=TOUR.i+d;while(i>0&&i<TOUR_STEPS.length-1&&TOUR_STEPS[i].skipIf&&TOUR_STEPS[i].skipIf())i+=d;TOUR.i=Math.max(0,Math.min(TOUR_STEPS.length-1,i));tourShow()}
 function tourShow(){const st=TOUR_STEPS[TOUR.i],i=TOUR.i;st.go();tourDemoRun(st.demo);requestAnimationFrame(()=>requestAnimationFrame(tourPlace));setTimeout(()=>{if(TOUR.on&&TOUR.i===i)tourPlace()},380)}
@@ -2025,7 +2029,7 @@ function tourPlace(poll){if(!TOUR.on)return;let el=$('tour');if(!el){el=document
    if(poll&&key===TOUR.key)return;TOUR.key=key;
    if(t0&&TOUR.seen!==TOUR.i){TOUR.seen=TOUR.i;poll=false}   // the first time a step's button is on screen, scroll it into view
    if(s0.live&&t0){const k=TOUR_STEPS.slice(0,TOUR.i+1).filter(x=>!(x.skipIf&&x.skipIf())).length,n=TOUR_STEPS.filter(x=>!(x.skipIf&&x.skipIf())).length;
-     el.innerHTML=`<div class="tring live" style="left:${rr.left-6}px;top:${rr.top-6}px;width:${rr.width+12}px;height:${rr.height+12}px"></div><div class="tcard plate tlive" role="dialog" aria-live="polite"><div class="tstep">${k} of ${n}</div><h3>${s0.t}</h3><p>${typeof s0.x==='function'?s0.x():s0.x}</p><div class="tbtns"><button class="btn ghost small" data-action="tourend">Skip tour</button></div></div>`;return}}
+     el.innerHTML=`<div class="tring live" style="left:${rr.left-6}px;top:${rr.top-6}px;width:${rr.width+12}px;height:${rr.height+12}px"></div><div class="tcard plate tlive" role="dialog" aria-live="polite"><div class="tstep">${k} of ${n}</div><h3>${s0.t}</h3><p>${typeof s0.x==='function'?s0.x():s0.x}</p><div class="tbtns">${tourNew()?'':'<button class="btn ghost small" data-action="tourend">Skip tour</button>'}</div></div>`;return}}
   const st=TOUR_STEPS[TOUR.i],n=TOUR_STEPS.filter(x=>!(x.skipIf&&x.skipIf())).length,k=TOUR_STEPS.slice(0,TOUR.i+1).filter(x=>!(x.skipIf&&x.skipIf())).length;
   const tg=st.sel&&[...document.querySelectorAll(st.sel)].find(e=>e.offsetParent!==null||getComputedStyle(e).position==='fixed');
   const phone=innerWidth<=760,pad=8;let tall=false;
@@ -2039,7 +2043,7 @@ function tourPlace(poll){if(!TOUR.on)return;let el=$('tour');if(!el){el=document
   const act=!!(st.act&&r),locked=!!(st.demo&&!TD.fin[st.demo]);
   el.innerHTML=`<div class="tblock ${r?'':'dark'} ${act?'pass':''}"></div>${ring}<div class="tcard plate ${!r?'center':''} ${st.demo?'wide':''} ${phone&&r?'dock':''}" style="${pos}" role="dialog" aria-live="polite" aria-label="Tour">
     <div class="tstep">${k} of ${n}</div><h3>${st.t}</h3>${st.demo?tourDemoHTML(st.demo):''}<p>${typeof st.x==='function'?st.x():st.x}</p>${act&&TOUR.i===TOUR_STEPS.findIndex(x=>x.act)?'<p class="tdo">Tap the highlighted one to carry on.</p>':''}
-    <div class="tbtns"><button class="btn ghost small" data-action="tourend">${TOUR.i===TOUR_STEPS.length-1?'Close':'Skip tour'}</button><span></span>${TOUR.i>0&&!st.noBack?'<button class="btn small" data-action="tourback">Back</button>':''}${act?'':`<button class="btn go small" data-action="tournext" ${locked?'disabled title="Finish the practice first"':''}>${TOUR.i===TOUR_STEPS.length-1?'Start forging':'Next'}</button>`}</div></div>`;
+    <div class="tbtns">${tourNew()&&TOUR.i<TOUR_STEPS.length-1?'<span></span>':`<button class="btn ghost small" data-action="tourend">${TOUR.i===TOUR_STEPS.length-1?'Close':'Skip tour'}</button>`}<span></span>${TOUR.i>0&&!st.noBack?'<button class="btn small" data-action="tourback">Back</button>':''}${act?'':`<button class="btn go small" data-action="tournext" ${locked?'disabled title="Finish the practice first"':''}>${TOUR.i===TOUR_STEPS.length-1?'Start forging':'Next'}</button>`}</div></div>`;
   if(st.demo==='forge'){const bb=$('tdbell'),on=e=>{e.preventDefault();TD.hold=true},off=()=>{TD.hold=false};if(bb){bb.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(v=>bb.addEventListener(v,off))}const sk=$('tdstrike');if(sk)sk.addEventListener('click',tdStrike)}
   if(phone&&r&&!tall){const card=el.querySelector('.tcard');const ch=card.offsetHeight,navH=(document.querySelector('nav.rail')||{}).offsetHeight||0;
     if(r.bottom>innerHeight-ch-navH-20){card.classList.remove('dock');card.classList.add('docktop')}}}
