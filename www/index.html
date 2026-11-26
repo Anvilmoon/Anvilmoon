@@ -1066,12 +1066,9 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 .hearth.shd{background:#0e0c14;box-shadow:inset 0 0 0 3px #141110;padding:0!important}
 .shdmoon{display:block;width:100%;height:auto;aspect-ratio:240/96;image-rendering:pixelated;pointer-events:none}
 .hearth.shd .pxanvil{display:none}.hearth.shd .hearthblade{position:absolute;left:50%;top:63%;width:min(760px,76%);max-width:none;margin:0!important;transform:translate(-50%,-50%)}.hearth.shd .heatind{z-index:4}
-.shdveil{position:absolute;left:0;top:30%;bottom:30%;width:3px;margin-left:-1px;background:#c9b8ff;box-shadow:0 0 6px #c9b8ff;z-index:2;pointer-events:none}
-.shdmark{position:absolute;left:50%;top:24%;bottom:24%;width:4px;margin-left:-2px;z-index:3;pointer-events:none;background:linear-gradient(#8a84a6 0 18%,transparent 18% 82%,#8a84a6 82%)}
-.shdmark.ok{background:linear-gradient(#fff6c8 0 18%,transparent 18% 82%,#fff6c8 82%);filter:drop-shadow(0 0 3px #fff6c8)}
 .hearth.shd .spark{background:#cdb8ff}.hearth.shd .spark:nth-child(3n){background:#8f6bff}.hearth.shd .spark:nth-child(4n){background:#fff}
 .hearth.shd ~ .strikebar .z1{background:rgba(143,107,255,.3)}.hearth.shd ~ .strikebar .z2{background:rgba(232,226,255,.6)}.hearth.shd .heatind.ok{color:#d9ccff}
-.page.forging.struck .shdveil,.page.forging.struck .shdmark{display:none}
+
 main{isolation:isolate}
 .recgrid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}.recgrid2 .recboard{max-width:none;margin:0}.recgrid2 .rechead h2{text-align:left}
 .recside{margin:0!important}.recboard .ledger{table-layout:fixed;width:100%}.recside h2{margin:0 0 8px}.recside tr[data-action]{cursor:pointer}.recside tr[data-action]:hover td{background:rgba(226,194,117,.08)}.recside .fine{margin:8px 0 0}
@@ -2383,13 +2380,11 @@ function shdDraw(ts){const cv=$('shdmoon');if(cv){const W=240,H=96,c=cv.getConte
     ell=(ex,ey,rx,ry,f)=>{c.fillStyle=f;for(let y=-ry;y<=ry;y++){const w=Math.round(rx*Math.sqrt(Math.max(0,1-y*y/(ry*ry))));c.fillRect(Math.round(ex)-w,Math.round(ey)+y,w*2,1)}};
     P(0,0,W,H,'#0e0c14');for(let i=0;i<70;i++)P((i*53)%W,(i*29)%46,1,1,i%3?'#1c1830':'#2a2444');
     ell(120,30,13,13,'#d9d4ee');ell(116,27,3,3,'#bdb7da');ell(125,34,2,2,'#bdb7da');ell(118,36,1,1,'#c9c3e2');
-    const off=Math.round(30*(1-Math.min(1,T/.7)));ell(120+off,30,13,13,'#0e0c14');
-    if(ok){c.fillStyle=`rgba(215,200,255,${(.55+.3*Math.sin(ts/170)).toFixed(2)})`;for(let a=0;a<6.283;a+=.03)c.fillRect(Math.round(120+Math.cos(a)*14),Math.round(30+Math.sin(a)*14),1,1)}
-    c.fillStyle=`rgba(190,180,240,${(.14*(1-Math.min(1,T/.7))+.035).toFixed(3)})`;c.beginPath();c.moveTo(108,41);c.lineTo(132,41);c.lineTo(182,66);c.lineTo(58,66);c.fill();
+    const off=Math.round(30*(1-Math.min(1,T/.88)));ell(120+off,30,13,13,'#0e0c14');
+    c.fillStyle=`rgba(190,180,240,${(.14*(1-Math.min(1,T/.88))+.035).toFixed(3)})`;c.beginPath();c.moveTo(108,41);c.lineTo(132,41);c.lineTo(182,66);c.lineTo(58,66);c.fill();
     ell(120,72,106,16,'#15121c');ell(120,69,106,16,'#2a2634');ell(120,67,106,16,'#3a3546');ell(120,66,98,13,'#2f2b3a');
     const n=F.need,x0=120-(n-1)*8;for(let i=0;i<n;i++){const sc=F.strikes[i],x=x0+i*16;if(sc==null){ell(x,90,4,4,'#3a3546')}else{ell(x,90,4,4,sc>.8?'#e9dcff':sc>.55?'#c9b8ff':sc>.3?'#8a78b8':'#5a4a6a');ell(x+2,90,4,4,'#0e0c14')}}
-    if(T>.88){c.fillStyle=`rgba(0,0,0,${Math.min(.6,(T-.88)*5).toFixed(2)})`;c.fillRect(0,0,W,H)}}
-  const v=$('shdveil');if(v)v.style.left=(F.mx*100).toFixed(2)+'%';const m=$('shdmark');if(m)m.classList.toggle('ok',F.T>=.48&&F.T<=.88)}
+    if(T>.88){c.fillStyle=`rgba(0,0,0,${Math.min(.6,(T-.88)*5).toFixed(2)})`;c.fillRect(0,0,W,H)}}}
 function startForge(labor){const c=C(),t=TYPES[labor?typesOf(c.cls)[1]:c.sel],w=WT[t.wt];let bog=0;
   if(!labor){if(!knows(c,t.wt))return toast(`Learn the ${WT[t.wt].n.toLowerCase()} blade pattern in the Workshop first.`);if(c.fuel<1||c.iron+(c.bog||0)<w.iron||c.coal<w.coal)return toast('You need more materials. Buy supplies at the Market.');
     bog=Math.max(0,w.iron-c.iron);if(c.fuel>=FUEL_MAX)c.fuelTs=Date.now();c.fuel--;c.iron-=w.iron-bog;c.bog=(c.bog||0)-bog;c.coal-=w.coal}
