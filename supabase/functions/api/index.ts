@@ -139,6 +139,14 @@ function cleanBlade(b) {
   if (b.moon) o.moon = true; if (b.bog) o.bog = true; if (b.perfect) o.perfect = true; if (b.quick) o.quick = true; if (b.cracked) o.cracked = true;
   if (typeof b.q === 'string' && /^(oil|brine|water)$/.test(b.q)) o.q = b.q;
   if (typeof b.gift === 'string') o.gift = b.gift.slice(0, 40); if (typeof b.gdate === 'string') o.gdate = b.gdate.slice(0, 12);
+  // a polish and runes travel with the blade (Auction House, Arena)
+  if (b.polish && typeof b.polish === 'object') {
+    const p = b.polish; o.polish = { q: Math.round(num(p.q, 0, 100)), m: Math.round(num(p.m, 0.8, 2.5) * 100) / 100, s: Math.round(num(p.s, 0, 1) * 100) / 100,
+      stone: Math.round(num(p.stone, 0, 4)), liq: typeof p.liq === 'string' && Object.hasOwn(R.LIQUIDS, p.liq) ? p.liq : 'spring' };
+    if (p.mirror) o.polish.mirror = 1; if (p.stain) o.polish.stain = 1;
+  }
+  if (Array.isArray(b.runes)) o.runes = b.runes.filter((r) => r && (r.k === 'scar' || (typeof r.k === 'string' && Object.hasOwn(R.RUNES, r.k)))).slice(0, 3)
+    .map((r) => { const x: any = { k: r.k, q: Math.round(num(r.q, 0, 1) * 1000) / 1000, p: Math.round(num(r.p, 0, 4) * 1000) / 1000 }; if (r.r) x.r = 1; return x; });
   o.forger = cleanName(b.forger); o.t = num(b.t, 0, 9e15);
   return o;
 }

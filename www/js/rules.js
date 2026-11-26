@@ -24,12 +24,12 @@
 (function (G) {
 'use strict';
 
-// ============================================================== DATA (blade types, classes, prices)
+// ============================================================== DATA (blade types, styles, prices)
 const CLASSES={
-  war:{n:'Warsmith',d:'Heavy straight steel. Seax to Zweihänder.',vars:[{n:'Iron',c:'#8a8f96'},{n:'Bronze',c:'#c58b4a'},{n:'Blackened',c:'#26252b',rare:1}]},
-  shadow:{n:'Shadowsmith',d:'Quiet, curved and wicked. Stiletto to reaping scythe.',vars:[{n:'Smoked',c:'#5a5560'},{n:'Serrated',c:'#9a9aa5'},{n:'Bone-handled',c:'#e8dcc0',rare:1}]},
-  arcane:{n:'Arcanesmith',d:'Rune-carved blades with an element. Rune dagger to staff-blade.',vars:[{n:'Fire',c:'#ff6a2a',glow:1},{n:'Frost',c:'#7fd8ff',glow:1},{n:'Storm',c:'#c7b8ff',glow:1},{n:'Void',c:'#b04cff',glow:1,rare:1}]},
-  sanct:{n:'Sanctum Smith',d:'Holy and ceremonial blades. Relic dagger to cathedral sword.',vars:[{n:'Silver',c:'#dfe6ee'},{n:'Gold',c:'#e9c35a'},{n:'Relic-wrapped',c:'#b98c62',rare:1}]},
+  war:{n:'War',d:'Heavy straight steel. Seax to Zweihänder.',vars:[{n:'Iron',c:'#8a8f96'},{n:'Bronze',c:'#c58b4a'},{n:'Blackened',c:'#26252b',rare:1}]},
+  shadow:{n:'Shadow',d:'Quiet, curved and wicked. Stiletto to reaping scythe.',vars:[{n:'Smoked',c:'#5a5560'},{n:'Serrated',c:'#9a9aa5'},{n:'Bone-handled',c:'#e8dcc0',rare:1}]},
+  arcane:{n:'Arcane',d:'Rune-carved blades with an element. Rune dagger to staff-blade.',vars:[{n:'Fire',c:'#ff6a2a',glow:1},{n:'Frost',c:'#7fd8ff',glow:1},{n:'Storm',c:'#c7b8ff',glow:1},{n:'Void',c:'#b04cff',glow:1,rare:1}]},
+  sanct:{n:'Sanctum',d:'Holy and ceremonial blades. Relic dagger to cathedral sword.',vars:[{n:'Silver',c:'#dfe6ee'},{n:'Gold',c:'#e9c35a'},{n:'Relic-wrapped',c:'#b98c62',rare:1}]},
 };
 const CK=Object.keys(CLASSES);
 // 100 blades: 25 per class (7 Light, 7 Medium, 6 Heavy, 5 Massive). Every blade has its own silhouette:
@@ -167,10 +167,10 @@ const RAR=[
 ];
 const ANVILS=[
   {n:'Rough Anvil',t:[70,22,6,1.8,.2],d:'Where everyone starts.'},
-  {n:'Iron Anvil',t:[60,25,10,4,1],cost:{coin:80,iron:15},d:'A proper anvil. Reachable in your first session.'},
-  {n:'Steel Anvil',t:[48,30,15,5.5,1.5],cost:{coin:400,iron:30,damascus:4},d:'Fewer Commons, more Masterworks.'},
-  {n:'Damascus Anvil',t:[38,32,19,8.5,2.5],cost:{coin:1500,damascus:12,shards:2},d:'Pattern-welded and heavy.'},
-  {n:'Dragonbone Anvil',t:[30,33,22,11,4],cost:{coin:5000,damascus:30,shards:8},d:'The best rarity table in the game.'},
+  {n:'Iron Anvil',t:[60,25,10,4,1],d:'A proper anvil. Reachable in your first session.'},
+  {n:'Steel Anvil',t:[48,30,15,5.5,1.5],d:'Fewer Commons, more Masterworks.'},
+  {n:'Damascus Anvil',t:[38,32,19,8.5,2.5],d:'Pattern-welded and heavy.'},
+  {n:'Dragonbone Anvil',t:[30,33,22,11,4],d:'The best rarity table in the game.'},
 ];
 const HAMMERS={
   worn:{n:'Worn Hammer',zone:1,cool:1,d:'Basic timing window. Never breaks.'},
@@ -183,9 +183,9 @@ const SIZES=[
 ];
 const SHINE={temp:{n:'Tempered',p:200,test:10,vb:3},star:{n:'Starforged',p:2000,test:40,vb:40}};
 const QUENCH={oil:{n:'Oil',d:'Safe: 3% crack risk, no bonus',risk:.03,bonus:0},brine:{n:'Brine',d:'10% crack risk, +6 grade',risk:.10,bonus:6},water:{n:'Water',d:'22% crack risk, +12 grade',risk:.22,bonus:12}};
-const PRICES={iron:4,coal:3,fuel:3,damascus:45};
-const SELLMAT={damascus:22,shards:100};const MERCHANT=.75,TRADER=1.2;
-const MATN={iron:'Iron',coal:'Coal',fuel:'Energy',damascus:'Damascus',dust:'Star-dust',shards:'Star-shards',coin:'Coin'};
+const PRICES = { iron: 4, coal: 3, fuel: 3, damascus: 45, grit: 5, dust: 40 };
+const SELLMAT={damascus:22,shards:100};
+const MATN={iron:'Iron',coal:'Coal',fuel:'Energy',damascus:'Damascus',dust:'Star-dust',shards:'Star-shards',coin:'Coin',grit:'Grit',mana:'Mana'};
 const FUEL_MAX=10,FUEL_MS=180000,BASE_COIN=6;
 const SLOT_UNLOCK=[0,30,100,250];
 const PATRONS=['Lady Wrenfield','Captain Orsk','The Gilded Guild','Brother Aldous','Quartermaster Vey','Duke Harrow','Mira of the Docks','The Iron Abbey'];
@@ -195,21 +195,12 @@ function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a
 function sizeIdx(len){for(let i=SIZES.length-1;i>=0;i--)if(len>=SIZES[i].a)return i;return 0}
 
 // ============================================================== more data
-const CLASS_COST = [0, 150, 600, 2000];          // coins to learn the 2nd, 3rd and 4th class
-const SLOT_PCT = [0, .05, .15, .3];             // Armory share needed for the 2nd, 3rd and 4th class
 const LABOR_MAX = 5;                             // day-labour shifts per day
 const DIG_MS = 45000, DIG_TEST_MS = 8000;        // digging the slag heap
 const ENERGY_CAP = 30;                           // meals can fill energy up to this
 const MIN_STRIKE_MS = 250;                       // a forge with N strikes takes at least N x this long
 const COMPACT_AT = 150;                          // tidy a save once it holds this many sold/salvaged blades
-const SAVE_V = 2;                                // save format version (see upgradeSave)
-const RECIPES = {
-  M: { n: 'Medium blade pattern', d: 'Lets you forge your class’s Medium blade.', cost: { coin: 150, iron: 10 } },
-  H: { n: 'Heavy blade pattern', d: 'Lets you forge your class’s Heavy blade.', cost: { coin: 600, damascus: 3 }, req: 'comm', need: 5, rt: 'Deliver 5 blades you forged to commissions' },
-  X: { n: 'Massive blade pattern', d: 'Lets you forge your class’s Massive blade.', cost: { coin: 2000, damascus: 8, shards: 1 }, req: 'mw', need: 1, rt: 'Forge a Masterwork or better yourself' },
-  brine: { n: 'Brine quench', d: '10% crack risk, +6 grade.', cost: { coin: 100 } },
-  water: { n: 'Water quench', d: '22% crack risk, +12 grade.', cost: { coin: 400 }, req: 'g70', need: 10, rt: 'Forge 10 blades with a grade of 70 or higher' },
-};
+const SAVE_V = 3;                                // save format version (see upgradeSave)
 const MEALS = {
   bread: { n: 'Rye bread', e: 1, p: 4, d: 'A heel of dark bread.' },
   pottage: { n: 'Pottage', e: 3, p: 10, d: 'A bowl of thick vegetable stew.' },
@@ -229,6 +220,118 @@ const forgerNow = (n) => (Object.prototype.hasOwnProperty.call(FORGER_AKA, n) ? 
 const AH_CUT = .05, MAX_LISTINGS = 20;
 const DURS = { short: { n: 'Short', d: '30 minutes', ms: 30 * 60e3, f: 1 }, medium: { n: 'Medium', d: '2 hours', ms: 2 * 3600e3, f: 2 }, long: { n: 'Long', d: '12 hours', ms: 12 * 3600e3, f: 4 } };
 const minBid = (L) => (L.bid ? Math.max(L.bid + 1, Math.ceil(L.bid * 1.05)) : L.start);
+
+// ============================================================== the shop, polishing and enchanting (docs/redesign/04-balance.md)
+const SCRAP = .40;                                   // the scrap merchant pays 40% of worth, at once
+const SHELF = {                                      // shop shelf listings: the price is fixed when you list
+  short:  { n: 'Short',  d: '10 minutes', ms: 10 * 60e3,   f: .80 },
+  medium: { n: 'Medium', d: '1 hour',     ms: 60 * 60e3,   f: 1.00 },
+  long:   { n: 'Long',   d: '8 hours',    ms: 8 * 3600e3,  f: 1.25 },
+};
+const SHELF_START = 3, SHELF_MAX = 8, SHELF_TEST_DIV = 20;   // test odds (dev only): listings sell 20x sooner
+const RENOWN_STEP = 10000, RENOWN_PER = .01;          // renown level n costs 10,000 x n; each level +1% on shelf sales
+const GRIT_PER = { L: 1, M: 1, H: 2, X: 3 };          // grit used by one polish, by weight
+const MANA_MAX = 20, MANA_MS = 120000, MANA_CAP = 40; // the mana meter: +1 every 2 minutes up to 20; draughts can fill it to 40
+const DRAUGHT = { mana: 5, p: 20, rise: .10 };        // mana draught: +5 mana for 20c, +10% for each one bought today
+const COMM_POLISH = .6, COMM_RUNE = .5, COMM_RUNE_K = 1.5, COMM_RUNE_Q = .5;   // commission polish/rune requests
+
+// polishing: the mini-game (docs/redesign/02-polishing.md section 2)
+const POLISH = { TICK: 50, MAX_TICKS: 400, SLACK: 1500, SEG: 24, A: 50, B: 950, R: 50, GRIME: .5, SPOT: [1.0, .5],
+  BITE: .08, SLOW: .4, SLOW_BITE: .35, FAST: 1.4, FAST_END: .55, RAMP: .4, SCRATCH: .08, SCRATCH_W: 1.5 };
+// polishing: the roll. Stones are bought in order (c.stone 0..4), like anvils.
+const STONES = [
+  { n: 'Sandstone',  lo: 0,  hi: 15, mirror: .005, c: '#b59a74', d: 'Comes with the polishing bench.' },
+  { n: 'Whetstone',  lo: 5,  hi: 22, mirror: .01,  c: '#8d9096', d: 'A finer grain: better polishes.' },
+  { n: 'Waterstone', lo: 10, hi: 28, mirror: .02,  c: '#c9a64a', d: 'Soaked before use. Brighter steel.' },
+  { n: 'Moonstone',  lo: 15, hi: 34, mirror: .03,  c: '#9fc7e8', d: 'Pale and smooth. Mirror polishes come more often.' },
+  { n: 'Starstone',  lo: 20, hi: 40, mirror: .05,  c: '#e6e0ff', d: 'The finest stone there is.' },
+];
+// polishing liquids: picked for each polish, like quenches. spring is known once you own the bench.
+const LIQUIDS = {
+  spring:   { n: 'Spring water', bonus: 0,  stain: 0,   mirror: 1,   bite: 1,   scr: 1,   c: '#9fd3ff', d: 'Safe. No bonus.' },
+  camellia: { n: 'Camellia oil', bonus: 6,  stain: .05, mirror: 1,   bite: 1,   scr: .7,  c: '#e0a640', d: '+6 quality, small stain risk. The stone glides: fewer scratches.' },
+  acid:     { n: 'Acid wash',    bonus: 12, stain: .18, mirror: 1.5, bite: 1.2, scr: 1.3, c: '#a8d65a', d: '+12 quality, Mirror polish 50% more likely, big stain risk. Scratches easily.' },
+};
+const MIRROR_M = 2.5, STAIN_M = .8, PERFECT_POLISH = .95;
+
+// enchanting (docs/redesign/03-enchanting.md). Chisels are bought in order (c.chisel 0..3), like anvils.
+const CHISELS = [
+  { n: 'Flint Chisel',     slots: 1, tol: 14, res: .02, d: 'Where every runecarver starts.' },
+  { n: 'Iron Chisel',      slots: 1, tol: 17, res: .03, d: 'A truer edge. Forgives a shaky hand.' },
+  { n: 'Steel Chisel',     slots: 2, tol: 20, res: .04, d: 'Room for a second rune on every blade.' },
+  { n: 'Starsteel Chisel', slots: 3, tol: 24, res: .06, d: 'Three runes, and the kindest edge.' },
+];
+// mana conduits: picked for each carving, like quenches. copper is known once you own the table.
+const CONDUITS = {
+  copper:     { n: 'Copper Conduit',     time: 1.0, power: 1.00, risk: .02, c: '#c8794a', d: 'Steady. 2% backlash risk.' },
+  silver:     { n: 'Silver Conduit',     time: 1.3, power: 1.10, risk: .06, c: '#cfd6de', d: '30% more carving time, +10% power, 6% backlash risk.' },
+  stormglass: { n: 'Stormglass Conduit', time: 1.6, power: 1.20, risk: .15, c: '#a58cff', d: '60% more carving time, +20% power, 15% backlash risk.' },
+};
+// Runes. s = the guide's strokes: lines of [x, y] points on the 1000 x 1000 plate (x right, y down, blade point at the top).
+// sec = seconds of carving with the Copper conduit. mana = taken from the meter. v = value at full strength.
+// Rule for new shapes: no two strokes closer than 150 units side by side; strokes meet at 45 degrees or more.
+const RUNES = {
+  ember:   { n: 'Ember',   g: 'ᚲ', glow: '#ff7a2a', sec: 5,   mana: 1, v: .35, s: [[[650, 200], [350, 500], [650, 800]]] },
+  frost:   { n: 'Frost',   g: 'ᚷ', glow: '#8fdcff', sec: 6,   mana: 2, v: .55, s: [[[300, 250], [700, 750]], [[700, 250], [300, 750]]] },
+  valor:   { n: 'Valor',   g: 'ᛏ', glow: '#ff5a4a', sec: 5.5, mana: 2, v: .75, s: [[[500, 150], [500, 850]], [[250, 380], [500, 150], [750, 380]]] },
+  storm:   { n: 'Storm',   g: 'ᛋ', glow: '#c7b8ff', sec: 3.5, mana: 3, v: .95, s: [[[620, 120], [380, 420], [620, 580], [380, 880]]] },
+  fortune: { n: 'Fortune', g: 'ᚠ', glow: '#e9c35a', sec: 5,   mana: 3, v: 1.15, s: [[[380, 150], [380, 850]], [[380, 250], [650, 100]], [[380, 480], [680, 300]]] },
+  ward:    { n: 'Ward',    g: 'ᛉ', glow: '#e8f0ff', sec: 5,   mana: 4, v: 1.40, s: [[[500, 150], [500, 850]], [[220, 200], [500, 450]], [[780, 200], [500, 450]]] },
+  hearth:  { n: 'Hearth',  g: 'ᛟ', glow: '#6fe0b0', sec: 6.5, mana: 4, v: 1.70, s: [[[500, 120], [750, 420], [500, 720], [250, 420], [500, 120]], [[500, 720], [300, 900]], [[500, 720], [700, 900]]] },
+  dawn:    { n: 'Dawn',    g: 'ᛞ', glow: '#fff2c0', sec: 8,   mana: 5, v: 2.10, s: [[[220, 200], [220, 800]], [[780, 200], [780, 800]], [[220, 200], [780, 800]], [[780, 200], [220, 800]]] },
+};
+const RUNE_KEYS = Object.keys(RUNES);
+const RUNE_STEP = 20, RUNE_MAX_PTS = 400, RUNE_MAX_STROKES = 12, RUNE_MAX_MS = 120000;
+const RUNE_FIZZLE = .25, RUNE_FULL_SPARE = .4, RUNE_GRACE_MS = 3000, RUNE_SLOT_W = [1, .5, .3], RESONANT = 1.5;
+
+// Everything bought in the Workshop and the shop, in one table, bought with the `unlock` action.
+//   tier: [field, n]  sets c[field] = n; bought in order (c[field] must be n - 1). Otherwise the key is learned into c.recipes.
+//   after: an unlock you must own first.   req/need/rt: an extra requirement (see reqProgress), rt is shown as "First: <rt>."
+const UNLOCKS = {
+  // ---- forge
+  anvil1:  { tree: 'forge', n: 'Iron Anvil', tier: ['anvil', 1], cost: { coin: 80, iron: 15 }, d: 'A proper anvil. Better rarity odds.' },
+  anvil2:  { tree: 'forge', n: 'Steel Anvil', tier: ['anvil', 2], cost: { coin: 400, iron: 30, damascus: 4 }, d: 'Fewer Commons, more Masterworks.' },
+  anvil3:  { tree: 'forge', n: 'Damascus Anvil', tier: ['anvil', 3], cost: { coin: 3000, damascus: 12, shards: 2 }, d: 'Pattern-welded and heavy.' },
+  anvil4:  { tree: 'forge', n: 'Dragonbone Anvil', tier: ['anvil', 4], cost: { coin: 40000, damascus: 40, shards: 10 }, d: 'The best rarity table in the game.' },
+  M:       { tree: 'forge', n: 'Medium blade pattern', cost: { coin: 150, iron: 10 }, d: 'Medium blades of every style you know.' },
+  H:       { tree: 'forge', n: 'Heavy blade pattern', cost: { coin: 600, damascus: 3 }, req: 'comm', need: 5, rt: 'deliver 5 blades you forged to commissions', d: 'Heavy blades of every style you know.' },
+  X:       { tree: 'forge', n: 'Massive blade pattern', cost: { coin: 2000, damascus: 8, shards: 1 }, req: 'mw', need: 1, rt: 'forge a Masterwork or better yourself', d: 'Massive blades of every style you know.' },
+  brine:   { tree: 'forge', n: 'Brine quench', cost: { coin: 100 }, d: '10% crack risk, +6 grade.' },
+  water:   { tree: 'forge', n: 'Water quench', cost: { coin: 400 }, req: 'g70', need: 10, rt: 'forge 10 blades with a grade of 70 or higher', d: '22% crack risk, +12 grade.' },
+  shadow:  { tree: 'forge', n: 'Shadow style', cost: { coin: 300 }, req: 'found', need: 10, rt: 'find 10 blade types (Armory)', d: 'The 25 Shadow blades: quiet, curved and wicked.' },
+  arcane:  { tree: 'forge', n: 'Arcane style', cost: { coin: 1200 }, req: 'found', need: 25, rt: 'find 25 blade types (Armory)', d: 'The 25 Arcane blades: rune-carved, with an element.' },
+  sanct:   { tree: 'forge', n: 'Sanctum style', cost: { coin: 4000 }, req: 'found', need: 45, rt: 'find 45 blade types (Armory)', d: 'The 25 Sanctum blades: holy and ceremonial.' },
+  // ---- polish
+  polish:  { tree: 'polish', n: 'Polishing bench', cost: { coin: 300 }, after: 'M', req: 'forged', need: 20, rt: 'forge 20 blades', d: 'Opens polishing. Comes with Sandstone and Spring water.' },
+  stone1:  { tree: 'polish', n: 'Whetstone', tier: ['stone', 1], after: 'polish', cost: { coin: 300, damascus: 2 }, d: STONES[1].d },
+  stone2:  { tree: 'polish', n: 'Waterstone', tier: ['stone', 2], cost: { coin: 1200, damascus: 6 }, d: STONES[2].d },
+  stone3:  { tree: 'polish', n: 'Moonstone', tier: ['stone', 3], cost: { coin: 6000, damascus: 15, shards: 3 }, d: STONES[3].d },
+  stone4:  { tree: 'polish', n: 'Starstone', tier: ['stone', 4], cost: { coin: 40000, damascus: 30, shards: 10 }, d: STONES[4].d },
+  camellia:{ tree: 'polish', n: 'Camellia oil', after: 'polish', cost: { coin: 150 }, d: LIQUIDS.camellia.d },
+  acid:    { tree: 'polish', n: 'Acid wash', after: 'polish', cost: { coin: 800 }, req: 'pgood', need: 15, rt: 'polish 15 blades with skill 0.7 or better', d: LIQUIDS.acid.d },
+  // ---- enchant
+  enchant: { tree: 'enchant', n: 'Enchanter’s table', cost: { coin: 1200, damascus: 5 }, after: 'anvil2', req: 'pol', need: 40, rt: 'polish 40 blades', d: 'Opens enchanting. Comes with the Flint Chisel, the Copper Conduit and the Ember rune.' },
+  chisel1: { tree: 'enchant', n: 'Iron Chisel', tier: ['chisel', 1], after: 'enchant', cost: { coin: 1000, iron: 20 }, d: CHISELS[1].d },
+  chisel2: { tree: 'enchant', n: 'Steel Chisel', tier: ['chisel', 2], cost: { coin: 4000, damascus: 10, shards: 1 }, d: CHISELS[2].d },
+  chisel3: { tree: 'enchant', n: 'Starsteel Chisel', tier: ['chisel', 3], cost: { coin: 40000, damascus: 30, shards: 10 }, d: CHISELS[3].d },
+  silver:  { tree: 'enchant', n: 'Silver Conduit', after: 'enchant', cost: { coin: 1500, damascus: 4 }, d: CONDUITS.silver.d },
+  stormglass: { tree: 'enchant', n: 'Stormglass Conduit', after: 'enchant', cost: { coin: 6000, shards: 3 }, req: 'r70', need: 10, rt: 'carve 10 runes with 70% strength or more', d: CONDUITS.stormglass.d },
+  frost:   { tree: 'enchant', n: 'Frost rune', after: 'enchant', cost: { coin: 300 }, d: 'Value 0.55. 2 mana.' },
+  valor:   { tree: 'enchant', n: 'Valor rune', after: 'enchant', cost: { coin: 1500, damascus: 3 }, req: 'runes', need: 10, rt: 'set 10 runes', d: 'Value 0.75. 2 mana.' },
+  storm:   { tree: 'enchant', n: 'Storm rune', after: 'enchant', cost: { coin: 3000, damascus: 6 }, req: 'runes', need: 25, rt: 'set 25 runes', d: 'Value 0.95. 3 mana. Quick to carve, short window.' },
+  fortune: { tree: 'enchant', n: 'Fortune rune', after: 'enchant', cost: { coin: 6000, shards: 3 }, req: 'runes', need: 60, rt: 'set 60 runes', d: 'Value 1.15. 3 mana.' },
+  ward:    { tree: 'enchant', n: 'Ward rune', after: 'enchant', cost: { coin: 12000, shards: 5 }, req: 'runes', need: 120, rt: 'set 120 runes', d: 'Value 1.40. 4 mana.' },
+  hearth:  { tree: 'enchant', n: 'Hearth rune', after: 'enchant', cost: { coin: 25000, shards: 8 }, req: 'r80', need: 25, rt: 'carve 25 runes with 80% strength or more', d: 'Value 1.70. 4 mana.' },
+  dawn:    { tree: 'enchant', n: 'Dawn rune', after: 'enchant', cost: { coin: 60000, shards: 15 }, req: 'r90', need: 10, rt: 'carve 10 runes with 90% strength or more', d: 'Value 2.10. 5 mana. The longest shape.' },
+  // ---- shop
+  shelf4:  { tree: 'shop', n: 'Shelf slot 4', tier: ['shelves', 4], cost: { coin: 150 }, d: 'One more blade on display.' },
+  shelf5:  { tree: 'shop', n: 'Shelf slot 5', tier: ['shelves', 5], cost: { coin: 500 }, d: 'One more blade on display.' },
+  shelf6:  { tree: 'shop', n: 'Shelf slot 6', tier: ['shelves', 6], cost: { coin: 1500 }, d: 'One more blade on display.' },
+  shelf7:  { tree: 'shop', n: 'Shelf slot 7', tier: ['shelves', 7], cost: { coin: 6000 }, d: 'One more blade on display.' },
+  shelf8:  { tree: 'shop', n: 'Shelf slot 8', tier: ['shelves', 8], cost: { coin: 25000 }, d: 'A full shop. Opens Renown.' },
+};
+const UNLOCK_KEYS = Object.keys(UNLOCKS);
+const STAT0 = { pol: 0, pgood: 0, runes: 0, r70: 0, r80: 0, r90: 0 };
 
 // ============================================================== small helpers
 class RuleError extends Error { constructor(msg) { super(msg); this.rule = true; } }
@@ -266,15 +369,9 @@ function bname(b) {
 const gradeMult = (g) => Math.max(.6, 1 + ((g ?? 60) - 72) / 55 * .5);
 // Length scales the price too: a 50 cm blade is worth about 70% of a 100 cm one, 250 cm about 160%. Runts keep their own bonus.
 const sizeMult = (b) => (b.si === 0 || !b.len ? 1 : Math.sqrt(Math.max(10, b.len) / 100));
-// What a blade sells for. dem = merchant demand for its type (1 = normal), mult = MERCHANT (0.75) at the shop, 1 for "worth".
-function value(b, dem = 1, mult = MERCHANT) {
-  if (b.cracked) return 1;
-  const t = TYPES[b.type]; if (!t) return 1;
-  const bonus = 1.72 + RAR[b.rarity].vb + SIZES[b.si].vb + (b.shine ? SHINE[b.shine].vb : 0) + (vr(b).rare ? 1 : 0) + (b.moon ? .5 : 0);
-  return Math.max(1, Math.round(BASE_COIN * WT[t.wt].v * bonus * gradeMult(b.grade) * sizeMult(b) * (dem ?? 1) * mult));
-}
-const worth = (b) => value(b, 1, 1);
+// Auction House deposit: a small share of the blade's worth (value, below)
 const depositFor = (b, k) => Math.max(1, Math.round(worth(b) * .03 * DURS[k].f));
+// what scrapping a blade yourself gives back: iron, rarity materials, grit from a polish, star-dust from runes
 function salvYield(b) {
   const t = WT[TYPES[b.type].wt], y = {};
   const iron = Math.round(t.iron * b.len / 100 * (b.cracked ? .3 : .6)); if (iron > 0) y.iron = iron;
@@ -282,51 +379,236 @@ function salvYield(b) {
   for (const [k, v] of Object.entries(RAR[b.rarity].salv)) y[k] = (y[k] || 0) + v;
   if (b.shine === 'temp') y.dust = (y.dust || 0) + 5;
   if (b.shine === 'star') y.shards = 3;
+  if (b.polish) y.grit = TYPES[b.type].wt === 'X' ? 2 : 1;
+  const nr = (b.runes || []).filter((r) => r.k !== 'scar').length; if (nr) y.dust = (y.dust || 0) + nr;
   return Object.keys(y).length ? y : { fuel: 1 };
 }
 function yieldStr(y) { const s = Object.entries(y).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${MATN[k]}`).join(', '); return s || 'scraps'; }
 const allBlades = (S) => S.slots.filter(Boolean).flatMap((c) => c.blades || []);
 // statuses the Records boards count
-const exists = (b) => ['owned', 'sold', 'commission', 'listed'].includes(b.status) && !b.cracked;
+const exists = (b) => ['owned', 'sold', 'commission', 'listed', 'shelf'].includes(b.status) && !b.cracked;
 const ownedOf = (c) => c.blades.filter((b) => b.status === 'owned');
 const bladeById = (c, id) => c.blades.find((b) => String(b.id) === String(id));
 
+// ============================================================== worth: forge worth x polish x enchant
+// What the forge made a blade worth (today's formula without merchant demand). Not rounded.
+function forgeWorth(b) {
+  const t = TYPES[b.type]; if (!t || b.cracked) return 1;
+  const bonus = 1.72 + RAR[b.rarity].vb + SIZES[b.si].vb + (b.shine ? SHINE[b.shine].vb : 0) + (vr(b).rare ? 1 : 0) + (b.moon ? .5 : 0);
+  return BASE_COIN * WT[t.wt].v * bonus * gradeMult(b.grade) * sizeMult(b);
+}
+const polishMult = (b) => (b && b.polish ? b.polish.m : 1);
+// runes count strongest first: the strongest fully, the 2nd half, the 3rd 30%
+function enchantMult(b) {
+  const ps = ((b && b.runes) || []).map((r) => r.p || 0).sort((x, y) => y - x);
+  return 1 + ps.reduce((s, p, i) => s + p * (RUNE_SLOT_W[i] || 0), 0);
+}
+// What a blade is worth. Shelves, the scrap merchant and Auction House deposits all start from this.
+function value(b) {
+  if (!b || b.cracked || !TYPES[b.type]) return 1;
+  return Math.max(1, Math.round(forgeWorth(b) * polishMult(b) * enchantMult(b)));
+}
+const worth = value;
+const scrapPrice = (b) => Math.max(1, Math.round(value(b) * SCRAP));
+const shelfPrice = (c, b, k) => Math.max(1, Math.round(value(b) * SHELF[k].f * (1 + RENOWN_PER * ((c && c.renown) || 0))));
+const renownCost = (c) => RENOWN_STEP * (((c && c.renown) || 0) + 1);
+
+// ============================================================== the clock: mana and shop shelves
+// The mana meter refills like energy (called in beginAction). Above MANA_MAX (after draughts) it doesn't refill.
+function tickMana(c, now) {
+  if (typeof c.mana !== 'number' || !isFinite(c.mana)) { c.mana = MANA_MAX; c.manaTs = now; }
+  if (!c.manaTs) c.manaTs = now;
+  if (c.mana >= MANA_MAX) { c.manaTs = now; return; }
+  const n = Math.floor((now - c.manaTs) / MANA_MS);
+  if (n > 0) { c.mana = Math.min(MANA_MAX, c.mana + n); c.manaTs += n * MANA_MS; if (c.mana >= MANA_MAX) c.manaTs = now; }
+}
+const draughtsToday = (c, day) => (c.draughts && c.draughts.d === day ? c.draughts.n : 0);
+const draughtPrice = (c, day) => Math.round(DRAUGHT.p * (1 + DRAUGHT.rise * draughtsToday(c, day)));
+// Every shelf listing whose time is up is sold: its fixed price goes to coin. Returns the blades sold just now.
+// Pure and clock-based, so the game and the server always agree (beginAction calls it; the game may call it to show coin).
+function settleShop(c, now) {
+  const sold = [];
+  for (const b of c.blades) {
+    if (b.status !== 'shelf' || !b.shelf || now < b.shelf.until) continue;
+    c.coin += b.shelf.price; b.status = 'sold'; b.su = b.shelf.until; sold.push(b);
+  }
+  return sold;
+}
+const shelfCount = (c) => c.blades.filter((b) => b.status === 'shelf').length;
+
+// ============================================================== polishing: the shared scoring code
+// The grime on each strip at the start, from the polish's seed. Same seed = same blade on both sides.
+function polishInit(seed) {
+  const r = mulberry(seed), t0 = new Array(POLISH.SEG).fill(POLISH.GRIME);
+  for (let k = 0; k < 3; k++) {                       // three rust spots
+    const c = Math.floor(r() * POLISH.SEG), w = 2 + Math.floor(r() * 3), h = POLISH.SPOT[0] + POLISH.SPOT[1] * r();
+    for (let i = c - w; i <= c + w; i++) if (i >= 0 && i < POLISH.SEG) t0[i] += h * (1 - Math.abs(i - c) / (w + 1));
+  }
+  return { t0, t: t0.slice(), scr: new Array(POLISH.SEG).fill(0) };
+}
+// what the liquid does in the mini-game: bite = grime removed x, scr = scratches x
+const polishFx = (liq) => ({ bite: LIQUIDS[liq].bite, scr: LIQUIDS[liq].scr });
+// One 50 ms tick. x2, x1, x0 = where the stone was two ticks ago, one tick ago and now (-1 = lifted).
+// Changes st. Returns how far over the speed limit the stone was (0 = fine, 1 = a full scratch), for the red glow and the scrape sound.
+function polishTick(st, x2, x1, x0, fx) {
+  if (x1 < 0 || x0 < 0 || x1 === x0) return 0;                       // lifted or still: nothing happens
+  const move = x2 < 0 ? Math.abs(x0 - x1) : (Math.abs(x0 - x1) + Math.abs(x1 - x2)) / 2;
+  const v = move / 50;                                                // tracks a second (1000 units over 20 ticks)
+  const bite = POLISH.BITE * fx.bite * (v < POLISH.SLOW ? POLISH.SLOW_BITE : 1);
+  const lo = Math.min(x0, x1), hi = Math.max(x0, x1), w = (POLISH.B - POLISH.A) / POLISH.SEG;
+  let worst = 0;
+  for (let i = 0; i < POLISH.SEG; i++) {
+    const c = POLISH.A + w * (i + .5);
+    const ov = Math.min(hi, c + POLISH.R) - Math.max(lo, c - POLISH.R);   // how far the stone travelled over this strip
+    if (ov <= 0) continue;
+    const pass = ov / (2 * POLISH.R);                                      // 1 = one whole pass
+    const limit = POLISH.FAST * (POLISH.FAST_END + (1 - POLISH.FAST_END) * st.t[i] / st.t0[i]);
+    const over = clamp((v - limit) / POLISH.RAMP, 0, 1);
+    st.t[i] = Math.max(0, st.t[i] - bite * pass);
+    st.scr[i] += POLISH.SCRATCH * fx.scr * over * pass;
+    if (over > worst) worst = over;
+  }
+  return worst;
+}
+// the speed limit (tracks a second) of strip i right now, for the speed meter's green band
+const polishLimit = (st, i) => POLISH.FAST * (POLISH.FAST_END + (1 - POLISH.FAST_END) * st.t[i] / st.t0[i]);
+// the strip under track position x (0..SEG-1), or -1 off the steel
+const polishStrip = (x) => (x < POLISH.A || x >= POLISH.B ? -1 : Math.floor((x - POLISH.A) / ((POLISH.B - POLISH.A) / POLISH.SEG)));
+// clean, finish and the skill score s (all 0..1) from a state
+function polishResult(st) {
+  let clean = 0, scr = 0;
+  for (let i = 0; i < POLISH.SEG; i++) { clean += Math.min(1, (1 - st.t[i] / st.t0[i]) / .97); scr += st.scr[i]; }
+  clean /= POLISH.SEG; scr /= POLISH.SEG;
+  const finish = Math.max(0, 1 - POLISH.SCRATCH_W * scr);
+  return { clean, finish, s: clean * clean * clean * finish };
+}
+// The whole polish from its samples. The browser calls polishTick live with the same samples; the server calls this once.
+function polishScore(seed, samples, liq) {
+  const st = polishInit(seed), fx = polishFx(liq);
+  for (let k = 1; k < samples.length; k++) polishTick(st, k >= 2 ? samples[k - 2] : -1, samples[k - 1], samples[k], fx);
+  return polishResult(st);
+}
+// the polish roll (server only: needs rng). s = skill 0..1
+const polishCurve = (q) => 1 + Math.pow(q / 100, 1.5);
+const polishName = (p) => (p.stain ? 'Stained' : p.q >= 100 ? 'Mirror polish' : p.q >= 75 ? 'Radiant polish' : p.q >= 50 ? 'Gleaming polish' : p.q >= 25 ? 'Bright polish' : 'Dull polish');
+function rollPolish(s, stone, liq, rng) {
+  const S = STONES[stone], L = LIQUIDS[liq];
+  if (rng() < L.stain * (1.5 - s)) return { q: 0, m: STAIN_M, stain: 1 };
+  if (rng() < S.mirror * L.mirror * s * s * (s >= PERFECT_POLISH ? 2 : 1)) return { q: 100, m: MIRROR_M, mirror: 1 };
+  const q = clamp(Math.round(50 * s + L.bonus + S.lo + (S.hi - S.lo) * rng()), 0, 99);
+  return { q, m: Math.round(polishCurve(q) * 100) / 100 };
+}
+
+// ============================================================== enchanting: the shared scoring code
+// how long the mana lasts while carving this rune with this conduit, in ms
+const runeWindow = (rune, con) => Math.round(RUNES[rune].sec * CONDUITS[con].time * 1000);
+// credit for being d units from the line: 1 on it, 0 from 3 x tol away, a smooth curve between
+const nearCredit = (d, tol) => { const r = d / (3 * tol); return r >= 1 ? 0 : 1 - r * r; };
+const average = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
+function segmentsOf(lines) {           // a list of polylines as pieces [ax, ay, bx, by]
+  const out = [];
+  for (const l of lines) for (let i = 1; i < l.length; i++) out.push([l[i - 1][0], l[i - 1][1], l[i][0], l[i][1]]);
+  return out;
+}
+function samplePoints(l, step) {       // points along a polyline, about every `step` units, both ends included
+  const out = [[l[0][0], l[0][1]]];
+  for (let i = 1; i < l.length; i++) {
+    const ax = l[i - 1][0], ay = l[i - 1][1], bx = l[i][0], by = l[i][1];
+    const n = Math.max(1, Math.ceil(Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) / step));
+    for (let k = 1; k <= n; k++) out.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]);
+  }
+  return out;
+}
+function nearestDist(x, y, segs) {     // distance from a point to the nearest of a list of segments
+  let best = Infinity;
+  for (const [ax, ay, bx, by] of segs) {
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+    const u = L2 ? clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0, 1) : 0;
+    const ex = ax + u * dx - x, ey = ay + u * dy - y, d = Math.sqrt(ex * ex + ey * ey);
+    if (d < best) best = d;
+  }
+  return best;
+}
+// Score a carving. strokes = [[[x, y, t], ...], ...] (plate units 0..1000, ms since the first touch).
+// o = { tol, win, tEnd }: tol from the chisel, win = how long the mana lasts (ms), tEnd = when the carving stopped (ms).
+// Returns { acc, done, spare, charge, q }, all 0..1. q = acc x acc x done x charge.
+function runeScore(rune, strokes, o) {
+  const R = RUNES[rune], ink = [];
+  for (const s of strokes) {           // the chisel stops when the mana runs out: keep only ink inside the window
+    const line = [];
+    for (let i = 0; i < s.length; i++) {
+      const x = s[i][0], y = s[i][1], t = s[i][2];
+      if (t <= o.win) { line.push([x, y]); continue; }
+      if (line.length) {               // cut the last piece where the mana ran out
+        const x0 = s[i - 1][0], y0 = s[i - 1][1], t0 = s[i - 1][2], f = (o.win - t0) / Math.max(1, t - t0);
+        line.push([x0 + (x - x0) * f, y0 + (y - y0) * f]);
+      }
+      break;
+    }
+    if (line.length >= 2) ink.push(line);
+  }
+  const spare = 1 - Math.min(o.tEnd, o.win) / o.win;
+  const charge = .85 + .15 * Math.min(1, spare / RUNE_FULL_SPARE);
+  if (!ink.length) return { acc: 0, done: 0, spare, charge, q: 0 };
+  const inkSegs = segmentsOf(ink), runeSegs = segmentsOf(R.s);
+  const done = average(R.s.flatMap((l) => samplePoints(l, RUNE_STEP)).map(([x, y]) => nearCredit(nearestDist(x, y, inkSegs), o.tol)));
+  const acc = average(ink.flatMap((l) => samplePoints(l, RUNE_STEP)).map(([x, y]) => nearCredit(nearestDist(x, y, runeSegs), o.tol)));
+  return { acc, done, spare, charge, q: clamp(acc * acc * done * charge, 0, 1) };
+}
+// strokes as the browser sent them, or null if they don't add up
+function cleanStrokes(strokes, tEnd) {
+  if (!Array.isArray(strokes) || strokes.length > RUNE_MAX_STROKES) return null;
+  let total = 0, last = 0;
+  for (const s of strokes) {
+    if (!Array.isArray(s) || s.length < 2) return null;
+    for (const p of s) {
+      if (!Array.isArray(p) || p.length !== 3 || !p.every(Number.isInteger)) return null;
+      const [x, y, t] = p;
+      if (x < 0 || x > 1000 || y < 0 || y > 1000 || t < last || t > tEnd) return null;
+      last = t; if (++total > RUNE_MAX_PTS) return null;
+    }
+  }
+  return total <= RUNE_MAX_PTS ? strokes : null;
+}
+// the dice for a carving (server only): fizzle, backlash (a scar fills the slot) or a rune, maybe Resonant
+function rollRune(q, rune, con, chisel, rng) {
+  if (q < RUNE_FIZZLE) return { res: 'fizzle', rune: null };
+  if (rng() < CONDUITS[con].risk) return { res: 'backlash', rune: { k: 'scar', q: 0, p: 0 } };
+  const resonant = rng() < CHISELS[chisel].res * q * q;
+  const qq = Math.round(q * 1000) / 1000, p = Math.round(RUNES[rune].v * qq * CONDUITS[con].power * (resonant ? RESONANT : 1) * 1000) / 1000;
+  return { res: resonant ? 'resonant' : 'set', rune: resonant ? { k: rune, q: qq, p, r: 1 } : { k: rune, q: qq, p } };
+}
+const runeSlots = (c) => CHISELS[c.chisel || 0].slots;
+
 // ============================================================== the save: new, upgrade, one smith
 function freshAcct() { return { v: SAVE_V, slots: [null, null, null, null], active: -1, serial: 0, totalForged: 0 }; }
+// cls is ignored (classes are gone; kept so old callers still work)
 function newChar(name, cls, now, rng) {
-  const d = {}; TK.forEach((k) => (d[k] = 1));
   let cid = 's'; for (let i = 0; i < 8; i++) cid += 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(rng() * 36)];
-  return { cid, name, cls, coin: 80, iron: 12, coal: 8, fuel: 10, damascus: 0, dust: 0, shards: 0, bog: 0, recipes: {}, fuelTs: now, demandTs: now, anvil: 0, hammer: 'worn', hammers: {}, blades: [], demand: d, commissions: [], forged: 0, sel: typesOf(cls)[0] };
+  return { cid, name, coin: 80, iron: 12, coal: 8, fuel: 10, damascus: 0, dust: 0, shards: 0, bog: 0, grit: 0, mana: MANA_MAX, recipes: {}, fuelTs: now, manaTs: now,
+    anvil: 0, stone: 0, chisel: 0, shelves: SHELF_START, renown: 0, hammer: 'worn', hammers: {}, blades: [], commissions: [], forged: 0, stat: { ...STAT0 }, sel: typesOf('war')[0] };
 }
-// One smith per account. Older saves could hold up to four; they are folded into the one in use, and every class they had stays unlocked.
+// One smith per account. Older saves could hold up to four; they are folded into the one in use.
 function unify(sv) {
   if (!sv || !Array.isArray(sv.slots)) return sv;
   const all = sv.slots.filter(Boolean); if (!all.length) { sv.active = -1; return sv; }
   const m = sv.slots[sv.active] || all[0];
   for (const o of all) {
     if (o === m) continue;
-    for (const k of ['coin', 'iron', 'coal', 'damascus', 'dust', 'shards', 'bog', 'forged']) m[k] = (m[k] || 0) + (o[k] || 0);
+    for (const k of ['coin', 'iron', 'coal', 'damascus', 'dust', 'shards', 'bog', 'grit', 'forged']) m[k] = (m[k] || 0) + (o[k] || 0);
     m.fuel = Math.max(m.fuel || 0, o.fuel || 0); m.anvil = Math.max(m.anvil || 0, o.anvil || 0);
     m.recipes = { ...(o.recipes || {}), ...(m.recipes || {}) }; m.hammers = m.hammers || {};
     for (const [k, h] of Object.entries(o.hammers || {})) if (!m.hammers[k] || (h.dur || 0) > (m.hammers[k].dur || 0)) m.hammers[k] = h;
-    for (const k of Object.keys(m.demand || {})) if (o.demand && o.demand[k] != null) m.demand[k] = Math.min(m.demand[k], o.demand[k]);
     sv.serial = sv.serial || 0; const ids = new Set((m.blades || []).map((b) => b.id));
     for (const b of o.blades || []) { if (ids.has(b.id)) b.id = ++sv.serial; ids.add(b.id); m.blades.push(b); }
-    m.classes = [...new Set([...(m.classes || [m.cls]), ...(o.classes || [o.cls])])];
     m.merged = [...new Set([...(m.merged || []), o.cid, ...(o.merged || [])])];
     m.aka = [...new Set([...(m.aka || []), o.name, ...(o.aka || [])])];
   }
-  if (!Array.isArray(m.classes) || !m.classes.includes(m.cls)) m.classes = [...new Set([m.cls, ...(m.classes || [])])];
-  // Every smith now starts as a Warsmith. A smith from before that change keeps its classes and is given Warsmith for free.
-  if (!m.classes.includes('war')) { m.classes.push('war'); m.freeWar = 1; }
-  m.selBy = m.selBy || {};
   if (sv.slots[0] !== m || all.length > 1) sv.slots = [m, null, null, null];
   sv.active = 0; return sv;
 }
-const needsUnify = (sv) => { const all = (sv.slots || []).filter(Boolean); return all.length > 1 || (all.length === 1 && (sv.slots[0] !== all[0] || sv.active !== 0 || !Array.isArray(all[0].classes) || !all[0].classes.includes('war'))); };
+const needsUnify = (sv) => { const all = (sv.slots || []).filter(Boolean); return all.length > 1 || (all.length === 1 && (sv.slots[0] !== all[0] || sv.active !== 0)); };
 const smithOf = (S) => { if (needsUnify(S)) unify(S); return S.slots[S.active] || null; };
-// classes that count towards the price of the next one (the free Warsmith doesn't)
-const clsN = (c) => (c.classes || [c.cls]).length - (c.freeWar ? 1 : 0);
 
 // Bring any save (old or new) up to the current format. Safe to run on every load: it only fills gaps and
 // tidies; it never takes coin or blades away. This is how existing players' saves survive the move.
@@ -338,13 +620,20 @@ function upgradeSave(S, now) {
   S.serial = Math.max(0, Math.floor(num(S.serial))); S.totalForged = Math.max(0, Math.floor(num(S.totalForged)));
   const c = S.slots[S.active];
   if (c) {
-    for (const k of ['coin', 'iron', 'coal', 'fuel', 'damascus', 'dust', 'shards', 'bog']) c[k] = Math.max(0, num(c[k]));
+    for (const k of ['coin', 'iron', 'coal', 'fuel', 'damascus', 'dust', 'shards', 'bog', 'grit']) c[k] = Math.max(0, num(c[k]));
+    if (typeof c.mana !== 'number' || !isFinite(c.mana)) c.mana = MANA_MAX;
+    c.mana = clamp(c.mana, 0, MANA_CAP);
     c.forged = Math.max(0, Math.floor(num(c.forged)));
     c.anvil = clamp(Math.floor(num(c.anvil)), 0, ANVILS.length - 1);
+    c.stone = clamp(Math.floor(num(c.stone)), 0, STONES.length - 1); c.chisel = clamp(Math.floor(num(c.chisel)), 0, CHISELS.length - 1);
+    c.shelves = clamp(Math.floor(num(c.shelves)) || SHELF_START, SHELF_START, SHELF_MAX); c.renown = Math.max(0, Math.floor(num(c.renown)));
+    const st = c.stat && typeof c.stat === 'object' ? c.stat : {}; c.stat = {};
+    for (const k of Object.keys(STAT0)) c.stat[k] = Math.max(0, Math.floor(num(st[k])));
     c.blades = Array.isArray(c.blades) ? c.blades.filter((b) => b && typeof b === 'object' && TYPES[b.type]) : [];
     const seen = new Set();
     for (const b of c.blades) {
       if (b.status === 'pending') b.status = b.cracked ? 'salvaged' : 'owned';   // a reveal that was never finished
+      if (b.status === 'shelf' && (!b.shelf || typeof b.shelf !== 'object')) b.status = 'owned';
       if (typeof b.id !== 'number' || seen.has(b.id)) b.id = ++S.serial;
       seen.add(b.id); if (b.id > S.serial) S.serial = b.id;
     }
@@ -352,11 +641,9 @@ function upgradeSave(S, now) {
     if (!HAMMERS[c.hammer]) c.hammer = 'worn';
     c.recipes = c.recipes && typeof c.recipes === 'object' ? c.recipes : {};
     c.commissions = Array.isArray(c.commissions) ? c.commissions.filter((q) => q && TYPES[q.type]) : [];
-    if (!CLASSES[c.cls]) c.cls = 'war';
-    c.demand = c.demand && typeof c.demand === 'object' ? c.demand : {};
-    for (const k of TK) if (typeof c.demand[k] !== 'number' || !isFinite(c.demand[k])) c.demand[k] = 1;
+    for (const k of ['cls', 'classes', 'selBy', 'freeWar', 'demand', 'demandTs']) delete c[k];
     if (!c.fuelTs) c.fuelTs = now;
-    if (!c.demandTs) c.demandTs = now;
+    if (!c.manaTs) c.manaTs = now;
     // day counters used to be the device's date text; they are now day numbers in the player's time zone
     if (c.labor && typeof c.labor.d !== 'number') delete c.labor;
     if (c.meals && typeof c.meals.d !== 'number') delete c.meals;
@@ -376,30 +663,11 @@ function oneName(S, username) {
   }
 }
 
-// ============================================================== energy and merchant demand (both follow the clock)
+// ============================================================== energy (follows the clock; mana and shelves are above)
 function tickFuel(c, now) {
   if (c.fuel >= FUEL_MAX) { c.fuelTs = now; return; }
   const n = Math.floor((now - c.fuelTs) / FUEL_MS);
   if (n > 0) { c.fuel = Math.min(FUEL_MAX, c.fuel + n); c.fuelTs += n * FUEL_MS; if (c.fuel >= FUEL_MAX) c.fuelTs = now; }
-}
-// Demand drifts 3% back toward 1.0 every 5 seconds. Every 75 seconds merchants clamour for one blade of your
-// class (+0.4, at most 1.6). Which blade is worked out from the clock and the smith id, so the game and the
-// server always agree on it without talking. settleDemand brings c.demand up to `now`.
-const DEM_TICK = 5000, DEM_WIN = 75000, DEM_KEEP = .97;
-const clamorType = (c, w) => { const list = typesOf(c.cls); return list[hash32(c.cid + ':' + w) % list.length]; };
-function relaxDemand(c, dt) {
-  if (dt <= 0) return;
-  const f = Math.pow(DEM_KEEP, dt / DEM_TICK);
-  for (const k of TK) c.demand[k] = 1 + Math.trunc((c.demand[k] - 1) * f * 1e5) / 1e5;
-}
-function settleDemand(c, now) {
-  let t = Math.min(c.demandTs || now, now);
-  if (now - t > 40 * DEM_WIN) { relaxDemand(c, now - 40 * DEM_WIN - t); t = now - 40 * DEM_WIN; }   // older bumps have faded to nothing
-  for (let w = Math.floor(t / DEM_WIN) + 1; w * DEM_WIN <= now; w++) {
-    relaxDemand(c, w * DEM_WIN - t); t = w * DEM_WIN;
-    const k = clamorType(c, w); c.demand[k] = Math.min(1.6, c.demand[k] + .4);
-  }
-  relaxDemand(c, now - t); c.demandTs = now;
 }
 
 // ============================================================== rolls (rng = a function returning 0..1)
@@ -422,7 +690,12 @@ function makeBlade(ctx, type, tier, grade, cracked, capR = 4) {
 }
 
 // ============================================================== workshop, market, hard times
-const knows = (c, k) => k === 'L' || k === 'oil' || !!(c.recipes && c.recipes[k]);
+const knows = (c, k) => k === 'L' || k === 'oil' || k === 'war' || !!(c.recipes && (c.recipes[k] ||
+  (k === 'spring' && c.recipes.polish) || ((k === 'ember' || k === 'copper') && c.recipes.enchant)));
+// do you own this unlock?
+const owns = (c, k) => { const u = UNLOCKS[k]; if (!u) return false; return u.tier ? (c[u.tier[0]] || 0) >= u.tier[1] : knows(c, k); };
+// the unlock just below a tier unlock (for "First get the X"), or null
+const tierPrev = (k) => { const u = UNLOCKS[k]; return u && u.tier ? UNLOCK_KEYS.map((x) => UNLOCKS[x]).find((v) => v.tier && v.tier[0] === u.tier[0] && v.tier[1] === u.tier[1] - 1) || null : null; };
 const canPay = (c, cost) => Object.entries(cost).every(([k, v]) => c[k] >= v);
 const payCost = (c, cost) => { for (const [k, v] of Object.entries(cost)) c[k] -= v; };
 const costStr = (cost) => Object.entries(cost).map(([k, v]) => (k === 'coin' ? `${fmtN(v)}c` : `${v} ${MATN[k]}`)).join(' + ');
@@ -430,11 +703,11 @@ function hammerFx(c) { const h = HAMMERS[c.hammer] || HAMMERS.worn; if (c.hammer
 const mealsToday = (c, day) => (c.meals && c.meals.d === day ? c.meals.n : 0);
 const mealPrice = (c, k, day) => Math.round(MEALS[k].p * (1 + .05 * mealsToday(c, day)));
 const laborLeft = (c, day) => (!c.labor || c.labor.d !== day ? LABOR_MAX : LABOR_MAX - c.labor.n);
-// broke = can't afford a Light forge even after selling every blade on the rack
+// broke = can't afford a Light forge even after scrapping every blade on the rack
 function isBroke(c) {
   const haveIron = c.iron + (c.bog || 0); if (haveIron >= 1 && c.coal >= 1) return false;
   const needC = (haveIron < 1 ? PRICES.iron * 5 : 0) + (c.coal < 1 ? PRICES.coal * 5 : 0); if (c.coin >= needC) return false;
-  return c.coin + ownedOf(c).reduce((a, b) => a + value(b, c.demand[b.type]), 0) < needC;
+  return c.coin + ownedOf(c).filter((b) => !isGift(b)).reduce((a, b) => a + scrapPrice(b), 0) < needC;
 }
 
 // ============================================================== Armory
@@ -467,22 +740,18 @@ function claimArmory(ctx) {
   got.slice(0, 3).forEach((t) => note(ctx, `Armory reward. ${t}.`, 4000));
   if (got.length > 3) note(ctx, `…and ${got.length - 3} more Armory rewards.`, 4000);
 }
-// progress towards a pattern's requirement (blades this smith forged)
+// progress towards an unlock's requirement
 function reqProgress(S, c, key) {
   const g = (S.gone && S.gone.req) || {}, mine = c.blades.filter((b) => b.forger === c.name && b.status !== 'pending' && b.status !== 'stock');
   if (key === 'comm') return mine.filter((b) => b.status === 'commission').length + (g.comm || 0);
   if (key === 'mw') return mine.filter((b) => !b.cracked && b.rarity >= 2).length + (g.mw || 0);
   if (key === 'g70') return mine.filter((b) => !b.cracked && b.grade >= 70).length + (g.g70 || 0);
+  if (key === 'forged') return c.forged || 0;
+  if (key === 'found') { const m = armoryBits(S); return TK.filter((k) => (m[k] || 0) & 1).length; }
+  if (Object.prototype.hasOwnProperty.call(STAT0, key)) return (c.stat && c.stat[key]) || 0;
   return 0;
 }
 const reqMet = (S, c, r) => !r.req || reqProgress(S, c, r.req) >= r.need;
-// A further class opens when the Armory is far enough along, and costs coins to learn.
-function classOffer(S, c) {
-  const n = clsN(c); if ((c.classes || [c.cls]).length >= CK.length) return null;
-  const { got, goals } = armoryProgress(S), pct = got / goals;
-  return { pct, need: SLOT_PCT[n], cost: CLASS_COST[n], ok: pct >= SLOT_PCT[n], afford: c.coin >= CLASS_COST[n] };
-}
-const slotsOpen = (S) => { const { got, goals } = armoryProgress(S), p = got / goals; return SLOT_PCT.filter((x) => p >= x).length; };
 
 // Keep saves small: once a save holds many sold, salvaged, delivered or lost blades, drop the ones that no
 // longer matter. Kept: every blade still on the rack or listed, and anything that could be on a Records board
@@ -490,7 +759,7 @@ const slotsOpen = (S) => { const { got, goals } = armoryProgress(S), p = got / g
 // What the dropped blades counted for (Armory goals, Legendaries, pattern requirements) is remembered in S.gone.
 function compact(S) {
   const c = S.slots[S.active]; if (!c) return;
-  const live = (b) => ['owned', 'listed', 'pending', 'wager'].includes(b.status);
+  const live = (b) => ['owned', 'listed', 'pending', 'wager', 'shelf'].includes(b.status);
   if (c.blades.filter((b) => !live(b)).length <= COMPACT_AT) return;
   const rec = c.blades.filter((b) => exists(b) && !isGift(b)), keep = new Set();
   const top = (list, cmp, n) => [...list].sort(cmp).slice(0, n).forEach((b) => keep.add(b));
@@ -512,29 +781,33 @@ function compact(S) {
 }
 
 // ============================================================== commissions
-function genComm(c, rng, now, online) {
-  const ownAll = typesOf(c.cls), own = ownAll.filter((k) => knows(c, TYPES[k].wt));
-  const imp = !own.length || (online && !(c.commissions || []).some((q) => q && q.imp) && rng() < .12);
-  const type = imp ? pickR(TK.filter((k) => !ownAll.includes(k)), rng) : pickR(own, rng);
+// any type you can forge; polish and rune requests once those are open (no imports)
+function genComm(c, rng, now) {
+  const own = TK.filter((k) => forgeable(c, k) && knows(c, TYPES[k].wt)), type = pickR(own.length ? own : [typesOf('war')[0]], rng);
   const maxR = c.anvil < 1 ? 1 : c.anvil < 3 ? 2 : 3, minR = Math.min(maxR, rollIdx([35, 35, 22, 8], rng));
   const minS = rng() < .35 ? (rng() < .75 ? 3 : 4) : 0, minG = rng() < .35 ? 55 + Math.floor(rng() * 5) * 5 : 0;
-  const pay = Math.round([15, 40, 100, 280][minR] * WT[TYPES[type].wt].v * (minS === 3 ? 1.6 : minS === 4 ? 3 : 1) * (minG ? 1.3 : 1) * (imp ? 1.8 : 1));
-  return { id: String(now) + Math.floor(rng() * 1e6), type, minR, minS, minG, pay, imp, patron: pickR(PATRONS, rng) };
+  let pay = [15, 40, 100, 280][minR] * WT[TYPES[type].wt].v * (minS === 3 ? 1.6 : minS === 4 ? 3 : 1) * (minG ? 1.3 : 1);
+  let minP = 0, rune = '';
+  if (knows(c, 'polish') && (knows(c, 'enchant') || rng() < COMM_POLISH)) { minP = [40, 60, 80][rollIdx([50, 35, 15], rng)]; pay *= 1 + minP / 100; }
+  const runes = RUNE_KEYS.filter((k) => knows(c, k));
+  if (knows(c, 'enchant') && runes.length && rng() < COMM_RUNE) { rune = pickR(runes, rng); pay *= 1 + COMM_RUNE_K * RUNES[rune].v; }
+  return { id: String(now) + Math.floor(rng() * 1e6), type, minR, minS, minG, minP, rune, pay: Math.round(pay), patron: pickR(PATRONS, rng) };
 }
-const qualifies = (b, q) => b.status === 'owned' && !b.cracked && b.type === q.type && b.rarity >= q.minR && b.si >= q.minS && b.grade >= q.minG;
+const qualifies = (b, q) => b.status === 'owned' && !b.cracked && b.type === q.type && b.rarity >= q.minR && b.si >= q.minS && b.grade >= q.minG &&
+  (!q.minP || !!(b.polish && b.polish.q >= q.minP)) && (!q.rune || (b.runes || []).some((r) => r.k === q.rune && r.q >= COMM_RUNE_Q));
 const deliverable = (b, q) => qualifies(b, q) && !b.keep && !isGift(b);
-function ensureComms(c, rng, now, online) { while (c.commissions.length < 3) c.commissions.push(genComm(c, rng, now, online)); }
+function ensureComms(c, rng, now, online) { while (c.commissions.length < 3) c.commissions.push(genComm(c, rng, now)); }
 function refreshCost(c) { const n = c.commissions.filter((q) => q.lock).length; return n >= c.commissions.length ? null : 10 * 2 ** n; }
 
 // ============================================================== getting started
 // [id, title, why, coin, where, button]
 const GS_STEPS = [['forge', 'Forge your first blade', 'The forge walks you through heating, striking and quenching.', 25, 'forge', 'Go to the Forge'],
   ['rack', 'Look at your blade on the Rack', 'Every blade you keep hangs on your rack, drawn to scale.', 10, 'rack', 'Open the Rack'],
-  ['sell', 'Sell a blade', 'Open a blade on your rack and press Sell. Coin buys iron, coal and upgrades.', 25, 'rack', 'Open the Rack'],
+  ['sell', 'Sell a blade', 'Open a blade on your rack and put it on a shop shelf, or sell it to the scrap merchant.', 25, 'rack', 'Open the Rack'],
   ['market', 'Visit the Market', 'Buy iron and coal here, or a meal when you run out of energy.', 15, 'market', 'Go to the Market'],
   ['board', 'Check the Commission board', 'Patrons pay extra for the exact blade they ask for.', 15, 'board', 'Open Commissions'],
   ['task', 'Collect a challenge reward', 'Finish any daily challenge, then collect its coin.', 50, 'tasks', 'See Challenges'],
-  ['workshop', 'See what the Workshop sells', 'Patterns, anvils and hammers. This is what to save your coin for.', 15, 'workshop', 'Go to the Workshop'],
+  ['workshop', 'See what the Workshop sells', 'Patterns, anvils, stones and chisels. This is what to save your coin for.', 15, 'workshop', 'Go to the Workshop'],
   ['armory', 'Open your Armory', 'The book of every blade there is to find. First finds pay a reward.', 15, 'armory', 'Open the Armory'],
   ['arena', 'Visit the Arena', 'Duel other smiths with your best blade.', 15, 'arena', 'Go to the Arena'],
   ['hall', 'See your Smith’s hall', 'Your look, title and best blades, as other smiths see you.', 25, 'hall', 'Open your hall']];
@@ -609,11 +882,11 @@ const TITLES = [
   ['smith1', 'Apprentice Smith', 'Forge your first blade', (x) => x.forged >= 1], ['smith2', 'Journeyman Smith', 'Forge 50 blades', (x) => x.forged >= 50], ['smith3', 'Master Smith', 'Forge 250 blades', (x) => x.forged >= 250], ['smith4', 'Grandmaster Smith', 'Forge 1,000 blades', (x) => x.forged >= 1000],
   ['leg1', 'Legend-Maker', 'Find a Legendary blade', (x) => x.leg >= 1], ['leg2', 'Keeper of Legends', 'Find 10 Legendary blades', (x) => x.leg >= 10],
   ['titan', 'Titan-Forger', 'Find a Titan-sized blade', (x) => x.titan], ['star', 'Starforger', 'Find a Starforged blade', (x) => x.star], ['moon', 'Moon-Touched', 'Find a Moonlit blade', (x) => x.moon],
-  ...CK.map((k) => ['chron-' + k, `${CLASSES[k].n.replace(' Smith', '')} Chronicler`, `Find every ${CLASSES[k].n} blade`, (x) => x.found[k] >= typesOf(k).length]),
+  ...CK.map((k) => ['chron-' + k, `${CLASSES[k].n} Chronicler`, `Find every ${CLASSES[k].n} blade`, (x) => x.found[k] >= typesOf(k).length]),
   ['rec', 'Record Holder', 'Hold a place on a Records board', (x) => x.rec], ['duel', 'Duelist', 'Win 5 Arena duels', (x) => x.wins >= 5], ['champ', 'Arena Champion', 'Reach an Arena rating of 1,200', (x) => x.rating >= 1200],
   ['baron', 'Coin Baron', 'Hold 10,000 coins', (x) => x.coin >= 10000], ['streak7', 'Steadfast', 'Keep a 7-day challenge streak', (x) => x.chBest >= 7], ['tasks50', 'Taskmaster', 'Complete 50 challenges', (x) => x.chDone >= 50], ['founder', 'Founding Smith', 'Joined during Anvilmoon’s first weeks', (x) => x.created > 0 && x.created < FOUNDER_BEFORE]];
 const titleDefault = (earned) => { const t = ['smith4', 'smith3', 'smith2', 'smith1'].find((k) => earned.includes(k)); return t || earned[0] || null; };
-const HALL_MAX = 8, HALL_KEYS = ['type', 'len', 'si', 'grade', 'rarity', 'variant', 'anvil', 'shine', 'moon', 'bog', 'forger', 'gdate', 'gift', 'q', 'perfect'];
+const HALL_MAX = 8, HALL_KEYS = ['type', 'len', 'si', 'grade', 'rarity', 'variant', 'anvil', 'shine', 'moon', 'bog', 'forger', 'gdate', 'gift', 'q', 'perfect', 'polish', 'runes'];
 // LOOK_MAX: how many choices each part of a portrait has (body, skin, hair...)
 const LOOK_MAX = { body: 2, skin: 6, hair: 14, hairC: 8, beard: 3, cloth: 8, trim: 8, trous: 5 };
 // user = {wins, losses, rating, created}; rec = whether the player is on a Records board
@@ -626,7 +899,7 @@ function hallCtx(S, user, rec) {
     leg: real.filter((b) => b.rarity === 4).length + (g.leg || 0), titan: real.some((b) => b.si >= 5) || anyBit(4), star: real.some((b) => b.shine === 'star') || anyBit(16), moon: real.some((b) => b.moon) || anyBit(32),
     found, big: [...real].sort((a, b) => b.len - a.len)[0], coin: S.slots.filter(Boolean).reduce((a, x) => a + Math.floor(x.coin || 0), 0),
     wins: u.wins || 0, losses: u.losses || 0, rating: u.rating || 1000, created: u.created || 0, rec: !!rec,
-    classes: (c && c.classes || []).length, onrack: c ? ownedOf(c).length : 0, chBest: (S.ch && S.ch.best) || 0, chDone: (S.ch && S.ch.done) || 0 };
+    classes: c ? CK.filter((k) => knows(c, k)).length : 0, onrack: c ? ownedOf(c).length : 0, chBest: (S.ch && S.ch.best) || 0, chDone: (S.ch && S.ch.done) || 0 };
 }
 function hallBlades(S) {
   const c = S.slots[S.active]; if (!c) return [];
@@ -663,7 +936,9 @@ function payForge(c, type) {
   c.fuel--; c.iron -= w.iron - bog; c.bog = (c.bog || 0) - bog; c.coal -= w.coal;
   return bog;
 }
-const forgeable = (c, type) => !!(TYPES[type] && !TYPES[type].gift && TYPES[type].c === c.cls);
+// can this smith forge this type? (the weight is checked by payForge)
+const forgeable = (c, type) => !!(TYPES[type] && !TYPES[type].gift && knows(c, TYPES[type].c));
+const FORGE_MSG = 'Learn that blade’s style in the Workshop first.';
 
 // ============================================================== ACTIONS
 // Every change a player can make. rng: true means the action rolls dice, so only the server can do it
@@ -674,7 +949,7 @@ const def = (name, rng, run) => { ACTIONS[name] = { rng, run }; };
 def('createSmith', true, (ctx) => {
   const { S } = ctx; need(!S.slots.some(Boolean), 'You already have a smith.');
   const name = ctx.user ? ctx.user.username : pickR(NAMES, ctx.rng) + ' ' + pickR(['Ashford', 'Coldwater', 'Emberly', 'Harth', 'Steelwick', 'Vane'], ctx.rng);
-  const c = newChar(name, 'war', ctx.now, ctx.rng); c.classes = ['war']; c.selBy = {};
+  const c = newChar(name, 'war', ctx.now, ctx.rng);
   S.slots = [c, null, null, null]; S.active = 0; S.gs = { d: {}, fin: 0 }; ctx.c = c;
   ctx.out.name = name;
 });
@@ -685,9 +960,9 @@ def('forgeStart', false, (ctx, a) => {
   if (a.labor) {
     need(isBroke(c), 'The foreman only hires smiths who are broke.');
     need(laborLeft(c, localDay(ctx.now, ctx.tz)) > 0, 'No more shifts today. Come back tomorrow.');
-    type = typesOf(c.cls)[1];
+    type = typesOf('war')[1];
   } else {
-    need(forgeable(c, type), 'Pick one of your class’s blades first.');
+    need(forgeable(c, type), FORGE_MSG);
     bog = payForge(c, type);
   }
   const h = hammerFx(c), w = WT[TYPES[type].wt];
@@ -719,7 +994,7 @@ def('forgeEnd', true, (ctx, a) => {
 });
 def('quickForge', true, (ctx, a) => {
   const { S, c } = ctx, type = String(a.type || '');
-  need(forgeable(c, type), 'Pick one of your class’s blades first.');
+  need(forgeable(c, type), FORGE_MSG);
   const bog = payForge(c, type), rng = ctx.rng;
   const b = makeBlade(ctx, type, c.anvil, 30 + Math.floor(rng() * 26), rng() < QUENCH.oil.risk, bog ? 1 : 4);
   b.q = 'oil'; b.quick = true; if (bog) b.bog = true;
@@ -729,17 +1004,17 @@ def('quickForge', true, (ctx, a) => {
 // first forge of a brand new smith: the guided tour tops up materials if they're short
 def('tourGift', false, (ctx, a) => {
   const { c } = ctx; need(!c.forged && !c.blades.length, 'Only for your very first forge.');
-  const type = forgeable(c, a.type) ? a.type : typesOf(c.cls)[0], w = WT[TYPES[type].wt];
+  const type = forgeable(c, a.type) ? a.type : typesOf('war')[0], w = WT[TYPES[type].wt];
   c.fuel = Math.max(c.fuel, 1); c.iron = Math.max(c.iron, w.iron); c.coal = Math.max(c.coal, w.coal);
 });
 
-// ---- blades on the rack
+// ---- blades on the rack. Selling: the scrap merchant pays 40% at once
 def('sell', false, (ctx, a) => {
   const { c } = ctx, ids = idList(a.ids); let coin = 0, n = 0;
   for (const id of ids) {
     const b = bladeById(c, id); if (!b || b.status !== 'owned' || b.cracked || isGift(b)) continue;
-    const v = value(b, c.demand[b.type]); c.coin += v; c.demand[b.type] = Math.max(.5, c.demand[b.type] * .93);
-    b.status = 'sold'; b.su = ctx.now; chEvent(ctx, { k: 'sell', b, coin: v }); coin += v; n++;
+    const v = scrapPrice(b); c.coin += v; b.status = 'sold'; b.su = ctx.now;
+    chEvent(ctx, { k: 'sell', b, coin: v }); coin += v; n++;
   }
   need(n, ids.length === 1 ? 'That blade can’t be sold.' : 'Nothing to sell.');
   ctx.out = { coin, n };
@@ -764,9 +1039,17 @@ def('hall', false, (ctx, a) => {
 
 // ---- market
 def('buy', false, (ctx, a) => {
-  const { c } = ctx, m = String(a.m); need(['iron', 'coal', 'damascus'].includes(m), 'That isn’t for sale.');
+  const { c } = ctx, m = String(a.m); need(['iron', 'coal', 'damascus', 'grit', 'dust'].includes(m), 'That isn’t for sale.');
   const n = intArg(a.n, 1, 99999), cost = PRICES[m] * n; need(c.coin >= cost, 'Not enough coin.');
-  c.coin -= cost; c[m] += n; ctx.out = { n, cost };
+  c.coin -= cost; c[m] = (c[m] || 0) + n; ctx.out = { n, cost };
+});
+def('drink', false, (ctx) => {
+  const { c } = ctx, day = localDay(ctx.now, ctx.tz), p = draughtPrice(c, day);
+  need(c.mana + DRAUGHT.mana <= MANA_CAP, 'Your mana is as full as a draught can make it.');
+  need(c.coin >= p, 'Not enough coin.');
+  c.coin -= p; c.mana += DRAUGHT.mana;
+  if (!c.draughts || c.draughts.d !== day) c.draughts = { d: day, n: 0 }; c.draughts.n++;
+  ctx.out = { mana: DRAUGHT.mana, p };
 });
 def('sellMat', false, (ctx, a) => {
   const { c } = ctx, m = String(a.m); need(SELLMAT[m], 'Merchants don’t buy that.');
@@ -779,7 +1062,7 @@ def('refine', false, (ctx, a) => {
 });
 // buy exactly the iron and coal the chosen blade still needs
 def('supfill', false, (ctx, a) => {
-  const { c } = ctx; need(forgeable(c, a.type), 'Pick one of your class’s blades first.');
+  const { c } = ctx; need(forgeable(c, a.type), FORGE_MSG);
   const w = WT[TYPES[a.type].wt], i = Math.max(0, w.iron - (c.iron + (c.bog || 0))), k = Math.max(0, w.coal - c.coal), p = i * PRICES.iron + k * PRICES.coal;
   need(p > 0, 'You already have enough.'); need(c.coin >= p, 'Not enough coin.');
   c.coin -= p; c.iron += i; c.coal += k; ctx.out = { iron: i, coal: k, cost: p };
@@ -792,15 +1075,25 @@ def('eat', false, (ctx, a) => {
   ctx.out = { e: m.e, n: m.n, p };
 });
 
-// ---- workshop
-def('learn', false, (ctx, a) => {
-  const { S, c } = ctx, k = String(a.k), r = RECIPES[k]; need(r, 'There is no such pattern.');
-  need(!knows(c, k), 'You already know that.'); need(reqMet(S, c, r), r.rt ? `First: ${r.rt.toLowerCase()}.` : 'Not yet.'); need(canPay(c, r.cost), `That costs ${costStr(r.cost)}.`);
-  payCost(c, r.cost); c.recipes = c.recipes || {}; c.recipes[k] = true;
+// ---- the Workshop and the shop: one action buys anything in UNLOCKS
+def('unlock', false, (ctx, a) => {
+  const { S, c } = ctx, k = String(a.k), u = Object.prototype.hasOwnProperty.call(UNLOCKS, k) ? UNLOCKS[k] : null;
+  need(u, 'There is no such thing to buy.');
+  need(!owns(c, k), 'You already have that.');
+  if (u.after) need(owns(c, u.after), `First get the ${UNLOCKS[u.after].n}.`);
+  if (u.tier) { const prev = tierPrev(k); need((c[u.tier[0]] || 0) === u.tier[1] - 1, prev ? `First get the ${prev.n}.` : 'Not yet.'); }
+  need(reqMet(S, c, u), `First: ${u.rt}.`);
+  need(canPay(c, u.cost), `That costs ${costStr(u.cost)}.`);
+  payCost(c, u.cost);
+  if (u.tier) c[u.tier[0]] = u.tier[1]; else { c.recipes = c.recipes || {}; c.recipes[k] = true; }
+  ctx.out = { n: u.n };
 });
-def('anvil', false, (ctx) => {
-  const { c } = ctx, a = ANVILS[c.anvil + 1]; need(a, 'You have the best anvil there is.'); need(canPay(c, a.cost), `That costs ${costStr(a.cost)}.`);
-  payCost(c, a.cost); c.anvil++; ctx.out = { n: a.n };
+def('renown', false, (ctx) => {
+  const { c } = ctx, cost = renownCost(c);
+  need(c.shelves >= SHELF_MAX, `Renown opens once your shop has ${SHELF_MAX} shelves.`);
+  need(c.coin >= cost, `The next level of renown costs ${fmtN(cost)}c.`);
+  c.coin -= cost; c.renown = (c.renown || 0) + 1;
+  ctx.out = { level: c.renown, cost };
 });
 def('hammer', false, (ctx, a) => {
   const { c } = ctx, k = String(a.k), h = HAMMERS[k]; need(h && h.cost, 'There is no such hammer.'); need(canPay(c, h.cost), `That costs ${costStr(h.cost)}.`);
@@ -827,7 +1120,7 @@ def('fulfill', true, (ctx, a) => {
   const { c } = ctx, i = c.commissions.findIndex((q) => String(q.id) === String(a.cid)); need(i >= 0, 'That order is gone.');
   const q = c.commissions[i], b = bladeById(c, a.id); need(b && deliverable(b, q), 'That blade doesn’t fit the order.');
   c.coin += q.pay; b.status = 'commission'; b.su = ctx.now;
-  c.commissions.splice(i, 1, genComm(c, ctx.rng, ctx.now, ctx.online));
+  c.commissions.splice(i, 1, genComm(c, ctx.rng, ctx.now));
   ctx.out = { pay: q.pay, patron: q.patron };
 });
 def('refreshBoard', true, (ctx) => {
@@ -839,16 +1132,96 @@ def('jobFlag', false, (ctx, a) => {
   const f = a.f === 'lock' ? 'lock' : 'pin'; q[f] = q[f] ? 0 : 1;
 });
 
-// ---- classes
-def('classSwitch', false, (ctx, a) => {
-  const { c } = ctx, k = String(a.k); need(CLASSES[k] && c.classes.includes(k), 'You haven’t learned that class.');
-  need(!ctx.S.forge, 'Finish the blade first.');
-  c.cls = k;
+// ---- shop shelves: the price is fixed now, the blade sells by the clock (settleShop in beginAction)
+def('shelfList', false, (ctx, a) => {
+  const { c } = ctx, b = bladeById(c, a.id), k = String(a.k);
+  need(Object.prototype.hasOwnProperty.call(SHELF, k), 'Pick Short, Medium or Long.');
+  need(b && b.status === 'owned', 'That blade isn’t on your rack.');
+  need(!b.cracked, 'Nobody buys a cracked blade. Salvage it instead.');
+  need(!isGift(b), 'Keepsakes can’t be sold.');
+  need(!b.keep, 'That blade is locked. Unlock it first.');
+  need(shelfCount(c) < c.shelves, `All ${c.shelves} shelves are full.`);
+  const price = shelfPrice(c, b, k), ms = ctx.test ? SHELF[k].ms / SHELF_TEST_DIV : SHELF[k].ms;
+  b.status = 'shelf'; b.shelf = { k, at: ctx.now, until: ctx.now + ms, price };
+  ctx.out = { price, until: b.shelf.until };
 });
-def('classLearn', false, (ctx, a) => {
-  const { S, c } = ctx, k = String(a.k), o = classOffer(S, c); need(CLASSES[k] && o && !c.classes.includes(k), 'You can’t learn that class.');
-  need(o.ok, `Your Armory needs to be ${Math.round(o.need * 100)}% complete first.`); need(o.afford, `You need ${fmtN(o.cost)} coins.`);
-  c.coin -= o.cost; c.classes.push(k); c.cls = k;
+def('shelfCancel', false, (ctx, a) => {
+  const b = bladeById(ctx.c, a.id); need(b && b.status === 'shelf', 'That blade isn’t on a shelf any more.');
+  b.status = 'owned'; delete b.shelf;
+});
+
+// ---- polishing: start (pay the grit), then end (score the strokes, roll the polish)
+def('polishStart', false, (ctx, a) => {
+  const { S, c } = ctx, b = bladeById(c, a.id), liq = String(a.liq || 'spring');
+  need(knows(c, 'polish'), 'Build a polishing bench in the Workshop first.');
+  need(b && b.status === 'owned' && !isGift(b), 'Pick a blade from your rack.');
+  need(!b.cracked, 'A cracked blade can’t be polished.');
+  need(!b.polish, 'That blade has already been polished.');
+  need(Object.prototype.hasOwnProperty.call(LIQUIDS, liq) && knows(c, liq), 'Learn that liquid in the Workshop first.');
+  const g = GRIT_PER[TYPES[b.type].wt];
+  need((c.grit || 0) >= g, `You need ${g} grit. Buy it at the Market.`);
+  c.grit -= g;
+  // the seed doesn't depend on the clock, so the game's prediction and the server agree on the grime
+  S.polish = { id: b.id, stone: c.stone || 0, liq, seed: hash32(`${c.cid}:${b.id}:polish`), t0: ctx.now };
+  ctx.out = { seed: S.polish.seed, stone: S.polish.stone, liq };
+});
+def('polishEnd', true, (ctx, a) => {
+  const { S, c } = ctx, P = S.polish;
+  need(P, 'You aren’t polishing anything. Start again.');
+  const b = bladeById(c, P.id);
+  need(b && b.status === 'owned' && !b.cracked && !b.polish, 'That blade isn’t on your rack any more.');
+  const x = Array.isArray(a.samples) ? a.samples : null;
+  need(x && x.length <= POLISH.MAX_TICKS + 1 && x.every((v) => Number.isInteger(v) && v >= -1 && v <= 1000), 'That polish doesn’t add up. Start again.');
+  need(ctx.now - P.t0 >= x.length * POLISH.TICK - POLISH.SLACK, 'That was quicker than any stone. Start again.');
+  S.polish = null;
+  const before = value(b), r = polishScore(P.seed, x, P.liq), roll = rollPolish(r.s, P.stone, P.liq, ctx.rng);
+  b.polish = { q: roll.q, m: roll.m, s: Math.round(r.s * 100) / 100, stone: P.stone, liq: P.liq };
+  if (roll.mirror) b.polish.mirror = 1;
+  if (roll.stain) b.polish.stain = 1;
+  c.stat = c.stat || { ...STAT0 }; c.stat.pol++; if (r.s >= .7) c.stat.pgood++;
+  chEvent(ctx, { k: 'polish', b });
+  ctx.out = { polish: b.polish, name: polishName(b.polish), clean: r.clean, finish: r.finish, s: r.s, before, after: value(b) };
+});
+
+// ---- enchanting: start (pay the mana at the first touch), then end (score the strokes, roll the dice)
+def('enchantStart', false, (ctx, a) => {
+  const { S, c } = ctx, b = bladeById(c, a.id), rune = String(a.rune || ''), con = String(a.con || 'copper');
+  need(knows(c, 'enchant'), 'Build an enchanter’s table in the Workshop first.');
+  need(b && b.status === 'owned' && !b.cracked && !isGift(b), 'That blade isn’t on your rack.');
+  need(b.polish, 'Polish the blade before you carve a rune into it.');
+  need(Object.prototype.hasOwnProperty.call(RUNES, rune) && knows(c, rune), 'Learn that rune first.');
+  need(Object.prototype.hasOwnProperty.call(CONDUITS, con) && knows(c, con), 'You don’t have that conduit.');
+  const runes = b.runes || [], CH = CHISELS[c.chisel || 0];
+  need(runes.length < CH.slots, `Your ${CH.n} can’t fit another rune on this blade.`);
+  need(!runes.some((r) => r.k === rune), 'That rune is already on this blade.');
+  need(c.mana >= RUNES[rune].mana, `${RUNES[rune].n} takes ${RUNES[rune].mana} mana. Mana refills with time.`);
+  c.mana -= RUNES[rune].mana;
+  S.enchant = { id: b.id, rune, con, chisel: c.chisel || 0, tol: CH.tol, win: runeWindow(rune, con), t0: ctx.now };
+  ctx.out = { win: S.enchant.win, tol: CH.tol };
+});
+def('enchantEnd', true, (ctx, a) => {
+  const { S, c } = ctx, E = S.enchant;
+  need(E && RUNES[E.rune], 'The carving has gone dark. Start again.');
+  const b = bladeById(c, E.id);
+  need(b && b.status === 'owned' && !b.cracked, 'That blade has left your rack.');
+  need(!(b.runes || []).some((r) => r.k === E.rune) && (b.runes || []).length < CHISELS[E.chisel].slots, 'That blade has no room for this rune.');
+  const tEnd = a.tEnd;
+  need(Number.isInteger(tEnd) && tEnd >= 1 && tEnd <= RUNE_MAX_MS, 'That carving doesn’t add up. Try again.');
+  const strokes = cleanStrokes(a.strokes, tEnd);
+  need(strokes, 'That carving doesn’t add up. Try again.');
+  // the server's clock is the referee: the carving took at least as long as the server saw, minus a grace for the
+  // network. A game clock that ran slow gets its points spread back out over the real time.
+  const real = Math.max(tEnd, ctx.now - E.t0 - RUNE_GRACE_MS), k = real / tEnd;
+  const fair = k === 1 ? strokes : strokes.map((s) => s.map(([x, y, t]) => [x, y, t * k]));
+  const sc = runeScore(E.rune, fair, { tol: E.tol, win: E.win, tEnd: real });
+  S.enchant = null;
+  const before = value(b), r = rollRune(sc.q, E.rune, E.con, E.chisel, ctx.rng);
+  if (r.rune) { b.runes = b.runes || []; b.runes.push(r.rune); }
+  if (r.res === 'set' || r.res === 'resonant') {
+    const st = c.stat = c.stat || { ...STAT0 }; st.runes++; if (sc.q >= .7) st.r70++; if (sc.q >= .8) st.r80++; if (sc.q >= .9) st.r90++;
+    chEvent(ctx, { k: 'rune', b });
+  }
+  ctx.out = { res: r.res, rune: r.rune, score: sc, before, after: value(b) };
 });
 
 // ---- challenges, getting started, your hall
@@ -887,11 +1260,18 @@ function runAction(S, name, args, env) {
   afterAction(ctx);
   return ctx;
 }
-// the shared start of every action: find the smith, bring energy and demand up to now
+// the shared start of every action: find the smith, bring energy and mana up to now, pay out shelf sales
 function beginAction(S, env) {
   const ctx = { S, now: env.now, rng: env.rng, tz: env.tz, test: !!env.test, online: !!env.online, user: env.user || null, notes: [], out: {} };
   ctx.c = smithOf(S);
-  if (ctx.c) { tickFuel(ctx.c, ctx.now); settleDemand(ctx.c, ctx.now); }
+  if (ctx.c) {
+    tickFuel(ctx.c, ctx.now); tickMana(ctx.c, ctx.now);
+    const sold = settleShop(ctx.c, ctx.now);
+    if (sold.length) {
+      let coin = 0; for (const b of sold) { coin += b.shelf.price; chEvent(ctx, { k: 'sell', b, coin: b.shelf.price }); }
+      note(ctx, `Your shop sold ${sold.length === 1 ? 'the ' + bname(sold[0]) : sold.length + ' blades'} for **${fmtN(coin)}c**.`, 4000);
+    }
+  }
   return ctx;
 }
 // after every action: pay out Armory rewards, keep 3 commissions on the board, keep the save small
@@ -933,16 +1313,24 @@ function applyPatch(obj, ops) {
 // ============================================================== what the game and the server can use
 G.AMR = {
   // data
-  CLASSES, CK, TYPES, TK, GIFTS, WT, RAR, ANVILS, HAMMERS, SIZES, SHINE, QUENCH, PRICES, SELLMAT, MERCHANT, TRADER, MATN, FUEL_MAX, FUEL_MS, BASE_COIN,
-  SLOT_UNLOCK, PATRONS, NAMES, CLASS_COST, SLOT_PCT, LABOR_MAX, DIG_MS, DIG_TEST_MS, ENERGY_CAP, MIN_STRIKE_MS, RECIPES, MEALS, FIND, FORGER_AKA, AH_CUT, MAX_LISTINGS, DURS,
+  CLASSES, CK, TYPES, TK, GIFTS, WT, RAR, ANVILS, HAMMERS, SIZES, SHINE, QUENCH, PRICES, SELLMAT, MATN, FUEL_MAX, FUEL_MS, BASE_COIN,
+  SLOT_UNLOCK, PATRONS, NAMES, LABOR_MAX, DIG_MS, DIG_TEST_MS, ENERGY_CAP, MIN_STRIKE_MS, MEALS, FIND, FORGER_AKA, AH_CUT, MAX_LISTINGS, DURS,
   GS_STEPS, GS_VISITS, CH_DAY, CH_TIER, CH_SIZE, CH_POOL, CH_WEEK, BADGES, FOUNDER_BEFORE, TITLES, HALL_MAX, HALL_KEYS, LOOK_MAX, SAVE_V,
   GIFT_C, GIFT_DATE, GIFT_PAL,
+  // the shop, polishing and enchanting
+  SCRAP, SHELF, SHELF_START, SHELF_MAX, SHELF_TEST_DIV, RENOWN_STEP, RENOWN_PER, GRIT_PER, MANA_MAX, MANA_MS, MANA_CAP,
+  DRAUGHT, COMM_POLISH, COMM_RUNE, COMM_RUNE_K, COMM_RUNE_Q, POLISH, STONES, LIQUIDS, MIRROR_M, STAIN_M, PERFECT_POLISH,
+  CHISELS, CONDUITS, RUNES, RUNE_KEYS, RUNE_STEP, RUNE_MAX_PTS, RUNE_MAX_STROKES, RUNE_MAX_MS, RUNE_FIZZLE, RUNE_FULL_SPARE,
+  RUNE_GRACE_MS, RUNE_SLOT_W, RESONANT, UNLOCKS, UNLOCK_KEYS, STAT0,
+  forgeWorth, polishMult, enchantMult, scrapPrice, shelfPrice, renownCost, tickMana, draughtsToday, draughtPrice, settleShop,
+  shelfCount, polishInit, polishFx, polishTick, polishLimit, polishStrip, polishResult, polishScore, polishCurve, polishName,
+  rollPolish, runeWindow, nearCredit, runeScore, cleanStrokes, rollRune, runeSlots, owns, tierPrev,
   // helpers
   RuleError, need, clamp, fmtN, hash32, mulberry, sizeIdx, typesOf, isGift, giftDate, giftWho, giftCls, rarN, rarC, vr, bname, gradeMult, sizeMult, value, worth, depositFor, minBid,
   salvYield, yieldStr, allBlades, exists, ownedOf, bladeById, forgerNow, localDay, isNight, tzOf,
-  freshAcct, newChar, unify, needsUnify, smithOf, clsN, upgradeSave, oneName, tickFuel, settleDemand, clamorType, DEM_WIN,
+  freshAcct, newChar, unify, needsUnify, smithOf, upgradeSave, oneName, tickFuel,
   rollIdx, rollSize, rollShine, rollVariant, rollMoon, makeBlade, knows, canPay, payCost, costStr, hammerFx, mealsToday, mealPrice, laborLeft, isBroke,
-  bladeBits, armSeen, armoryBits, armoryProgress, claimArmory, reqProgress, reqMet, classOffer, slotsOpen, compact,
+  bladeBits, armSeen, armoryBits, armoryProgress, claimArmory, reqProgress, reqMet, compact,
   genComm, qualifies, deliverable, ensureComms, refreshCost, gsState, gsMark, chDay, chWeek, chRng, chList, chState, chEvent, chReady,
   badgeOf, titleDefault, hallCtx, hallBlades, hallSummary, strikeScore, forgeGrade, forgeable,
   ACTIONS, runAction, beginAction, afterAction, diff, applyPatch,
