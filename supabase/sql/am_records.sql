@@ -1,13 +1,14 @@
 -- Leaderboards, built from every account's saved blades. The server calls this for /api/records.
 -- One row per name on each board. Changing a board is a change here only; the server code does not need republishing.
 -- Settings read from am_state.blob->'config': hideFromRecords (usernames), giftTypes (blade types), forgerAka (old smith name -> name now).
+-- Saves are written only by the server, so what these boards show was really forged.
 create or replace function public.am_records() returns jsonb language sql stable set search_path = public as $fn$
 with st as (select blob from am_state where id = 1),
 hide as (select lower(x) as n from st, jsonb_array_elements_text(coalesce(blob->'config'->'hideFromRecords', '[]'::jsonb)) x),
 gift as (select unnest(array['testsword','sweetchilli']) as t union select x from st, jsonb_array_elements_text(coalesce(blob->'config'->'giftTypes', '[]'::jsonb)) x),
 aka as (select key as old, value as new from st, jsonb_each_text(coalesce(blob->'config'->'forgerAka', '{}'::jsonb))),
-u as (select s.uid, st.blob->'users'->s.uid->>'username' as username, s.save from am_saves s, st
-      where st.blob->'users' ? s.uid and lower(st.blob->'users'->s.uid->>'username') not in (select n from hide)),
+u as (select s.uid, us.username, s.save from am_saves s join am_users us on us.uid = s.uid
+      where us.uname_lc not in (select n from hide)),
 sl as (select u.uid, u.username, x as slot from u, jsonb_array_elements(case when jsonb_typeof(u.save->'slots') = 'array' then u.save->'slots' else '[]'::jsonb end) x where jsonb_typeof(x) = 'object'),
 raw as (select sl.username, coalesce(nullif(bl->>'forger', ''), sl.slot->>'name', '?') as forger, bl
         from sl, jsonb_array_elements(case when jsonb_typeof(sl.slot->'blades') = 'array' then sl.slot->'blades' else '[]'::jsonb end) bl
@@ -31,29 +32,22 @@ wealth as (select u.username as "user",
 select jsonb_build_object(
   'entries', coalesce((select jsonb_agg(to_jsonb(p)) from picked p), '[]'::jsonb),
   'wealth', coalesce((select jsonb_agg(jsonb_build_object('user', w."user", 'wealth', w.wealth) order by w.wealth desc) from (select * from wealth where wealth > 0 order by wealth desc limit 10) w), '[]'::jsonb),
-  'players', (select count(*) from st, jsonb_object_keys(blob->'users')),
+  'players', (select count(*) from am_users),
   'blades', (select count(*) from b));
 $fn$;
 revoke all on function public.am_records() from public, anon, authenticated;
 
--- Records without the one-minute cache: always worked out from the latest saves (the game asks /api/x/records).
-create or replace function public.am_x_records(uid text, input jsonb) returns jsonb
-language sql stable set search_path = public as $$ select public.am_records() $$;
-
--- A smith's public hall (the game asks /api/x/hall?u=<username>). The hall itself is worked out by that player's game and kept in their save.
+-- A smith's public hall (the game asks /api/x/hall?u=<username>). The server works the hall out after every action and keeps it in the save.
 create or replace function public.am_x_hall(uid text, input jsonb) returns jsonb
 language sql stable set search_path = public as $$
-with st as (select blob from am_state where id = 1),
-k as (select st.blob->'names'->>lower(coalesce(input->>'u', '')) as id from st)
-select case when k.id is null or k.id = 'reserved' or not (st.blob->'users' ? k.id) then jsonb_build_object('missing', true)
-  else jsonb_build_object('user', st.blob->'users'->k.id->>'username', 'created', st.blob->'users'->k.id->'created',
-    'rating', st.blob->'users'->k.id->'rating', 'wins', st.blob->'users'->k.id->'wins', 'losses', st.blob->'users'->k.id->'losses',
-    'hall', (select s.save->'hall' from am_saves s where s.uid = k.id)) end
-from st, k $$;
+select coalesce((
+  select jsonb_build_object('user', u.username, 'created', u.created, 'rating', u.rating, 'wins', u.wins, 'losses', u.losses,
+    'hall', (select s.save->'hall' from am_saves s where s.uid = u.uid))
+  from am_users u where u.uname_lc = lower(coalesce(input->>'u', ''))), jsonb_build_object('missing', true)) $$;
 
--- Records, plus every player's badge and title so names can link to their hall.
+-- Records, plus every player's badge and title so names can link to their hall (the game asks /api/x/records).
 create or replace function public.am_x_records(uid text, input jsonb) returns jsonb
 language sql stable set search_path = public as $$
 select public.am_records() || jsonb_build_object('smiths', coalesce((
-  select jsonb_object_agg(u.value->>'username', jsonb_build_object('t', coalesce(s.save->'hall'->>'title', ''), 'b', s.save->'hall'->>'badge', 'l', s.save->'hall'->'look'))
-  from am_state st, jsonb_each(st.blob->'users') u left join am_saves s on s.uid = u.key where st.id = 1), '{}'::jsonb)) $$;
+  select jsonb_object_agg(u.username, jsonb_build_object('t', coalesce(s.save->'hall'->>'title', ''), 'b', s.save->'hall'->>'badge', 'l', s.save->'hall'->'look'))
+  from am_users u left join am_saves s on s.uid = u.uid), '{}'::jsonb)) $$;

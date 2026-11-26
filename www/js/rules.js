@@ -1,0 +1,948 @@
+// =====================================================================================================
+// ANVILMOON GAME RULES
+//
+// The one place where the game's numbers and rules live. This same file runs in two places:
+//
+//   1. In the browser. www/index.html loads it before the game, so the game can show prices, odds and
+//      costs, and can show the result of simple actions (selling, buying iron...) straight away.
+//   2. On the server (supabase/functions/api). The server is the referee: it keeps the real save, runs
+//      every action again with that save, rolls all the dice, and its answer is what counts. A player who
+//      edits the game in their browser can only change what they see, never what they own.
+//
+// THE MASTER COPY IS www/js/rules.js. The server's copy, supabase/functions/api/rules.js, is made from it:
+//     node tools/sync-rules.mjs
+// Never edit the server's copy by hand. `node tools/test.mjs` fails if the two copies differ.
+//
+// How an action works (see docs/server-authority.md for the long version):
+//   the game sends   { name: 'sell', args: { ids: [12] } }
+//   the server runs  runAction(save, 'sell', args, env)  -> changes the save, or throws a RuleError
+//   and answers with the list of changes (a "patch") so the game can update its copy of the save.
+//
+// Everything below the data section is written to be read. Each action checks what it needs with
+// need(condition, 'message the player sees') before it changes anything.
+// =====================================================================================================
+(function (G) {
+'use strict';
+
+// ============================================================== DATA (blade types, classes, prices)
+const CLASSES={
+  war:{n:'Warsmith',d:'Heavy straight steel. Seax to Zweihänder.',vars:[{n:'Iron',c:'#8a8f96'},{n:'Bronze',c:'#c58b4a'},{n:'Blackened',c:'#26252b',rare:1}]},
+  shadow:{n:'Shadowsmith',d:'Quiet, curved and wicked. Stiletto to reaping scythe.',vars:[{n:'Smoked',c:'#5a5560'},{n:'Serrated',c:'#9a9aa5'},{n:'Bone-handled',c:'#e8dcc0',rare:1}]},
+  arcane:{n:'Arcanesmith',d:'Rune-carved blades with an element. Rune dagger to staff-blade.',vars:[{n:'Fire',c:'#ff6a2a',glow:1},{n:'Frost',c:'#7fd8ff',glow:1},{n:'Storm',c:'#c7b8ff',glow:1},{n:'Void',c:'#b04cff',glow:1,rare:1}]},
+  sanct:{n:'Sanctum Smith',d:'Holy and ceremonial blades. Relic dagger to cathedral sword.',vars:[{n:'Silver',c:'#dfe6ee'},{n:'Gold',c:'#e9c35a'},{n:'Relic-wrapped',c:'#b98c62',rare:1}]},
+};
+const CK=Object.keys(CLASSES);
+// 100 blades: 25 per class (7 Light, 7 Medium, 6 Heavy, 5 Massive). Every blade has its own silhouette:
+// blade shape + guard + pommel + grip, plus width (w), grip length (g), fullers and curve (cv).
+const TYPES=(()=>{const T={};const add=(c,rows)=>rows.forEach(([k,n,wt,shape,w,g,guard,pommel,grip,fuller=0,cv])=>{T[k]={n,c,wt,shape,w,g,guard,pommel,grip,fuller,...(cv!=null?{cv}:{})}});
+add('war',[
+ ['seax','Seax','L','seax',16,.38,'bolster','cap','wood'],
+ ['brokenseax','Broken-back Seax','L','clip',15,.36,'bolster','nut','wood'],
+ ['scramasax','Scramasax','L','messer',17,.34,'bolster','disc','leather'],
+ ['warknife','War Knife','L','clip',13,.4,'cross','wheel','leather'],
+ ['rondel','Rondel Dagger','L','spike',9,.5,'disc','disc','wood'],
+ ['baselard','Baselard','L','straight',12,.42,'lugs','fishtail','leather',1],
+ ['dirk','Highland Dirk','L','needle',10,.45,'bolster','orb','wood'],
+ ['broadsword','Broadsword','M','broad',15,.22,'cross','wheel','leather',1],
+ ['armingsword','Arming Sword','M','straight',12,.22,'cross','nut','leather',1],
+ ['vikingsword','Viking Sword','M','broad',15,.2,'collar','bell','wrap',1],
+ ['spatha','Spatha','M','rounded',13,.2,'collar','orb','wood',1],
+ ['gladius','Gladius','M','waisted',16,.25,'tsuba','orb','bone'],
+ ['falchion','Falchion','M','falchion',18,.22,'cross','disc','leather'],
+ ['messer','Messer','M','messer',14,.28,'cross','cap','wood'],
+ ['claymore','Claymore','H','straight',16,.3,'quillons','wheel','leather',1],
+ ['longsword','Longsword','H','straight',13,.3,'cross','wheel','wrap',1],
+ ['bastard','Bastard Sword','H','broad',14,.28,'cross','fishtail','leather',1],
+ ['greatmesser','Great Messer','H','messer',15,.32,'cross','cap','wood'],
+ ['warsword','War Sword','H','waisted',15,.3,'cross','nut','leather',1],
+ ['executioner','Executioner’s Sword','H','rounded',19,.3,'cross','disc','leather'],
+ ['zwei','Zweihänder','X','straight',18,.32,'big','nut','leather',1],
+ ['flamberge','Flamberge','X','flame',15,.32,'big','wheel','leather'],
+ ['greatsword','Greatsword','X','broad',18,.3,'big','bell','wrap',1],
+ ['montante','Montante','X','straight',15,.34,'ring','orb','leather',1],
+ ['highland','Highland Greatsword','X','waisted',16,.32,'big','orb','wrap',1],
+]);
+add('shadow',[
+ ['stiletto','Stiletto','L','spike',9,.45,'disc','orb','leather'],
+ ['kris','Kris','L','kris',11,.4,'lugs','cap','wood'],
+ ['karambit','Karambit','L','karambit',12,.45,'none','ring','wrap'],
+ ['tanto','Tanto','L','tanto',11,.42,'tsuba','cap','wrap'],
+ ['misericorde','Misericorde','L','needle',9,.45,'cross','star','leather'],
+ ['throwingknife','Throwing Knife','L','leaf',11,.35,'none','ring','leather'],
+ ['fang','Fang Dagger','L','clip',12,.4,'talon','fishtail','bone'],
+ ['hookblade','Hookblade','M','kukri',15,.32,'bolster','cap','wood'],
+ ['wakizashi','Wakizashi','M','katana',10,.36,'tsuba','cap','wrap',0,.6],
+ ['khopesh','Khopesh','M','khopesh',14,.28,'collar','bell','wood'],
+ ['shotel','Shotel','M','shotel',10,.3,'none','nut','wood'],
+ ['sicklesword','Sickle Sword','M','khopesh',12,.3,'bolster','orb','bone',0,.6],
+ ['kopis','Kopis','M','falchion',16,.26,'talon','nut','leather'],
+ ['talwar','Talwar','M','saber',12,.24,'cross','disc','wrap',1,.7],
+ ['nightsaber','Nightsaber','H','saber',13,.26,'sguard','cap','leather',1,.9],
+ ['scimitar','Scimitar','H','saber',15,.22,'crescent','nut','leather',0,1.3],
+ ['shamshir','Shamshir','H','saber',11,.24,'quillons','fishtail','leather',0,1.7],
+ ['dao','Dao','H','falchion',17,.26,'tsuba','ring','wrap',0,.5],
+ ['yatagan','Yatagan','H','kukri',11,.24,'none','fishtail','bone',0,.8],
+ ['katana','Katana','H','katana',10,.32,'tsuba','nut','wrap',0,.8],
+ ['scythe','Reaping Scythe','X','crescent',22,.75,'collar','cap','shaft'],
+ ['odachi','Ōdachi','X','katana',11,.34,'tsuba','orb','wrap',0,.9],
+ ['zanbato','Zanbatō','X','cleaver',20,.38,'collar','cap','wrap'],
+ ['nagamaki','Nagamaki','X','katana',11,.7,'collar','ring','shaft',0,.7],
+ ['grimcrescent','Grim Crescent','X','shotel',18,.55,'talon','gem','shaft',0,1.2],
+]);
+add('arcane',[
+ ['runedagger','Rune Dagger','L','leaf',11,.42,'crescent','orb','leather'],
+ ['athame','Athame','L','straight',10,.42,'crescent','crystal','bone'],
+ ['spellknife','Spellknife','L','clip',11,.4,'star','crystal','leather'],
+ ['crystalshiv','Crystal Shiv','L','crystal',9,.45,'none','gem','wrap'],
+ ['sigildagger','Sigil Dagger','L','kris',10,.42,'star','orb','leather'],
+ ['wandblade','Wandblade','L','needle',9,.6,'collar','crystal','wood'],
+ ['wardknife','Ward Knife','L','leaf',12,.4,'ring','star','bone'],
+ ['spellsword','Spellsword','M','straight',11,.24,'swept','crystal','leather',1],
+ ['glyphblade','Glyphblade','M','waisted',12,.24,'swept','gem','wrap'],
+ ['leyblade','Leyblade','M','lightning',11,.24,'crescent','crystal','wrap'],
+ ['starsaber','Star Saber','M','saber',11,.24,'star','star','leather',0,.8],
+ ['arcsword','Arc Sword','M','lightning',12,.22,'star','orb','leather'],
+ ['hexblade','Hexblade','M','kris',12,.26,'crescent','gem','bone'],
+ ['moonfang','Moonfang','M','shotel',11,.28,'crescent','orb','wrap',0,.7],
+ ['runeblade','Runeblade','H','flame',15,.27,'crescent','crystal','leather',1],
+ ['stormbrand','Stormbrand','H','lightning',14,.27,'quillons','crystal','leather'],
+ ['voidcleaver','Voidcleaver','H','cleaver',19,.3,'crescent','gem','wrap'],
+ ['prismsword','Prism Sword','H','crystal',15,.28,'star','crystal','wrap'],
+ ['aetherblade','Aether Blade','H','leaf',15,.27,'swept','orb','leather'],
+ ['wyrmtongue','Wyrmtongue','H','flame',14,.28,'talon','gem','bone'],
+ ['staffblade','Staff-blade','X','leaf',13,1,'collar','crystal','shaft'],
+ ['archmage','Archmage Greatsword','X','straight',16,.32,'star','gem','leather',1],
+ ['sunderstaff','Sunderstaff','X','glaive',15,.9,'collar','gem','shaft'],
+ ['obelisk','Obelisk Blade','X','crystal',19,.32,'big','crystal','leather'],
+ ['astralglaive','Astral Glaive','X','glaive',14,.8,'star','crystal','shaft'],
+]);
+add('sanct',[
+ ['relicdagger','Relic Dagger','L','straight',12,.4,'cross','disc','leather',1],
+ ['pilgrimknife','Pilgrim’s Knife','L','leaf',11,.42,'cross','cross','wood'],
+ ['vowdagger','Vow Dagger','L','spike',10,.45,'cross','bell','leather'],
+ ['rosarystiletto','Rosary Stiletto','L','needle',7,.48,'ring','cross','leather'],
+ ['chapelknife','Chapel Knife','L','clip',12,.4,'cross','orb','bone'],
+ ['seraphfang','Seraph Fang','L','leaf',11,.42,'wings','gem','wrap'],
+ ['martyrdirk','Martyr’s Dirk','L','spike',9,.45,'halo','disc','wrap'],
+ ['holyblade','Holy Blade','M','waisted',13,.25,'cross','cross','leather',1],
+ ['templar','Templar Sword','M','broad',14,.22,'cross','cross','wrap',1],
+ ['paladin','Paladin’s Blade','M','straight',13,.24,'wings','cross','leather',1],
+ ['oathsword','Oath Sword','M','straight',12,.24,'halo','cross','wrap',2],
+ ['vigilsword','Vigil Sword','M','rounded',13,.22,'cross','bell','leather',1],
+ ['cherubblade','Cherub Blade','M','leaf',14,.24,'wings','orb','leather'],
+ ['lanternsword','Lantern Sword','M','waisted',13,.24,'ring','bell','wrap'],
+ ['crusader','Crusader Sword','H','broad',16,.27,'cross','disc','leather',1],
+ ['mercy','Sword of Mercy','H','blunt',15,.27,'cross','disc','wrap',1],
+ ['inquisitor','Inquisitor’s Blade','H','straight',14,.28,'star','cross','bone',1],
+ ['archangel','Archangel Sword','H','straight',15,.28,'wings','gem','wrap',2],
+ ['reliquary','Reliquary Sword','H','broad',15,.28,'halo','bell','leather',1],
+ ['judgment','Judgment Blade','H','rounded',17,.28,'wings','cross','leather'],
+ ['cathedral','Cathedral Sword','X','straight',19,.32,'halo','disc','leather',2],
+ ['seraphgreat','Seraph Greatsword','X','flame',16,.32,'wings','cross','leather'],
+ ['sanctifier','Sanctifier','X','broad',18,.32,'big','cross','leather',2],
+ ['pontiff','Pontiff’s Greatsword','X','straight',17,.33,'big','gem','wrap',2],
+ ['dawnbringer','Dawnbringer','X','waisted',17,.33,'halo','star','leather',2],
+]);
+T.crusader.wide=1;return T})();
+
+const TK=Object.keys(TYPES);
+// Commemorative gift blades: not forgeable, not part of any class or the Armory.
+const GIFTS={testsword:{n:'Test Sword',c:'gift',wt:'M',shape:'straight',w:23,g:.26,guard:'wings',pommel:'gem',grip:'wrap',fuller:1,gift:'TEST 18/11/2026',d:'Given to everyone who tested Anvilmoon, 18 November 2026.'},
+  sweetchilli:{n:'Sweet Chilli',c:'gift',wt:'M',shape:'flame',w:24,g:.24,guard:'talon',pommel:'orb',grip:'wrap',fuller:0,gift:'CHILLI',date:'19/11/2026',who:'Made for sweetchilli',
+    pal:{st:['#ff7a3c','#b3170f','#e0401f'],metal:'#5aa83c',grip:'#5c2a14',gem:'#ffd23f',glow:[255,110,40],c:'#ff6a3d',ink:[255,214,90],shadow:[70,8,6],rgb:'255,106,61'}}};
+Object.assign(TYPES,GIFTS);
+const typesOf=c=>TK.filter(k=>TYPES[k].c===c);
+const isGift=b=>!!(b&&TYPES[b.type]&&TYPES[b.type].gift);
+const GIFT_C='#5fd0b8',GIFT_DATE='18/11/2026';
+const giftDate=b=>b.gdate||TYPES[b.type].date||GIFT_DATE,giftWho=b=>TYPES[b.type].who||'Given to everyone who tested Anvilmoon',giftCls=b=>isGift(b)?' g-'+b.type:'';
+const GIFT_PAL={st:['#d9f2ea','#3f8f86','#9fd9cc'],metal:'#e8bf52',grip:'#24423f',gem:'#7ff5d8',glow:[95,220,190],c:'#5fd0b8'};
+const rarN=b=>isGift(b)?'One of a kind':RAR[b.rarity].n,rarC=b=>isGift(b)?((TYPES[b.type].pal||GIFT_PAL).c):RAR[b.rarity].c;
+const WT={L:{n:'Light',iron:1,coal:1,strikes:4,v:1},M:{n:'Medium',iron:2,coal:1,strikes:6,v:1.8},H:{n:'Heavy',iron:4,coal:2,strikes:8,v:3},X:{n:'Massive',iron:6,coal:3,strikes:10,v:4.5}};
+const RAR=[
+  {n:'Common',c:'#b7ada0',vb:0,salv:{}},
+  {n:'Fine',c:'#8fbf7a',vb:1,salv:{coal:1}},
+  {n:'Masterwork',c:'#6ea0d8',vb:3,salv:{damascus:1}},
+  {n:'Heirloom',c:'#b08ad8',vb:8,salv:{damascus:2,dust:1}},
+  {n:'Legendary',c:'#f0c35a',vb:25,salv:{damascus:3,dust:3}},
+];
+const ANVILS=[
+  {n:'Rough Anvil',t:[70,22,6,1.8,.2],d:'Where everyone starts.'},
+  {n:'Iron Anvil',t:[60,25,10,4,1],cost:{coin:80,iron:15},d:'A proper anvil. Reachable in your first session.'},
+  {n:'Steel Anvil',t:[48,30,15,5.5,1.5],cost:{coin:400,iron:30,damascus:4},d:'Fewer Commons, more Masterworks.'},
+  {n:'Damascus Anvil',t:[38,32,19,8.5,2.5],cost:{coin:1500,damascus:12,shards:2},d:'Pattern-welded and heavy.'},
+  {n:'Dragonbone Anvil',t:[30,33,22,11,4],cost:{coin:5000,damascus:30,shards:8},d:'The best rarity table in the game.'},
+];
+const HAMMERS={
+  worn:{n:'Worn Hammer',zone:1,cool:1,d:'Basic timing window. Never breaks.'},
+  smith:{n:"Smith's Hammer",zone:1.3,cool:.85,dur:50,cost:{coin:120,iron:10,damascus:1},repair:{coin:30},d:'30% wider sweet spot. Each strike cools the metal 15% less.'},
+  master:{n:'Master Hammer',zone:1.6,cool:.7,dur:50,cost:{coin:900,damascus:6,shards:1},repair:{coin:150},d:'60% wider sweet spot. Each strike cools the metal 30% less.'},
+};
+const SIZES=[
+  {n:'Runt',p:1,a:8,b:30,vb:1.5},{n:'Small',p:20,a:30,b:70,vb:0},{n:'Standard',p:55,a:70,b:120,vb:0},{n:'Large',p:20,a:120,b:160,vb:.3},
+  {n:'Huge',p:3.49,a:160,b:220,vb:1},{n:'Titan',p:.5,a:220,b:300,vb:4},{n:'Colossal',p:.01,a:300,b:null,vb:30},
+];
+const SHINE={temp:{n:'Tempered',p:200,test:10,vb:3},star:{n:'Starforged',p:2000,test:40,vb:40}};
+const QUENCH={oil:{n:'Oil',d:'Safe: 3% crack risk, no bonus',risk:.03,bonus:0},brine:{n:'Brine',d:'10% crack risk, +6 grade',risk:.10,bonus:6},water:{n:'Water',d:'22% crack risk, +12 grade',risk:.22,bonus:12}};
+const PRICES={iron:4,coal:3,fuel:3,damascus:45};
+const SELLMAT={damascus:22,shards:100};const MERCHANT=.75,TRADER=1.2;
+const MATN={iron:'Iron',coal:'Coal',fuel:'Energy',damascus:'Damascus',dust:'Star-dust',shards:'Star-shards',coin:'Coin'};
+const FUEL_MAX=10,FUEL_MS=180000,BASE_COIN=6;
+const SLOT_UNLOCK=[0,30,100,250];
+const PATRONS=['Lady Wrenfield','Captain Orsk','The Gilded Guild','Brother Aldous','Quartermaster Vey','Duke Harrow','Mira of the Docks','The Iron Abbey'];
+const NAMES=['Edda','Rowan','Hal','Brin','Maren','Tobin','Senna','Garrick','Wren','Ostra'];
+
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function sizeIdx(len){for(let i=SIZES.length-1;i>=0;i--)if(len>=SIZES[i].a)return i;return 0}
+
+// ============================================================== more data
+const CLASS_COST = [0, 150, 600, 2000];          // coins to learn the 2nd, 3rd and 4th class
+const SLOT_PCT = [0, .05, .15, .3];             // Armory share needed for the 2nd, 3rd and 4th class
+const LABOR_MAX = 5;                             // day-labour shifts per day
+const DIG_MS = 45000, DIG_TEST_MS = 8000;        // digging the slag heap
+const ENERGY_CAP = 30;                           // meals can fill energy up to this
+const MIN_STRIKE_MS = 250;                       // a forge with N strikes takes at least N x this long
+const COMPACT_AT = 150;                          // tidy a save once it holds this many sold/salvaged blades
+const SAVE_V = 2;                                // save format version (see upgradeSave)
+const RECIPES = {
+  M: { n: 'Medium blade pattern', d: 'Lets you forge your class’s Medium blade.', cost: { coin: 150, iron: 10 } },
+  H: { n: 'Heavy blade pattern', d: 'Lets you forge your class’s Heavy blade.', cost: { coin: 600, damascus: 3 }, req: 'comm', need: 5, rt: 'Deliver 5 blades you forged to commissions' },
+  X: { n: 'Massive blade pattern', d: 'Lets you forge your class’s Massive blade.', cost: { coin: 2000, damascus: 8, shards: 1 }, req: 'mw', need: 1, rt: 'Forge a Masterwork or better yourself' },
+  brine: { n: 'Brine quench', d: '10% crack risk, +6 grade.', cost: { coin: 100 } },
+  water: { n: 'Water quench', d: '22% crack risk, +12 grade.', cost: { coin: 400 }, req: 'g70', need: 10, rt: 'Forge 10 blades with a grade of 70 or higher' },
+};
+const MEALS = {
+  bread: { n: 'Rye bread', e: 1, p: 4, d: 'A heel of dark bread.' },
+  pottage: { n: 'Pottage', e: 3, p: 10, d: 'A bowl of thick vegetable stew.' },
+  pie: { n: 'Meat pie', e: 6, p: 18, d: 'Mutton and onion under a hard crust.' },
+  feast: { n: 'Feast', e: 12, p: 30, d: 'Roast fowl, bread, cheese and a jug of ale.' },
+};
+// Armory first-find rewards
+const FIND = {
+  found: { n: 'first find', r: (w) => ({ coin: Math.round(20 * w) }) }, leg: { n: 'first Legendary', r: () => ({ damascus: 2 }) },
+  big: { n: 'first Titan', r: () => ({ damascus: 1 }) }, temp: { n: 'first Tempered', r: () => ({ dust: 5 }) },
+  star: { n: 'first Starforged', r: () => ({ shards: 1 }) }, moon: { n: 'first Moonlit', r: () => ({ coin: 25 }) },
+};
+// Old smith names that blades are re-signed to (the account's username)
+const FORGER_AKA = { 'Spriggan': 'Anvilmoon', 'Lexy': 'lexy', 'Edda Emberly': 'Stubbs38', 'John': 'Mouflon' };
+const forgerNow = (n) => (Object.prototype.hasOwnProperty.call(FORGER_AKA, n) ? FORGER_AKA[n] : n);
+// Auction House
+const AH_CUT = .05, MAX_LISTINGS = 20;
+const DURS = { short: { n: 'Short', d: '30 minutes', ms: 30 * 60e3, f: 1 }, medium: { n: 'Medium', d: '2 hours', ms: 2 * 3600e3, f: 2 }, long: { n: 'Long', d: '12 hours', ms: 12 * 3600e3, f: 4 } };
+const minBid = (L) => (L.bid ? Math.max(L.bid + 1, Math.ceil(L.bid * 1.05)) : L.start);
+
+// ============================================================== small helpers
+class RuleError extends Error { constructor(msg) { super(msg); this.rule = true; } }
+// need(ok, msg): stop the action with a message for the player unless ok is true
+const need = (ok, msg) => { if (!ok) throw new RuleError(msg); };
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const pickR = (a, rng) => a[Math.floor(rng() * a.length)];
+const num = (v) => (typeof v === 'number' && isFinite(v) ? v : 0);
+const fmtN = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const note = (ctx, text, ms) => { ctx.notes.push(ms ? { text, ms } : { text }); };
+// a whole number from the player, within limits
+const intArg = (v, lo, hi, msg) => { const n = Math.floor(Number(v)); need(Number.isFinite(n) && n >= lo && n <= hi, msg || 'That amount isn’t valid.'); return n; };
+const idList = (v) => (Array.isArray(v) ? v : [v]).slice(0, 500).map(String);
+// a small fixed hash, so "random" events that both sides must agree on come out the same everywhere
+function hash32(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+// ============================================================== time
+// tz is the player's clock offset from UTC in minutes, as the browser's getTimezoneOffset() gives it.
+const DAY_MS = 864e5;
+const tzOf = (tz) => (Number.isInteger(tz) && Math.abs(tz) <= 14 * 60 ? tz : 0);
+const localDay = (now, tz) => Math.floor((now - tzOf(tz) * 60000) / DAY_MS);
+function isNight(now, tz, test) {
+  if (test) return true;
+  const h = ((((now - tzOf(tz) * 60000) % DAY_MS) + DAY_MS) % DAY_MS) / 36e5;
+  return h >= 20 || h < 6;
+}
+
+// ============================================================== blades: names, worth, salvage
+function vr(b) { const c = CLASSES[TYPES[b.type] && TYPES[b.type].c]; return c ? c.vars[b.variant || 0] || c.vars[0] : { n: 'Commemorative', c: '#5fd0b8' }; }
+function bname(b) {
+  if (TYPES[b.type] && TYPES[b.type].gift) return `The ${TYPES[b.type].n}`;
+  return `${b.moon ? 'Moonlit ' : ''}${b.shine === 'star' ? 'Starforged ' : b.shine === 'temp' ? 'Tempered ' : ''}${RAR[b.rarity].n} ${vr(b).n} ${TYPES[b.type].n}`;
+}
+// Forge grade scales the whole price: grade 72 is the baseline, a great hand forge (88) is worth about 35% more than a quick forge (55).
+const gradeMult = (g) => Math.max(.6, 1 + ((g ?? 60) - 72) / 55 * .5);
+// Length scales the price too: a 50 cm blade is worth about 70% of a 100 cm one, 250 cm about 160%. Runts keep their own bonus.
+const sizeMult = (b) => (b.si === 0 || !b.len ? 1 : Math.sqrt(Math.max(10, b.len) / 100));
+// What a blade sells for. dem = merchant demand for its type (1 = normal), mult = MERCHANT (0.75) at the shop, 1 for "worth".
+function value(b, dem = 1, mult = MERCHANT) {
+  if (b.cracked) return 1;
+  const t = TYPES[b.type]; if (!t) return 1;
+  const bonus = 1.72 + RAR[b.rarity].vb + SIZES[b.si].vb + (b.shine ? SHINE[b.shine].vb : 0) + (vr(b).rare ? 1 : 0) + (b.moon ? .5 : 0);
+  return Math.max(1, Math.round(BASE_COIN * WT[t.wt].v * bonus * gradeMult(b.grade) * sizeMult(b) * (dem ?? 1) * mult));
+}
+const worth = (b) => value(b, 1, 1);
+const depositFor = (b, k) => Math.max(1, Math.round(worth(b) * .03 * DURS[k].f));
+function salvYield(b) {
+  const t = WT[TYPES[b.type].wt], y = {};
+  const iron = Math.round(t.iron * b.len / 100 * (b.cracked ? .3 : .6)); if (iron > 0) y.iron = iron;
+  if (b.cracked) return Object.keys(y).length ? y : { fuel: 1 };
+  for (const [k, v] of Object.entries(RAR[b.rarity].salv)) y[k] = (y[k] || 0) + v;
+  if (b.shine === 'temp') y.dust = (y.dust || 0) + 5;
+  if (b.shine === 'star') y.shards = 3;
+  return Object.keys(y).length ? y : { fuel: 1 };
+}
+function yieldStr(y) { const s = Object.entries(y).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${MATN[k]}`).join(', '); return s || 'scraps'; }
+const allBlades = (S) => S.slots.filter(Boolean).flatMap((c) => c.blades || []);
+// statuses the Records boards count
+const exists = (b) => ['owned', 'sold', 'commission', 'listed'].includes(b.status) && !b.cracked;
+const ownedOf = (c) => c.blades.filter((b) => b.status === 'owned');
+const bladeById = (c, id) => c.blades.find((b) => String(b.id) === String(id));
+
+// ============================================================== the save: new, upgrade, one smith
+function freshAcct() { return { v: SAVE_V, slots: [null, null, null, null], active: -1, serial: 0, totalForged: 0 }; }
+function newChar(name, cls, now, rng) {
+  const d = {}; TK.forEach((k) => (d[k] = 1));
+  let cid = 's'; for (let i = 0; i < 8; i++) cid += 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(rng() * 36)];
+  return { cid, name, cls, coin: 80, iron: 12, coal: 8, fuel: 10, damascus: 0, dust: 0, shards: 0, bog: 0, recipes: {}, fuelTs: now, demandTs: now, anvil: 0, hammer: 'worn', hammers: {}, blades: [], demand: d, commissions: [], forged: 0, sel: typesOf(cls)[0] };
+}
+// One smith per account. Older saves could hold up to four; they are folded into the one in use, and every class they had stays unlocked.
+function unify(sv) {
+  if (!sv || !Array.isArray(sv.slots)) return sv;
+  const all = sv.slots.filter(Boolean); if (!all.length) { sv.active = -1; return sv; }
+  const m = sv.slots[sv.active] || all[0];
+  for (const o of all) {
+    if (o === m) continue;
+    for (const k of ['coin', 'iron', 'coal', 'damascus', 'dust', 'shards', 'bog', 'forged']) m[k] = (m[k] || 0) + (o[k] || 0);
+    m.fuel = Math.max(m.fuel || 0, o.fuel || 0); m.anvil = Math.max(m.anvil || 0, o.anvil || 0);
+    m.recipes = { ...(o.recipes || {}), ...(m.recipes || {}) }; m.hammers = m.hammers || {};
+    for (const [k, h] of Object.entries(o.hammers || {})) if (!m.hammers[k] || (h.dur || 0) > (m.hammers[k].dur || 0)) m.hammers[k] = h;
+    for (const k of Object.keys(m.demand || {})) if (o.demand && o.demand[k] != null) m.demand[k] = Math.min(m.demand[k], o.demand[k]);
+    sv.serial = sv.serial || 0; const ids = new Set((m.blades || []).map((b) => b.id));
+    for (const b of o.blades || []) { if (ids.has(b.id)) b.id = ++sv.serial; ids.add(b.id); m.blades.push(b); }
+    m.classes = [...new Set([...(m.classes || [m.cls]), ...(o.classes || [o.cls])])];
+    m.merged = [...new Set([...(m.merged || []), o.cid, ...(o.merged || [])])];
+    m.aka = [...new Set([...(m.aka || []), o.name, ...(o.aka || [])])];
+  }
+  if (!Array.isArray(m.classes) || !m.classes.includes(m.cls)) m.classes = [...new Set([m.cls, ...(m.classes || [])])];
+  // Every smith now starts as a Warsmith. A smith from before that change keeps its classes and is given Warsmith for free.
+  if (!m.classes.includes('war')) { m.classes.push('war'); m.freeWar = 1; }
+  m.selBy = m.selBy || {};
+  if (sv.slots[0] !== m || all.length > 1) sv.slots = [m, null, null, null];
+  sv.active = 0; return sv;
+}
+const needsUnify = (sv) => { const all = (sv.slots || []).filter(Boolean); return all.length > 1 || (all.length === 1 && (sv.slots[0] !== all[0] || sv.active !== 0 || !Array.isArray(all[0].classes) || !all[0].classes.includes('war'))); };
+const smithOf = (S) => { if (needsUnify(S)) unify(S); return S.slots[S.active] || null; };
+// classes that count towards the price of the next one (the free Warsmith doesn't)
+const clsN = (c) => (c.classes || [c.cls]).length - (c.freeWar ? 1 : 0);
+
+// Bring any save (old or new) up to the current format. Safe to run on every load: it only fills gaps and
+// tidies; it never takes coin or blades away. This is how existing players' saves survive the move.
+function upgradeSave(S, now) {
+  if (!S || typeof S !== 'object' || !Array.isArray(S.slots)) S = freshAcct();
+  // things only the old cloud-sync or the browser itself used
+  for (const k of ['base', 'pushed', 'rev', 'at', 'tab', 'testOdds', 'tourDone', 'tutDone', 'tipsOff', 'rackTall', 'mailSeen', 'arenaDone', 'wealth']) delete S[k];
+  if (needsUnify(S)) unify(S);
+  S.serial = Math.max(0, Math.floor(num(S.serial))); S.totalForged = Math.max(0, Math.floor(num(S.totalForged)));
+  const c = S.slots[S.active];
+  if (c) {
+    for (const k of ['coin', 'iron', 'coal', 'fuel', 'damascus', 'dust', 'shards', 'bog']) c[k] = Math.max(0, num(c[k]));
+    c.forged = Math.max(0, Math.floor(num(c.forged)));
+    c.anvil = clamp(Math.floor(num(c.anvil)), 0, ANVILS.length - 1);
+    c.blades = Array.isArray(c.blades) ? c.blades.filter((b) => b && typeof b === 'object' && TYPES[b.type]) : [];
+    const seen = new Set();
+    for (const b of c.blades) {
+      if (b.status === 'pending') b.status = b.cracked ? 'salvaged' : 'owned';   // a reveal that was never finished
+      if (typeof b.id !== 'number' || seen.has(b.id)) b.id = ++S.serial;
+      seen.add(b.id); if (b.id > S.serial) S.serial = b.id;
+    }
+    c.hammers = c.hammers && typeof c.hammers === 'object' ? c.hammers : {};
+    if (!HAMMERS[c.hammer]) c.hammer = 'worn';
+    c.recipes = c.recipes && typeof c.recipes === 'object' ? c.recipes : {};
+    c.commissions = Array.isArray(c.commissions) ? c.commissions.filter((q) => q && TYPES[q.type]) : [];
+    if (!CLASSES[c.cls]) c.cls = 'war';
+    c.demand = c.demand && typeof c.demand === 'object' ? c.demand : {};
+    for (const k of TK) if (typeof c.demand[k] !== 'number' || !isFinite(c.demand[k])) c.demand[k] = 1;
+    if (!c.fuelTs) c.fuelTs = now;
+    if (!c.demandTs) c.demandTs = now;
+    // day counters used to be the device's date text; they are now day numbers in the player's time zone
+    if (c.labor && typeof c.labor.d !== 'number') delete c.labor;
+    if (c.meals && typeof c.meals.d !== 'number') delete c.meals;
+    delete c.trader;
+  }
+  S.v = SAVE_V;
+  return S;
+}
+// A smith goes by the account's username. Blades forged under an old smith name are re-signed.
+function oneName(S, username) {
+  if (!username) return;
+  for (const c of S.slots) {
+    if (!c) continue;
+    const old = new Set([c.name, ...(c.aka || [])]); old.delete(username);
+    if (c.name !== username) { c.aka = [...new Set([...(c.aka || []), c.name])]; c.name = username; }
+    for (const b of c.blades || []) { if (!b || b.forger === username) continue; const f = old.has(b.forger) ? username : forgerNow(b.forger); if (f !== b.forger) b.forger = f; }
+  }
+}
+
+// ============================================================== energy and merchant demand (both follow the clock)
+function tickFuel(c, now) {
+  if (c.fuel >= FUEL_MAX) { c.fuelTs = now; return; }
+  const n = Math.floor((now - c.fuelTs) / FUEL_MS);
+  if (n > 0) { c.fuel = Math.min(FUEL_MAX, c.fuel + n); c.fuelTs += n * FUEL_MS; if (c.fuel >= FUEL_MAX) c.fuelTs = now; }
+}
+// Demand drifts 3% back toward 1.0 every 5 seconds. Every 75 seconds merchants clamour for one blade of your
+// class (+0.4, at most 1.6). Which blade is worked out from the clock and the smith id, so the game and the
+// server always agree on it without talking. settleDemand brings c.demand up to `now`.
+const DEM_TICK = 5000, DEM_WIN = 75000, DEM_KEEP = .97;
+const clamorType = (c, w) => { const list = typesOf(c.cls); return list[hash32(c.cid + ':' + w) % list.length]; };
+function relaxDemand(c, dt) {
+  if (dt <= 0) return;
+  const f = Math.pow(DEM_KEEP, dt / DEM_TICK);
+  for (const k of TK) c.demand[k] = 1 + Math.trunc((c.demand[k] - 1) * f * 1e5) / 1e5;
+}
+function settleDemand(c, now) {
+  let t = Math.min(c.demandTs || now, now);
+  if (now - t > 40 * DEM_WIN) { relaxDemand(c, now - 40 * DEM_WIN - t); t = now - 40 * DEM_WIN; }   // older bumps have faded to nothing
+  for (let w = Math.floor(t / DEM_WIN) + 1; w * DEM_WIN <= now; w++) {
+    relaxDemand(c, w * DEM_WIN - t); t = w * DEM_WIN;
+    const k = clamorType(c, w); c.demand[k] = Math.min(1.6, c.demand[k] + .4);
+  }
+  relaxDemand(c, now - t); c.demandTs = now;
+}
+
+// ============================================================== rolls (rng = a function returning 0..1)
+function rollIdx(weights, rng) { let r = rng() * weights.reduce((a, b) => a + b, 0); for (let i = 0; i < weights.length; i++) { if ((r -= weights[i]) < 0) return i; } return 0; }
+function rollSize(rng, test) {
+  const w = SIZES.map((s) => s.p); if (test) { w[5] = 5; w[6] = 1; w[2] = 49.5; }
+  const i = rollIdx(w, rng), s = SIZES[i]; let len;
+  if (s.b === null) len = s.a - 60 * Math.log(rng() || .001);
+  else if (i === 2) len = s.a + (s.b - s.a) * (rng() + rng()) / 2;
+  else len = s.a + (s.b - s.a) * rng();
+  len = +len.toFixed(1); return { len, si: sizeIdx(len) };
+}
+function rollShine(rng, test) { const s = rng(), st = 1 / (test ? SHINE.star.test : SHINE.star.p), tp = 1 / (test ? SHINE.temp.test : SHINE.temp.p); return s < st ? 'star' : s < st + tp ? 'temp' : ''; }
+function rollVariant(cls, rng) { const v = CLASSES[cls].vars, nr = v.filter((x) => !x.rare).length; return rollIdx(v.map((x) => (x.rare ? 5 : 95 / nr)), rng); }
+const rollMoon = (night, rng, test) => night && rng() < (test ? 1 / 3 : 1 / 15);
+function makeBlade(ctx, type, tier, grade, cracked, capR = 4) {
+  const { S, c, rng, test } = ctx, t = TYPES[type], { len, si } = rollSize(rng, test);
+  return { id: ++S.serial, type, rarity: Math.min(capR, rollIdx(ANVILS[tier].t, rng)), variant: rollVariant(t.c, rng), len, si, shine: rollShine(rng, test),
+    moon: rollMoon(isNight(ctx.now, ctx.tz, test), rng, test), grade, cracked: !!cracked, anvil: tier, forger: c.name, status: 'owned', t: ctx.now };
+}
+
+// ============================================================== workshop, market, hard times
+const knows = (c, k) => k === 'L' || k === 'oil' || !!(c.recipes && c.recipes[k]);
+const canPay = (c, cost) => Object.entries(cost).every(([k, v]) => c[k] >= v);
+const payCost = (c, cost) => { for (const [k, v] of Object.entries(cost)) c[k] -= v; };
+const costStr = (cost) => Object.entries(cost).map(([k, v]) => (k === 'coin' ? `${fmtN(v)}c` : `${v} ${MATN[k]}`)).join(' + ');
+function hammerFx(c) { const h = HAMMERS[c.hammer] || HAMMERS.worn; if (c.hammer !== 'worn' && (!c.hammers[c.hammer] || c.hammers[c.hammer].dur <= 0)) return HAMMERS.worn; return h; }
+const mealsToday = (c, day) => (c.meals && c.meals.d === day ? c.meals.n : 0);
+const mealPrice = (c, k, day) => Math.round(MEALS[k].p * (1 + .05 * mealsToday(c, day)));
+const laborLeft = (c, day) => (!c.labor || c.labor.d !== day ? LABOR_MAX : LABOR_MAX - c.labor.n);
+// broke = can't afford a Light forge even after selling every blade on the rack
+function isBroke(c) {
+  const haveIron = c.iron + (c.bog || 0); if (haveIron >= 1 && c.coal >= 1) return false;
+  const needC = (haveIron < 1 ? PRICES.iron * 5 : 0) + (c.coal < 1 ? PRICES.coal * 5 : 0); if (c.coin >= needC) return false;
+  return c.coin + ownedOf(c).reduce((a, b) => a + value(b, c.demand[b.type]), 0) < needC;
+}
+
+// ============================================================== Armory
+// Each blade type has 6 goals; a bit per goal: 1 found, 2 Legendary, 4 Titan+, 8 Tempered, 16 Starforged, 32 Moonlit.
+// Sold and salvaged blades that a save no longer keeps (see compact) are remembered in S.gone.
+const bladeBits = (b) => 1 | (b.rarity === 4 ? 2 : 0) | (b.si >= 5 ? 4 : 0) | (b.shine === 'temp' ? 8 : 0) | (b.shine === 'star' ? 16 : 0) | (b.moon ? 32 : 0);
+const armSeen = (b) => !!(b && TYPES[b.type] && b.status !== 'pending' && b.status !== 'stock' && !b.cracked);
+function armoryBits(S) {
+  const m = { ...((S.gone && S.gone.arm) || {}) };
+  for (const b of allBlades(S)) if (armSeen(b)) m[b.type] = (m[b.type] || 0) | bladeBits(b);
+  return m;
+}
+function armoryProgress(S) {
+  const m = armoryBits(S); let got = 0;
+  for (const k of TK) { let x = m[k] || 0; while (x) { got += x & 1; x >>= 1; } }
+  return { got, goals: TK.length * 6 };
+}
+function claimArmory(ctx) {
+  const { S, c } = ctx; S.claimed = S.claimed || {}; const m = armoryBits(S), got = [];
+  for (const k of TK) {
+    const bits = m[k]; if (!bits) continue;
+    const w = WT[TYPES[k].wt].v, keys = [['found', 1]];
+    if (bits & 2) keys.push(['leg']); if (bits & 4) keys.push(['big']); if (bits & 8) keys.push(['temp']); if (bits & 16) keys.push(['star']); if (bits & 32) keys.push(['moon']);
+    for (const [g, i] of keys) {
+      const key = `${k}:${g}${i ?? ''}`; if (S.claimed[key]) continue;
+      S.claimed[key] = 1; const rw = FIND[g].r(w); for (const [mm, v] of Object.entries(rw)) c[mm] += v;
+      got.push(`${TYPES[k].n} ${FIND[g].n}: ${yieldStr(rw)}`);
+    }
+  }
+  got.slice(0, 3).forEach((t) => note(ctx, `Armory reward. ${t}.`, 4000));
+  if (got.length > 3) note(ctx, `…and ${got.length - 3} more Armory rewards.`, 4000);
+}
+// progress towards a pattern's requirement (blades this smith forged)
+function reqProgress(S, c, key) {
+  const g = (S.gone && S.gone.req) || {}, mine = c.blades.filter((b) => b.forger === c.name && b.status !== 'pending' && b.status !== 'stock');
+  if (key === 'comm') return mine.filter((b) => b.status === 'commission').length + (g.comm || 0);
+  if (key === 'mw') return mine.filter((b) => !b.cracked && b.rarity >= 2).length + (g.mw || 0);
+  if (key === 'g70') return mine.filter((b) => !b.cracked && b.grade >= 70).length + (g.g70 || 0);
+  return 0;
+}
+const reqMet = (S, c, r) => !r.req || reqProgress(S, c, r.req) >= r.need;
+// A further class opens when the Armory is far enough along, and costs coins to learn.
+function classOffer(S, c) {
+  const n = clsN(c); if ((c.classes || [c.cls]).length >= CK.length) return null;
+  const { got, goals } = armoryProgress(S), pct = got / goals;
+  return { pct, need: SLOT_PCT[n], cost: CLASS_COST[n], ok: pct >= SLOT_PCT[n], afford: c.coin >= CLASS_COST[n] };
+}
+const slotsOpen = (S) => { const { got, goals } = armoryProgress(S), p = got / goals; return SLOT_PCT.filter((x) => p >= x).length; };
+
+// Keep saves small: once a save holds many sold, salvaged, delivered or lost blades, drop the ones that no
+// longer matter. Kept: every blade still on the rack or listed, and anything that could be on a Records board
+// (your 10 longest, 10 shortest, 10 finest, 10 longest on the Rough Anvil, and your longest of each type).
+// What the dropped blades counted for (Armory goals, Legendaries, pattern requirements) is remembered in S.gone.
+function compact(S) {
+  const c = S.slots[S.active]; if (!c) return;
+  const live = (b) => ['owned', 'listed', 'pending', 'wager'].includes(b.status);
+  if (c.blades.filter((b) => !live(b)).length <= COMPACT_AT) return;
+  const rec = c.blades.filter((b) => exists(b) && !isGift(b)), keep = new Set();
+  const top = (list, cmp, n) => [...list].sort(cmp).slice(0, n).forEach((b) => keep.add(b));
+  top(rec, (a, b) => b.len - a.len, 10); top(rec, (a, b) => a.len - b.len, 10);
+  top(rec, (a, b) => b.grade - a.grade || b.len - a.len, 10); top(rec.filter((b) => b.anvil === 0), (a, b) => b.len - a.len, 10);
+  const best = {}; for (const b of rec) if (!best[b.type] || b.len > best[b.type].len) best[b.type] = b;
+  Object.values(best).forEach((b) => keep.add(b));
+  const g = S.gone = S.gone || {}; g.arm = g.arm || {}; g.req = g.req || {}; g.leg = g.leg || 0; g.n = g.n || 0;
+  c.blades = c.blades.filter((b) => {
+    if (live(b) || keep.has(b)) return true;
+    if (armSeen(b)) { g.arm[b.type] = (g.arm[b.type] || 0) | bladeBits(b); if (!isGift(b) && b.rarity === 4) g.leg++; }
+    if (b.forger === c.name && b.status !== 'stock') {
+      if (b.status === 'commission') g.req.comm = (g.req.comm || 0) + 1;
+      if (!b.cracked && b.rarity >= 2) g.req.mw = (g.req.mw || 0) + 1;
+      if (!b.cracked && b.grade >= 70) g.req.g70 = (g.req.g70 || 0) + 1;
+    }
+    g.n++; return false;
+  });
+}
+
+// ============================================================== commissions
+function genComm(c, rng, now, online) {
+  const ownAll = typesOf(c.cls), own = ownAll.filter((k) => knows(c, TYPES[k].wt));
+  const imp = !own.length || (online && !(c.commissions || []).some((q) => q && q.imp) && rng() < .12);
+  const type = imp ? pickR(TK.filter((k) => !ownAll.includes(k)), rng) : pickR(own, rng);
+  const maxR = c.anvil < 1 ? 1 : c.anvil < 3 ? 2 : 3, minR = Math.min(maxR, rollIdx([35, 35, 22, 8], rng));
+  const minS = rng() < .35 ? (rng() < .75 ? 3 : 4) : 0, minG = rng() < .35 ? 55 + Math.floor(rng() * 5) * 5 : 0;
+  const pay = Math.round([15, 40, 100, 280][minR] * WT[TYPES[type].wt].v * (minS === 3 ? 1.6 : minS === 4 ? 3 : 1) * (minG ? 1.3 : 1) * (imp ? 1.8 : 1));
+  return { id: String(now) + Math.floor(rng() * 1e6), type, minR, minS, minG, pay, imp, patron: pickR(PATRONS, rng) };
+}
+const qualifies = (b, q) => b.status === 'owned' && !b.cracked && b.type === q.type && b.rarity >= q.minR && b.si >= q.minS && b.grade >= q.minG;
+const deliverable = (b, q) => qualifies(b, q) && !b.keep && !isGift(b);
+function ensureComms(c, rng, now, online) { while (c.commissions.length < 3) c.commissions.push(genComm(c, rng, now, online)); }
+function refreshCost(c) { const n = c.commissions.filter((q) => q.lock).length; return n >= c.commissions.length ? null : 10 * 2 ** n; }
+
+// ============================================================== getting started
+// [id, title, why, coin, where, button]
+const GS_STEPS = [['forge', 'Forge your first blade', 'The forge walks you through heating, striking and quenching.', 25, 'forge', 'Go to the Forge'],
+  ['rack', 'Look at your blade on the Rack', 'Every blade you keep hangs on your rack, drawn to scale.', 10, 'rack', 'Open the Rack'],
+  ['sell', 'Sell a blade', 'Open a blade on your rack and press Sell. Coin buys iron, coal and upgrades.', 25, 'rack', 'Open the Rack'],
+  ['market', 'Visit the Market', 'Buy iron and coal here, or a meal when you run out of energy.', 15, 'market', 'Go to the Market'],
+  ['board', 'Check the Commission board', 'Patrons pay extra for the exact blade they ask for.', 15, 'board', 'Open Commissions'],
+  ['task', 'Collect a challenge reward', 'Finish any daily challenge, then collect its coin.', 50, 'tasks', 'See Challenges'],
+  ['workshop', 'See what the Workshop sells', 'Patterns, anvils and hammers. This is what to save your coin for.', 15, 'workshop', 'Go to the Workshop'],
+  ['armory', 'Open your Armory', 'The book of every blade there is to find. First finds pay a reward.', 15, 'armory', 'Open the Armory'],
+  ['arena', 'Visit the Arena', 'Duel other smiths with your best blade.', 15, 'arena', 'Go to the Arena'],
+  ['hall', 'See your Smith’s hall', 'Your look, title and best blades, as other smiths see you.', 25, 'hall', 'Open your hall']];
+const GS_VISITS = ['rack', 'market', 'board', 'workshop', 'armory', 'arena', 'hall'];
+function gsState(S) { if (!S.gs || !S.gs.d) S.gs = { d: {}, fin: S.slots.some((x) => x && x.forged) ? 1 : 0 }; return S.gs; }
+function gsMark(ctx, id) {
+  const { S, c } = ctx; if (!c) return;
+  const g = gsState(S); if (g.fin || g.d[id]) return;
+  const st = GS_STEPS.find((s) => s[0] === id); if (!st) return;
+  if (id !== 'forge' && !g.d.forge) return;
+  g.d[id] = 1; c.coin += st[3];
+  const left = GS_STEPS.filter((s) => !g.d[s[0]]).length;
+  if (!left) { g.fin = 1; note(ctx, `**Getting started is done.** +${st[3]} coin. The game now opens on the Forge.`, 5200); }
+  else note(ctx, `**Step done:** ${st[1]}. +${st[3]} coin.`, 3600);
+}
+
+// ============================================================== challenges: five a day and five a week, the same for every smith
+// Days and weeks turn over at midnight UTC (weeks on Monday). Progress is counted as you forge, sell, salvage and duel.
+const CH_DAY = 864e5, chDay = (t) => Math.floor(t / CH_DAY), chWeek = (t) => Math.floor((chDay(t) + 3) / 7);
+function chRng(seed) { let h = (seed * 2654435761) >>> 0; return (n) => { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = Math.imul(h ^ (h >>> 13), 3266489917) >>> 0; h ^= h >>> 16; return (h >>> 0) % n; }; }
+const CH_TIER = [['Easy', 25], ['Medium', 50], ['Hard', 100], ['Very hard', 200]], CH_SIZE = { 3: 'Large', 4: 'Huge', 5: 'Titan' };
+const forgedEv = (ev, f) => (ev.k === 'forge' && (!f || f(ev.b)) ? 1 : 0);
+// each maker returns [text, how many, what one event adds]
+const CH_POOL = [
+  [(r) => { const n = 5 + r(4); return [`Forge ${n} blades`, n, (ev) => forgedEv(ev)]; }, (r) => { const n = 3 + r(3); return [`Sell ${n} blades`, n, (ev) => (ev.k === 'sell' ? 1 : 0)]; }, (r) => { const n = 2 + r(2); return [`Salvage ${n} blades`, n, (ev) => (ev.k === 'salv' ? 1 : 0)]; }, (r) => { const n = 2 + r(2); return [`Forge ${n} blades of grade 60 or better`, n, (ev) => forgedEv(ev, (b) => b.grade >= 60)]; }],
+  [(r) => { const w = ['L', 'M'][r(2)], n = 3 + r(2); return [`Forge ${n} ${WT[w].n} blades`, n, (ev) => forgedEv(ev, (b) => TYPES[b.type].wt === w)]; }, (r) => { const n = 2 + r(2); return [`Forge ${n} blades of grade 80 or better`, n, (ev) => forgedEv(ev, (b) => b.grade >= 80)]; }, (r) => { const n = 2 + r(2); return [`Forge ${n} blades that are ${RAR[1].n} or rarer`, n, (ev) => forgedEv(ev, (b) => b.rarity >= 1)]; }, (r) => { const n = 150 + r(3) * 50; return [`Earn ${n} coins from selling blades`, n, (ev) => (ev.k === 'sell' ? ev.coin || 0 : 0)]; }],
+  [(r) => [`Forge a blade that is ${RAR[2].n} or rarer`, 1, (ev) => forgedEv(ev, (b) => b.rarity >= 2)], (r) => [`Forge a ${CH_SIZE[3]} blade or bigger`, 1, (ev) => forgedEv(ev, (b) => b.si >= 3)], (r) => { const n = 300 + r(3) * 100; return [`Earn ${n} coins from selling blades`, n, (ev) => (ev.k === 'sell' ? ev.coin || 0 : 0)]; }, (r) => [`Forge 2 blades of grade 90 or better`, 2, (ev) => forgedEv(ev, (b) => b.grade >= 90)]],
+  [(r) => [`Forge a blade that is ${RAR[3].n} or rarer`, 1, (ev) => forgedEv(ev, (b) => b.rarity >= 3)], (r) => [`Forge a ${CH_SIZE[4]} blade or bigger`, 1, (ev) => forgedEv(ev, (b) => b.si >= 4)], (r) => [`Forge a blade of grade 97 or better`, 1, (ev) => forgedEv(ev, (b) => b.grade >= 97)]]];
+const CH_WEEK = [[(r) => [`Forge 40 blades`, 40, (ev) => forgedEv(ev)], 150], [(r) => [`Sell 25 blades`, 25, (ev) => (ev.k === 'sell' ? 1 : 0)], 150], [(r) => [`Earn 1,500 coins from selling blades`, 1500, (ev) => (ev.k === 'sell' ? ev.coin || 0 : 0)], 250],
+  [(r) => [`Forge 5 blades that are ${RAR[2].n} or rarer`, 5, (ev) => forgedEv(ev, (b) => b.rarity >= 2)], 300], [(r) => [`Forge 8 Heavy or Massive blades`, 8, (ev) => forgedEv(ev, (b) => 'HX'.includes(TYPES[b.type].wt))], 250],
+  [(r) => [`Forge 3 blades of grade 95 or better`, 3, (ev) => forgedEv(ev, (b) => b.grade >= 95)], 300], [(r) => [`Win 2 Arena duels`, 2, (ev) => (ev.k === 'win' ? 1 : 0)], 250], [(r) => [`Forge a ${RAR[4].n} blade`, 1, (ev) => forgedEv(ev, (b) => b.rarity >= 4)], 600], [(r) => [`Forge 10 ${CH_SIZE[3]} blades or bigger`, 10, (ev) => forgedEv(ev, (b) => b.si >= 3)], 300]];
+let CHC = {};
+function chList(weekly, now) {
+  const n = weekly ? chWeek(now) : chDay(now), key = (weekly ? 'w' : 'd') + n; if (CHC[key]) return CHC[key];
+  const r = chRng((weekly ? 9000000 : 0) + n), out = [];
+  if (weekly) { const idx = CH_WEEK.map((_, i) => i); for (let i = 0; i < 5; i++) { const j = idx.splice(r(idx.length), 1)[0], [text, needN, inc] = CH_WEEK[j][0](r); out.push({ id: 'w' + j, text, need: needN, inc, pay: CH_WEEK[j][1], tier: CH_WEEK[j][1] >= 600 ? 3 : CH_WEEK[j][1] >= 300 ? 2 : 1 }); } }
+  else { [0, 0, 1, 2, 3].forEach((tier, i) => { const pool = CH_POOL[tier]; let j = r(pool.length); if (i === 1 && out[0].id === 'd0-' + j) j = (j + 1) % pool.length; const [text, needN, inc] = pool[j](r); out.push({ id: 'd' + tier + '-' + j, text, need: needN, inc, pay: CH_TIER[tier][1], tier }); }); }
+  CHC = { [key]: out, ...Object.fromEntries(Object.entries(CHC).slice(0, 3)) }; return out;
+}
+function chState(S, now) {
+  const s = S.ch = S.ch || {}, d = chDay(now), w = chWeek(now);
+  if (s.d !== d) { s.d = d; s.p = {}; s.c = {}; } if (s.w !== w) { s.w = w; s.wp = {}; s.wc = {}; }
+  s.p = s.p || {}; s.c = s.c || {}; s.wp = s.wp || {}; s.wc = s.wc || {};
+  if (s.last !== d && s.last !== d - 1) s.streak = 0;
+  s.streak = s.streak || 0; s.best = s.best || 0; s.done = s.done || 0; return s;
+}
+// something happened in the game: forge, sell, salv or win
+function chEvent(ctx, ev) {
+  if (ev.k === 'forge') gsMark(ctx, 'forge'); if (ev.k === 'sell') gsMark(ctx, 'sell');
+  if (!ctx.c) return;
+  const s = chState(ctx.S, ctx.now);
+  for (const weekly of [false, true]) {
+    const P = weekly ? s.wp : s.p;
+    for (const t of chList(weekly, ctx.now)) {
+      const have = P[t.id] || 0; if (have >= t.need) continue;
+      const add = t.inc(ev); if (!add) continue;
+      P[t.id] = Math.min(t.need, have + add);
+      if (P[t.id] >= t.need) {
+        note(ctx, `Challenge done: ${t.text}. Collect **${t.pay}c** from Challenges.`, 5200);
+        if (!weekly && s.last !== s.d) { s.streak = (s.last === s.d - 1 ? s.streak : 0) + 1; s.last = s.d; s.best = Math.max(s.best, s.streak); }
+      }
+    }
+  }
+}
+const chReady = (S, now) => { const s = chState(S, now); return chList(false, now).filter((t) => (s.p[t.id] || 0) >= t.need && !s.c[t.id]).length + chList(true, now).filter((t) => (s.wp[t.id] || 0) >= t.need && !s.wc[t.id]).length; };
+
+// ============================================================== the smith's hall (public page), titles and badges
+const BADGES = [['bronze', 'Bronze', 0], ['silver', 'Silver', .1], ['gold', 'Gold', .3], ['platinum', 'Platinum', .6]];
+const badgeOf = (p) => { let b = BADGES[0]; BADGES.forEach((x) => { if ((p || 0) >= x[2]) b = x; }); return b; };
+const FOUNDER_BEFORE = Date.UTC(2026, 11, 1);
+const TITLES = [
+  ['smith1', 'Apprentice Smith', 'Forge your first blade', (x) => x.forged >= 1], ['smith2', 'Journeyman Smith', 'Forge 50 blades', (x) => x.forged >= 50], ['smith3', 'Master Smith', 'Forge 250 blades', (x) => x.forged >= 250], ['smith4', 'Grandmaster Smith', 'Forge 1,000 blades', (x) => x.forged >= 1000],
+  ['leg1', 'Legend-Maker', 'Find a Legendary blade', (x) => x.leg >= 1], ['leg2', 'Keeper of Legends', 'Find 10 Legendary blades', (x) => x.leg >= 10],
+  ['titan', 'Titan-Forger', 'Find a Titan-sized blade', (x) => x.titan], ['star', 'Starforger', 'Find a Starforged blade', (x) => x.star], ['moon', 'Moon-Touched', 'Find a Moonlit blade', (x) => x.moon],
+  ...CK.map((k) => ['chron-' + k, `${CLASSES[k].n.replace(' Smith', '')} Chronicler`, `Find every ${CLASSES[k].n} blade`, (x) => x.found[k] >= typesOf(k).length]),
+  ['rec', 'Record Holder', 'Hold a place on a Records board', (x) => x.rec], ['duel', 'Duelist', 'Win 5 Arena duels', (x) => x.wins >= 5], ['champ', 'Arena Champion', 'Reach an Arena rating of 1,200', (x) => x.rating >= 1200],
+  ['baron', 'Coin Baron', 'Hold 10,000 coins', (x) => x.coin >= 10000], ['streak7', 'Steadfast', 'Keep a 7-day challenge streak', (x) => x.chBest >= 7], ['tasks50', 'Taskmaster', 'Complete 50 challenges', (x) => x.chDone >= 50], ['founder', 'Founding Smith', 'Joined during Anvilmoon’s first weeks', (x) => x.created > 0 && x.created < FOUNDER_BEFORE]];
+const titleDefault = (earned) => { const t = ['smith4', 'smith3', 'smith2', 'smith1'].find((k) => earned.includes(k)); return t || earned[0] || null; };
+const HALL_MAX = 8, HALL_KEYS = ['type', 'len', 'si', 'grade', 'rarity', 'variant', 'anvil', 'shine', 'moon', 'bog', 'forger', 'gdate', 'gift', 'q', 'perfect'];
+// LOOK_MAX: how many choices each part of a portrait has (body, skin, hair...)
+const LOOK_MAX = { body: 2, skin: 6, hair: 14, hairC: 8, beard: 3, cloth: 8, trim: 8, trous: 5 };
+// user = {wins, losses, rating, created}; rec = whether the player is on a Records board
+function hallCtx(S, user, rec) {
+  const u = user || {}, c = S.slots[S.active], g = S.gone || {}, arm = g.arm || {};
+  const real = allBlades(S).filter((b) => armSeen(b) && !isGift(b)), { got, goals } = armoryProgress(S);
+  const found = {}; CK.forEach((k) => { const set = new Set(real.filter((b) => TYPES[b.type].c === k).map((b) => b.type)); for (const t of typesOf(k)) if ((arm[t] || 0) & 1) set.add(t); found[k] = set.size; });
+  const anyBit = (bit) => TK.some((t) => (arm[t] || 0) & bit);
+  return { forged: S.slots.filter(Boolean).reduce((a, x) => a + (x.forged || 0), 0), pct: goals ? got / goals : 0, got, goals,
+    leg: real.filter((b) => b.rarity === 4).length + (g.leg || 0), titan: real.some((b) => b.si >= 5) || anyBit(4), star: real.some((b) => b.shine === 'star') || anyBit(16), moon: real.some((b) => b.moon) || anyBit(32),
+    found, big: [...real].sort((a, b) => b.len - a.len)[0], coin: S.slots.filter(Boolean).reduce((a, x) => a + Math.floor(x.coin || 0), 0),
+    wins: u.wins || 0, losses: u.losses || 0, rating: u.rating || 1000, created: u.created || 0, rec: !!rec,
+    classes: (c && c.classes || []).length, onrack: c ? ownedOf(c).length : 0, chBest: (S.ch && S.ch.best) || 0, chDone: (S.ch && S.ch.done) || 0 };
+}
+function hallBlades(S) {
+  const c = S.slots[S.active]; if (!c) return [];
+  const mine = ownedOf(c); let pick = mine.filter((b) => b.hall);
+  if (!pick.length) pick = [...mine].sort((a, b) => (b.rarity - a.rarity) || (b.len - a.len)).slice(0, 6);
+  return pick.sort((a, b) => b.len - a.len).slice(0, HALL_MAX);
+}
+// the public summary kept with the save, so other players' games can show the hall
+function hallSummary(S, user, rec, look) {
+  const x = hallCtx(S, user, rec), earned = TITLES.filter((t) => { try { return t[3](x); } catch (e) { return false; } }).map((t) => t[0]);
+  const tid = earned.includes(S.hallTitle) ? S.hallTitle : titleDefault(earned), t = TITLES.find((y) => y[0] === tid);
+  return { v: 1, look: look === undefined ? (S.look || null) : look, title: t ? t[1] : '', badge: badgeOf(x.pct)[0], pct: Math.round(x.pct * 1000) / 1000, earned,
+    stats: { forged: x.forged, leg: x.leg, onrack: x.onrack, classes: x.classes, big: x.big ? { len: x.big.len, type: x.big.type } : null },
+    blades: hallBlades(S).map((b) => { const o = {}; HALL_KEYS.forEach((k) => { if (b[k] !== undefined && b[k] !== '' && b[k] !== false) o[k] = b[k]; }); return o; }) };
+}
+
+// ============================================================== forging
+// The mini-game itself runs in the browser. For each strike the game reports two raw numbers:
+//   d = how far the marker was from the centre (or the spark from the rune), T = the heat (0..1).
+// Both sides score them with this function, so the grade the player sees is the grade they get.
+function strikeScore(F, d, T) {
+  const timing = F.arc ? Math.max(0, 1 - Math.abs(d) / (.72 * F.zone)) : Math.max(0, 1 - Math.abs(d) * 3.2 / F.zone);
+  let hf = 1, cold = 0, burn = 0;
+  if (T < .3) { hf = .35; cold = .09; } else if (T < .48) { hf = .65; cold = .04; } else if (T > .88) { hf = .6; burn = 1; }
+  return { timing, hf, cold, burn, score: timing * hf };
+}
+const forgeGrade = (avg, q, burns) => clamp(Math.round(avg * 88 + QUENCH[q].bonus - burns * 2), 1, 100);
+// take a forge's energy, iron and coal; returns how much bog iron stood in for iron
+function payForge(c, type) {
+  const t = TYPES[type], w = WT[t.wt];
+  need(knows(c, t.wt), `Learn the ${w.n.toLowerCase()} blade pattern in the Workshop first.`);
+  need(c.fuel >= 1 && c.iron + (c.bog || 0) >= w.iron && c.coal >= w.coal, 'You need more materials. Buy supplies at the Market.');
+  const bog = Math.max(0, w.iron - c.iron);
+  c.fuel--; c.iron -= w.iron - bog; c.bog = (c.bog || 0) - bog; c.coal -= w.coal;
+  return bog;
+}
+const forgeable = (c, type) => !!(TYPES[type] && !TYPES[type].gift && TYPES[type].c === c.cls);
+
+// ============================================================== ACTIONS
+// Every change a player can make. rng: true means the action rolls dice, so only the server can do it
+// (the game waits for the answer). Without it, the game shows the result at once and the server confirms.
+const ACTIONS = {};
+const def = (name, rng, run) => { ACTIONS[name] = { rng, run }; };
+
+def('createSmith', true, (ctx) => {
+  const { S } = ctx; need(!S.slots.some(Boolean), 'You already have a smith.');
+  const name = ctx.user ? ctx.user.username : pickR(NAMES, ctx.rng) + ' ' + pickR(['Ashford', 'Coldwater', 'Emberly', 'Harth', 'Steelwick', 'Vane'], ctx.rng);
+  const c = newChar(name, 'war', ctx.now, ctx.rng); c.classes = ['war']; c.selBy = {};
+  S.slots = [c, null, null, null]; S.active = 0; S.gs = { d: {}, fin: 0 }; ctx.c = c;
+  ctx.out.name = name;
+});
+
+// ---- forging: start (pay), then end (score the strikes, roll the blade)
+def('forgeStart', false, (ctx, a) => {
+  const { S, c } = ctx; let type = String(a.type || ''), bog = 0;
+  if (a.labor) {
+    need(isBroke(c), 'The foreman only hires smiths who are broke.');
+    need(laborLeft(c, localDay(ctx.now, ctx.tz)) > 0, 'No more shifts today. Come back tomorrow.');
+    type = typesOf(c.cls)[1];
+  } else {
+    need(forgeable(c, type), 'Pick one of your class’s blades first.');
+    bog = payForge(c, type);
+  }
+  const h = hammerFx(c), w = WT[TYPES[type].wt];
+  if (!a.labor && c.hammer !== 'worn' && c.hammers[c.hammer] && c.hammers[c.hammer].dur > 0) c.hammers[c.hammer].dur--;
+  S.forge = { type, labor: !!a.labor, arc: !!a.arc && !a.labor && TYPES[type].c === 'arcane', need: w.strikes, bog, zone: h.zone, cool: h.cool, t0: ctx.now };
+});
+def('forgeEnd', true, (ctx, a) => {
+  const { S, c } = ctx, F = S.forge;
+  need(F && TYPES[F.type], 'That forge has gone cold. Light it again.');
+  const strikes = Array.isArray(a.strikes) ? a.strikes : [];
+  need(strikes.length === F.need && strikes.every((s) => Array.isArray(s) && s.length === 2 && s.every((v) => typeof v === 'number' && isFinite(v))), 'Those strikes don’t add up. Light the forge again.');
+  need(ctx.now - F.t0 >= F.need * MIN_STRIKE_MS, 'That was quicker than any hammer. Light the forge again.');
+  if (!F.labor) need(QUENCH[a.q] && knows(c, a.q), 'Learn that quench in the Workshop first.');
+  let sum = 0, cold = 0, burns = 0;
+  for (const [d, T] of strikes) { const s = strikeScore(F, d, clamp(T, 0, 1)); sum += s.score; cold += s.cold; burns += s.burn; }
+  S.forge = null;
+  const avg = sum / F.need;
+  if (F.labor) {
+    const iron = 1 + (avg > .55 ? 1 : 0), coal = 1 + (avg > .8 ? 1 : 0), day = localDay(ctx.now, ctx.tz);
+    c.iron += iron; c.coal += coal; if (!c.labor || c.labor.d !== day) c.labor = { d: day, n: 0 }; c.labor.n++;
+    ctx.out = { labor: true, iron, coal, avg };
+    return;
+  }
+  const Q = QUENCH[a.q], grade = forgeGrade(avg, a.q, burns), perfect = grade >= 90, tier = Math.min(ANVILS.length - 1, c.anvil + (perfect ? 1 : 0));
+  const b = makeBlade(ctx, F.type, tier, grade, ctx.rng() < Q.risk + cold, F.bog ? 1 : 4);
+  b.anvil = c.anvil; b.perfect = perfect && tier > c.anvil && !F.bog; b.q = a.q; if (F.bog) b.bog = true;
+  c.blades.push(b); c.forged++; S.totalForged++; chEvent(ctx, { k: 'forge', b });
+  ctx.out = { blade: b };
+});
+def('quickForge', true, (ctx, a) => {
+  const { S, c } = ctx, type = String(a.type || '');
+  need(forgeable(c, type), 'Pick one of your class’s blades first.');
+  const bog = payForge(c, type), rng = ctx.rng;
+  const b = makeBlade(ctx, type, c.anvil, 30 + Math.floor(rng() * 26), rng() < QUENCH.oil.risk, bog ? 1 : 4);
+  b.q = 'oil'; b.quick = true; if (bog) b.bog = true;
+  c.blades.push(b); c.forged++; S.totalForged++; chEvent(ctx, { k: 'forge', b });
+  ctx.out = { blade: b };
+});
+// first forge of a brand new smith: the guided tour tops up materials if they're short
+def('tourGift', false, (ctx, a) => {
+  const { c } = ctx; need(!c.forged && !c.blades.length, 'Only for your very first forge.');
+  const type = forgeable(c, a.type) ? a.type : typesOf(c.cls)[0], w = WT[TYPES[type].wt];
+  c.fuel = Math.max(c.fuel, 1); c.iron = Math.max(c.iron, w.iron); c.coal = Math.max(c.coal, w.coal);
+});
+
+// ---- blades on the rack
+def('sell', false, (ctx, a) => {
+  const { c } = ctx, ids = idList(a.ids); let coin = 0, n = 0;
+  for (const id of ids) {
+    const b = bladeById(c, id); if (!b || b.status !== 'owned' || b.cracked || isGift(b)) continue;
+    const v = value(b, c.demand[b.type]); c.coin += v; c.demand[b.type] = Math.max(.5, c.demand[b.type] * .93);
+    b.status = 'sold'; b.su = ctx.now; chEvent(ctx, { k: 'sell', b, coin: v }); coin += v; n++;
+  }
+  need(n, ids.length === 1 ? 'That blade can’t be sold.' : 'Nothing to sell.');
+  ctx.out = { coin, n };
+});
+def('salvage', false, (ctx, a) => {
+  const { c } = ctx, ids = idList(a.ids), tot = {}; let n = 0;
+  for (const id of ids) {
+    const b = bladeById(c, id); if (!b || b.status !== 'owned' || isGift(b)) continue;
+    const y = salvYield(b);
+    for (const [k, v] of Object.entries(y)) { const add = k === 'fuel' ? Math.max(0, Math.min(ENERGY_CAP, c[k] + v) - c[k]) : v; c[k] += add; tot[k] = (tot[k] || 0) + add; }
+    b.status = 'salvaged'; b.su = ctx.now; chEvent(ctx, { k: 'salv', b }); n++;
+  }
+  need(n, ids.length === 1 ? 'That blade can’t be salvaged.' : 'Nothing to salvage.');
+  ctx.out = { y: tot, n };
+});
+def('keep', false, (ctx, a) => { const b = bladeById(ctx.c, a.id); need(b && b.status === 'owned', 'That blade isn’t on your rack.'); b.keep = !b.keep; ctx.out = { keep: b.keep }; });
+def('hall', false, (ctx, a) => {
+  const { c } = ctx, b = bladeById(c, a.id); need(b && b.status === 'owned', 'That blade isn’t on your rack.');
+  need(b.hall || ownedOf(c).filter((x) => x.hall).length < HALL_MAX, `Your hall holds ${HALL_MAX} blades. Take one down first.`);
+  b.hall = !b.hall; ctx.out = { hall: b.hall };
+});
+
+// ---- market
+def('buy', false, (ctx, a) => {
+  const { c } = ctx, m = String(a.m); need(['iron', 'coal', 'damascus'].includes(m), 'That isn’t for sale.');
+  const n = intArg(a.n, 1, 99999), cost = PRICES[m] * n; need(c.coin >= cost, 'Not enough coin.');
+  c.coin -= cost; c[m] += n; ctx.out = { n, cost };
+});
+def('sellMat', false, (ctx, a) => {
+  const { c } = ctx, m = String(a.m); need(SELLMAT[m], 'Merchants don’t buy that.');
+  const n = intArg(a.n, 1, 99999); need(c[m] >= n, `You don’t have that much ${MATN[m].toLowerCase()}.`);
+  c[m] -= n; c.coin += SELLMAT[m] * n; ctx.out = { n, coin: SELLMAT[m] * n };
+});
+def('refine', false, (ctx, a) => {
+  const { c } = ctx, n = intArg(a.n, 1, 99999); need(c.dust >= n * 10, 'Not enough star-dust.');
+  c.dust -= n * 10; c.shards += n; ctx.out = { n };
+});
+// buy exactly the iron and coal the chosen blade still needs
+def('supfill', false, (ctx, a) => {
+  const { c } = ctx; need(forgeable(c, a.type), 'Pick one of your class’s blades first.');
+  const w = WT[TYPES[a.type].wt], i = Math.max(0, w.iron - (c.iron + (c.bog || 0))), k = Math.max(0, w.coal - c.coal), p = i * PRICES.iron + k * PRICES.coal;
+  need(p > 0, 'You already have enough.'); need(c.coin >= p, 'Not enough coin.');
+  c.coin -= p; c.iron += i; c.coal += k; ctx.out = { iron: i, coal: k, cost: p };
+});
+def('eat', false, (ctx, a) => {
+  const { c } = ctx, k = String(a.k), m = MEALS[k]; need(m, 'The tavern doesn’t serve that.');
+  const day = localDay(ctx.now, ctx.tz), p = mealPrice(c, k, day);
+  need(c.coin >= p, 'Not enough coin.'); need(c.fuel + m.e <= ENERGY_CAP, 'You’re too full.');
+  c.coin -= p; c.fuel += m.e; if (!c.meals || c.meals.d !== day) c.meals = { d: day, n: 0 }; c.meals.n++;
+  ctx.out = { e: m.e, n: m.n, p };
+});
+
+// ---- workshop
+def('learn', false, (ctx, a) => {
+  const { S, c } = ctx, k = String(a.k), r = RECIPES[k]; need(r, 'There is no such pattern.');
+  need(!knows(c, k), 'You already know that.'); need(reqMet(S, c, r), r.rt ? `First: ${r.rt.toLowerCase()}.` : 'Not yet.'); need(canPay(c, r.cost), `That costs ${costStr(r.cost)}.`);
+  payCost(c, r.cost); c.recipes = c.recipes || {}; c.recipes[k] = true;
+});
+def('anvil', false, (ctx) => {
+  const { c } = ctx, a = ANVILS[c.anvil + 1]; need(a, 'You have the best anvil there is.'); need(canPay(c, a.cost), `That costs ${costStr(a.cost)}.`);
+  payCost(c, a.cost); c.anvil++; ctx.out = { n: a.n };
+});
+def('hammer', false, (ctx, a) => {
+  const { c } = ctx, k = String(a.k), h = HAMMERS[k]; need(h && h.cost, 'There is no such hammer.'); need(canPay(c, h.cost), `That costs ${costStr(h.cost)}.`);
+  payCost(c, h.cost); c.hammers[k] = { dur: h.dur }; c.hammer = k; ctx.out = { n: h.n };
+});
+def('equip', false, (ctx, a) => { const { c } = ctx, k = String(a.k); need(HAMMERS[k] && (k === 'worn' || c.hammers[k]), 'You don’t have that hammer.'); c.hammer = k; });
+def('repair', false, (ctx, a) => {
+  const { c } = ctx, k = String(a.k), h = HAMMERS[k]; need(h && h.repair && c.hammers[k], 'You don’t have that hammer.'); need(canPay(c, h.repair), `That costs ${costStr(h.repair)}.`);
+  payCost(c, h.repair); c.hammers[k].dur = h.dur; ctx.out = { n: h.n };
+});
+
+// ---- hard times
+def('dig', false, (ctx) => {
+  const { c } = ctx; need(isBroke(c), 'Only smiths who are broke dig the slag heap.'); need(!c.digUntil, 'You’re already digging.');
+  c.digUntil = ctx.now + (ctx.test ? DIG_TEST_MS : DIG_MS);
+});
+def('collectDig', false, (ctx) => {
+  const { c } = ctx; need(c.digUntil && ctx.now >= c.digUntil, 'Keep digging a little longer.');
+  c.digUntil = 0; c.bog = (c.bog || 0) + 1; c.coal += 1;
+});
+
+// ---- commissions
+def('fulfill', true, (ctx, a) => {
+  const { c } = ctx, i = c.commissions.findIndex((q) => String(q.id) === String(a.cid)); need(i >= 0, 'That order is gone.');
+  const q = c.commissions[i], b = bladeById(c, a.id); need(b && deliverable(b, q), 'That blade doesn’t fit the order.');
+  c.coin += q.pay; b.status = 'commission'; b.su = ctx.now;
+  c.commissions.splice(i, 1, genComm(c, ctx.rng, ctx.now, ctx.online));
+  ctx.out = { pay: q.pay, patron: q.patron };
+});
+def('refreshBoard', true, (ctx) => {
+  const { c } = ctx, p = refreshCost(c); need(p != null, 'Every order is locked.'); need(c.coin >= p, 'Not enough coin.');
+  c.coin -= p; c.commissions = c.commissions.filter((q) => q.lock); ensureComms(c, ctx.rng, ctx.now, ctx.online);
+});
+def('jobFlag', false, (ctx, a) => {
+  const q = ctx.c.commissions.find((x) => String(x.id) === String(a.cid)); need(q, 'That order is gone.');
+  const f = a.f === 'lock' ? 'lock' : 'pin'; q[f] = q[f] ? 0 : 1;
+});
+
+// ---- classes
+def('classSwitch', false, (ctx, a) => {
+  const { c } = ctx, k = String(a.k); need(CLASSES[k] && c.classes.includes(k), 'You haven’t learned that class.');
+  need(!ctx.S.forge, 'Finish the blade first.');
+  c.cls = k;
+});
+def('classLearn', false, (ctx, a) => {
+  const { S, c } = ctx, k = String(a.k), o = classOffer(S, c); need(CLASSES[k] && o && !c.classes.includes(k), 'You can’t learn that class.');
+  need(o.ok, `Your Armory needs to be ${Math.round(o.need * 100)}% complete first.`); need(o.afford, `You need ${fmtN(o.cost)} coins.`);
+  c.coin -= o.cost; c.classes.push(k); c.cls = k;
+});
+
+// ---- challenges, getting started, your hall
+def('chClaim', false, (ctx, a) => {
+  const { S, c } = ctx, s = chState(S, ctx.now), w = !!a.w, t = chList(w, ctx.now).find((x) => x.id === a.id), P = w ? s.wp : s.p, Gt = w ? s.wc : s.c;
+  need(t && !Gt[t.id] && (P[t.id] || 0) >= t.need, 'That challenge isn’t ready to collect.');
+  Gt[t.id] = 1; s.done++; c.coin += t.pay; gsMark(ctx, 'task'); ctx.out = { pay: t.pay };
+});
+def('gs', false, (ctx, a) => {
+  const id = String(a.id); need(GS_VISITS.includes(id), 'Unknown step.');
+  if (id === 'rack') need(ownedOf(ctx.c).length, 'Your rack is empty.');
+  gsMark(ctx, id);
+});
+def('gsSkip', false, (ctx) => { gsState(ctx.S).fin = 1; });
+def('prefs', false, (ctx, a) => {
+  const { S } = ctx;
+  if (a.look !== undefined) {
+    const L = a.look; need(L && typeof L === 'object', 'That look isn’t valid.'); const o = {};
+    for (const [k, max] of Object.entries(LOOK_MAX)) { const v = Math.floor(Number(L[k]) || 0); o[k] = clamp(v, 0, max - 1); }
+    if (o.body === 1) o.beard = 0; S.look = o;
+  }
+  if (a.hallTitle !== undefined) { need(TITLES.some((t) => t[0] === a.hallTitle), 'Unknown title.'); S.hallTitle = a.hallTitle; }
+});
+
+// ============================================================== running an action
+// env = { now, rng (a function, or null when the game is only predicting), tz, test, online, user }
+// Returns ctx: ctx.out is the action's own answer, ctx.notes are messages to show the player.
+function runAction(S, name, args, env) {
+  const A = Object.prototype.hasOwnProperty.call(ACTIONS, name) ? ACTIONS[name] : null; need(A, 'Unknown action.');
+  if (A.rng && !env.rng) throw new RuleError('Only the server can do that.');
+  const ctx = beginAction(S, env);
+  if (name !== 'createSmith') need(ctx.c, 'Make a smith first.');
+  A.run(ctx, args && typeof args === 'object' ? args : {});
+  afterAction(ctx);
+  return ctx;
+}
+// the shared start of every action: find the smith, bring energy and demand up to now
+function beginAction(S, env) {
+  const ctx = { S, now: env.now, rng: env.rng, tz: env.tz, test: !!env.test, online: !!env.online, user: env.user || null, notes: [], out: {} };
+  ctx.c = smithOf(S);
+  if (ctx.c) { tickFuel(ctx.c, ctx.now); settleDemand(ctx.c, ctx.now); }
+  return ctx;
+}
+// after every action: pay out Armory rewards, keep 3 commissions on the board, keep the save small
+function afterAction(ctx) {
+  ctx.c = smithOf(ctx.S); const c = ctx.c; if (!c) return;
+  claimArmory(ctx);
+  if (ctx.rng) { ensureComms(c, ctx.rng, ctx.now, ctx.online); compact(ctx.S); }
+}
+
+// ============================================================== patches: the changes between two saves
+// diff(old, new) lists what changed as small steps; applyPatch(obj, steps) makes the same changes elsewhere.
+//   { p: ['slots', 0, 'coin'], v: 120 }   set a value       { p: [...], del: 1 }   remove a key
+//   { p: ['slots', 0, 'blades'], len: 40 } shorten a list
+function diff(a, b, p = [], out = []) {
+  if (a === b) return out;
+  const isO = (x) => x !== null && typeof x === 'object';
+  if (!isO(a) || !isO(b) || Array.isArray(a) !== Array.isArray(b)) { out.push({ p, v: b === undefined ? null : b }); return out; }
+  if (Array.isArray(a)) {
+    const n = Math.min(a.length, b.length);
+    for (let i = 0; i < n; i++) diff(a[i], b[i], p.concat(i), out);
+    for (let i = n; i < b.length; i++) out.push({ p: p.concat(i), v: b[i] });
+    if (b.length < a.length) out.push({ p, len: b.length });
+    return out;
+  }
+  for (const k of Object.keys(a)) if (a[k] !== undefined && b[k] === undefined) out.push({ p: p.concat(k), del: 1 });
+  for (const k of Object.keys(b)) if (b[k] !== undefined) diff(a[k], b[k], p.concat(k), out);
+  return out;
+}
+function applyPatch(obj, ops) {
+  for (const op of ops) {
+    if (!op.p.length) { if (op.v !== undefined) obj = op.v; continue; }
+    let o = obj; for (let i = 0; i < op.p.length - 1; i++) { const k = op.p[i]; if (o[k] === null || typeof o[k] !== 'object') o[k] = typeof op.p[i + 1] === 'number' ? [] : {}; o = o[k]; }
+    const k = op.p[op.p.length - 1];
+    if (op.del) delete o[k]; else if (op.len !== undefined) o[k].length = op.len; else o[k] = op.v;
+  }
+  return obj;
+}
+
+// ============================================================== what the game and the server can use
+G.AMR = {
+  // data
+  CLASSES, CK, TYPES, TK, GIFTS, WT, RAR, ANVILS, HAMMERS, SIZES, SHINE, QUENCH, PRICES, SELLMAT, MERCHANT, TRADER, MATN, FUEL_MAX, FUEL_MS, BASE_COIN,
+  SLOT_UNLOCK, PATRONS, NAMES, CLASS_COST, SLOT_PCT, LABOR_MAX, DIG_MS, DIG_TEST_MS, ENERGY_CAP, MIN_STRIKE_MS, RECIPES, MEALS, FIND, FORGER_AKA, AH_CUT, MAX_LISTINGS, DURS,
+  GS_STEPS, GS_VISITS, CH_DAY, CH_TIER, CH_SIZE, CH_POOL, CH_WEEK, BADGES, FOUNDER_BEFORE, TITLES, HALL_MAX, HALL_KEYS, LOOK_MAX, SAVE_V,
+  GIFT_C, GIFT_DATE, GIFT_PAL,
+  // helpers
+  RuleError, need, clamp, fmtN, hash32, mulberry, sizeIdx, typesOf, isGift, giftDate, giftWho, giftCls, rarN, rarC, vr, bname, gradeMult, sizeMult, value, worth, depositFor, minBid,
+  salvYield, yieldStr, allBlades, exists, ownedOf, bladeById, forgerNow, localDay, isNight, tzOf,
+  freshAcct, newChar, unify, needsUnify, smithOf, clsN, upgradeSave, oneName, tickFuel, settleDemand, clamorType, DEM_WIN,
+  rollIdx, rollSize, rollShine, rollVariant, rollMoon, makeBlade, knows, canPay, payCost, costStr, hammerFx, mealsToday, mealPrice, laborLeft, isBroke,
+  bladeBits, armSeen, armoryBits, armoryProgress, claimArmory, reqProgress, reqMet, classOffer, slotsOpen, compact,
+  genComm, qualifies, deliverable, ensureComms, refreshCost, gsState, gsMark, chDay, chWeek, chRng, chList, chState, chEvent, chReady,
+  badgeOf, titleDefault, hallCtx, hallBlades, hallSummary, strikeScore, forgeGrade, forgeable,
+  ACTIONS, runAction, beginAction, afterAction, diff, applyPatch,
+};
+})(typeof window !== 'undefined' ? window : globalThis);
