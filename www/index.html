@@ -1063,6 +1063,12 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+.jpin{display:block;width:100%;margin-top:10px;background:none;border:2px dashed #b49f6e;color:#5a4326;font:700 13px var(--body);padding:5px;cursor:pointer}.jpin:hover,.jpin.on{background:#3a2716;color:#eadcb6;border-style:solid;border-color:#1a100a}
+.pinrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;margin-bottom:12px}
+.pin{display:flex;align-items:center;gap:12px;background:#eadcb6;color:#3a2716;border:3px solid #1a100a;box-shadow:inset 3px 3px 0 #f8efd6,inset -3px -3px 0 #c8b383;padding:8px 12px}
+.pinart{width:110px;flex:none}.pinart>*{width:100%;display:block}.pintxt{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}.pinwant{font:700 20px/1.1 var(--display)}.pinreq{font-size:14px;font-weight:600}.pinreq b{text-shadow:0 0 1px #3a2716,0 1px 0 #3a2716}.pinfrom{font-size:13px;color:#6b563a}
+.pinact{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}.pinact .linkbtn{color:#6b563a;font-size:13px}.pinact .fine{color:#6b563a}.pin.fit{border-color:#3f6b2a}
+@media (max-width:760px){.pinrow{grid-template-columns:1fr}.pinart{width:70px}}
 .fhlab{margin:0 0 5px;font:600 13px var(--body);color:var(--mute)}.fhlab span{color:var(--dim);font-weight:400}
 .cost em{font-style:normal;font-size:13px;color:var(--mute);margin-left:2px}
 .forgehero .fhart{align-self:center;height:200px;padding:0 18px;border:3px solid var(--ink);background:linear-gradient(#5e3f27,#5e3f27) 0 0/100% 8px no-repeat,linear-gradient(#4a311e,#4a311e) 0 8px/100% 3px no-repeat,radial-gradient(ellipse at 50% 60%,#322b26,#211d1a 75%)}
@@ -1863,6 +1869,12 @@ function hardTimes(c){const broke=isBroke(c),digging=c.digUntil&&Date.now()<c.di
     <div><h3>Dig the slag heap</h3><p class="fine" title="Bog iron blades can never be better than Fine.">Free but slow · 1 bog iron + 1 coal</p>${dig}</div></div></div>`}
 const bookBtn=(extra='')=>`<div class="ptools">${extra}<button class="bookbtn" data-action="tab" data-tab="armory" title="Your Armory: every blade you’ve found"><i class="pxi" style="background-image:var(--ico-armory)"></i>Armory</button></div>`;
 function costChip(k,need,have){const short=have<need;return `<span class="cost ${short?'short':''}" title="${MATN[k]}: you have ${have}, this needs ${need}"><i class="pxi" style="background-image:var(--ico-${k})" aria-hidden="true"></i><b>${need}</b><small>${have}</small><em>${MATN[k]}</em></span>`}
+function pinRow(c){const pins=c.commissions.filter(q=>q.pin);if(!pins.length)return '';const own=owned(),mine=typesOf(c.cls);
+  return `<div class="pinrow" aria-label="Pinned commissions">${pins.map(q=>{const t=TYPES[q.type],fit=own.filter(b=>deliverable(b,q)).length,foreign=!mine.includes(q.type),lk=!foreign&&!knows(c,t.wt);
+    const req=[`<b style="color:${RAR[q.minR].c}">${RAR[q.minR].n}</b> or better`];if(q.minS)req.push(`${SIZES[q.minS].n} or bigger`);if(q.minG)req.push(`grade ${q.minG}+`);
+    return `<div class="pin ${fit?'fit':''}"><span class="pinart">${bladeSVG({type:q.type,len:100,rarity:q.minR,variant:0,si:2,grade:70,id:'pin'+q.id},{noRuler:1,minW:330})}</span>
+      <span class="pintxt"><b class="pinwant">${t.n}</b><span class="pinreq">${req.join(' · ')}</span><span class="pinfrom">${q.patron} pays <b>${q.pay}c</b></span></span>
+      <span class="pinact">${fit?`<button class="btn go small" data-action="boardtoggle">Deliver (${fit} fit${fit>1?'':'s'})</button>`:foreign?'<span class="fine">Not your class. Try Auctions.</span>':lk?'<span class="fine">Needs a pattern</span>':c.sel===q.type?'<span class="fine pinsel">Selected below</span>':`<button class="btn small" data-action="pick" data-type="${q.type}" data-w="${t.wt}">Forge this</button>`}<button class="linkbtn" data-action="jobpin" data-cid="${q.id}">Unpin</button></span></div>`}).join('')}</div>`}
 function forgeNeeds(c,k){return c.commissions.filter(q=>q.type===k)}
 function demandTag(c,k){const d=c.demand[k];if(d==null)return '';return d>1.1?`<span class="tag dem up" title="Merchants pay ×${d.toFixed(2)} for this blade right now">▲ ${d.toFixed(1)}×</span>`:d<.8?`<span class="tag dem down" title="Merchants pay ×${d.toFixed(2)} for this blade right now">▼ ${d.toFixed(1)}×</span>`:''}
 function vForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt],h=hammerFx(),locked=!knows(c,t.wt),bogUse=Math.max(0,w.iron-c.iron),can=!locked&&c.fuel>=1&&c.iron+(c.bog||0)>=w.iron&&c.coal>=w.coal;
@@ -1882,7 +1894,7 @@ function vForge(){const c=C(),t=TYPES[c.sel],w=WT[t.wt],h=hammerFx(),locked=!kno
     <li><i class="pxi" style="background-image:var(--ico-workshop)"></i><span><b>Hold the bellows</b> until it says <b>Strike now</b>, then strike as the marker crosses the middle.</span></li>
     <li><i class="pxi" style="background-image:var(--ico-coin)"></i><span><b>Quench it</b> and watch the reveal. Keep it, sell it, or deliver it to a patron who ordered one.</span></li></ol></div>`:'';
   return `<section class="page forgepage"><div class="pagehead"><h1>The forge</h1><div class="ptools"><button class="btn small" data-action="tutopen">How to forge</button></div></div>
-  ${tut}${hardTimes(c)}
+  ${tut}${hardTimes(c)}${pinRow(c)}
   <div class="plate forgehero">
     <div class="fhart">${bladeSVG({type:c.sel,len:100,rarity:0,variant:0,si:2,grade:70},{plain:!locked,stage:locked?'sil':'',noRuler:1,minW:330})}</div>
     <div class="fhinfo"><h2>${t.n}</h2>
@@ -2019,8 +2031,8 @@ function boardHTML(){const c=C(),own=owned(),mine=typesOf(c.cls);
       <p class="jfrom">${q.patron}</p><h3 class="jwant">Wanted: ${t.n}</h3>
       <div class="jart">${bladeSVG({type:q.type,len:100,rarity:q.minR,variant:0,si:2,grade:70,id:'job'+q.id},{noRuler:1,minW:330})}</div>
       <ul class="jreq">${req.join('')}</ul>
-      <div class="jpay"><span class="seal"><i class="pxi" style="background-image:var(--ico-coin)"></i></span><b>${q.pay}c</b><small>${dn}</small></div>${act}</article>`}).join('');
-  return `<div class="jobboard"><div class="jbhead"><h2>Commission board</h2><p>Patrons pin commissions here. Bring a blade that fits and get paid on the spot.</p><button class="btn small" data-action="refresh" ${c.coin>=10?'':'disabled'}>New notices (10c)</button><button class="btn ghost small" data-action="boardtoggle">Close</button></div><div class="jobs">${comms}</div></div>`}
+      <div class="jpay"><span class="seal"><i class="pxi" style="background-image:var(--ico-coin)"></i></span><b>${q.pay}c</b><small>${dn}</small></div>${act}<button class="jpin ${q.pin?'on':''}" data-action="jobpin" data-cid="${q.id}" aria-pressed="${!!q.pin}">${q.pin?'Pinned to the forge · unpin':'Pin to the forge'}</button></article>`}).join('');
+  return `<div class="jobboard"><div class="jbhead"><h2>Commission board</h2><p>Bring a blade that fits and get paid on the spot. Pin an order to keep it in view on the Forge.</p><button class="btn small" data-action="refresh" ${c.coin>=10?'':'disabled'}>New notices (10c)</button><button class="btn ghost small" data-action="boardtoggle">Close</button></div><div class="jobs">${comms}</div></div>`}
 let boardLast='';
 function renderBoard(){const el=$('boardpop');if(!el)return;const on=!!(UI.board&&C()&&!F&&!revealId);document.body.classList.toggle('boardopen',on);if(!on){el.innerHTML='';boardLast='';return}
   const html=`<div class="sheetbg" data-action="boardtoggle"></div><section class="boardpop" role="dialog" aria-label="Commission board">${boardHTML()}</section>`;
@@ -3379,7 +3391,8 @@ const ACT={
   dig:()=>{const c=C();if(!isBroke(c))return;c.digUntil=Date.now()+(A.testOdds?8000:DIG_MS);save();render()},
   collectdig:()=>{const c=C();if(!c.digUntil||Date.now()<c.digUntil)return;c.digUntil=0;c.bog=(c.bog||0)+1;c.coal+=1;gainXP(c,3);save();toast('You haul out 1 bog iron and 1 coal.');render()},
   tab:el=>{if(F)return toast('Finish the blade first.');A.tab=el.dataset.tab;save();render()},
-  pick:el=>{C().sel=el.dataset.type;save();render()},
+  pick:el=>{C().sel=el.dataset.type;if(el.dataset.w)C().selW=el.dataset.w;save();render()},
+  jobpin:el=>{const q=C().commissions.find(x=>String(x.id)===el.dataset.cid);if(!q)return;q.pin=q.pin?0:1;save();render()},
   supopen:()=>{UI.sup=true;render()},supclose:()=>{UI.sup=false;render()},
   rackopen:el=>{RACK.open=el.dataset.k;render()},rackclose:()=>{RACK.open=null;render()},
   racktoggle:()=>{UI.rack=!UI.rack;RACK.open=null;RACK.man={};render()},bulksell:el=>bulkDo(el.dataset.k,'sell'),bulksalv:el=>bulkDo(el.dataset.k,'salv'),bfreset:()=>{RACK.f={...BF0};RACK.man={};render()},keeptoggle:el=>{const b=blade(el.dataset.id);if(!b)return;b.keep=!b.keep;if(RACK.man)delete RACK.man[b.id];save();toast(b.keep?'Locked. Selling will skip it.':'Unlocked.');render()},bulkall:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;const{ok}=bulkState(st.list);st.list.forEach(b=>{if(ok(b))RACK.man[b.id]=true});render()},bulknone:el=>{const st=rackStacks().find(x=>x.k===el.dataset.k);if(!st)return;st.list.forEach(b=>RACK.man[b.id]=false);render()},
