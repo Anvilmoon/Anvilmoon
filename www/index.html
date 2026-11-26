@@ -1063,7 +1063,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
-.jpin{display:block;width:100%;margin-top:10px;background:none;border:2px dashed #b49f6e;color:#5a4326;font:700 13px var(--body);padding:5px;cursor:pointer}.jpin:hover,.jpin.on{background:#3a2716;color:#eadcb6;border-style:solid;border-color:#1a100a}
+.jtools{display:flex;gap:6px;margin-top:10px}.jpin{display:block;flex:1;background:none;border:2px dashed #b49f6e;color:#5a4326;font:700 13px var(--body);padding:5px;cursor:pointer}.jpin:hover,.jpin.on{background:#3a2716;color:#eadcb6;border-style:solid;border-color:#1a100a}
 .pinrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;margin-bottom:12px}
 .pin{display:flex;align-items:center;gap:12px;background:#eadcb6;color:#3a2716;border:3px solid #1a100a;box-shadow:inset 3px 3px 0 #f8efd6,inset -3px -3px 0 #c8b383;padding:8px 12px}
 .pinart{width:110px;flex:none}.pinart>*{width:100%;display:block}.pintxt{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.3}.pinwant{font:700 20px/1.1 var(--display)}.pinreq{font-size:14px;font-weight:600}.pinreq b{text-shadow:0 0 1px #3a2716,0 1px 0 #3a2716}.pinfrom{font-size:13px;color:#6b563a}
@@ -1869,11 +1869,12 @@ function hardTimes(c){const broke=isBroke(c),digging=c.digUntil&&Date.now()<c.di
     <div><h3>Dig the slag heap</h3><p class="fine" title="Bog iron blades can never be better than Fine.">Free but slow · 1 bog iron + 1 coal</p>${dig}</div></div></div>`}
 const bookBtn=(extra='')=>`<div class="ptools">${extra}<button class="bookbtn" data-action="tab" data-tab="armory" title="Your Armory: every blade you’ve found"><i class="pxi" style="background-image:var(--ico-armory)"></i>Armory</button></div>`;
 function costChip(k,need,have){const short=have<need;return `<span class="cost ${short?'short':''}" title="${MATN[k]}: you have ${have}, this needs ${need}"><i class="pxi" style="background-image:var(--ico-${k})" aria-hidden="true"></i><b>${need}</b><small>${have}</small><em>${MATN[k]}</em></span>`}
+function refreshCost(c){const n=c.commissions.filter(q=>q.lock).length;return n>=c.commissions.length?null:10*2**n}
 function pinRow(c){const pins=c.commissions.filter(q=>q.pin);if(!pins.length)return '';const own=owned(),mine=typesOf(c.cls);
   return `<div class="pinrow" aria-label="Pinned commissions">${pins.map(q=>{const t=TYPES[q.type],fit=own.filter(b=>deliverable(b,q)).length,foreign=!mine.includes(q.type),lk=!foreign&&!knows(c,t.wt);
     const req=[`<b style="color:${RAR[q.minR].c}">${RAR[q.minR].n}</b> or better`];if(q.minS)req.push(`${SIZES[q.minS].n} or bigger`);if(q.minG)req.push(`grade ${q.minG}+`);
     return `<div class="pin ${fit?'fit':''}"><span class="pinart">${bladeSVG({type:q.type,len:100,rarity:q.minR,variant:0,si:2,grade:70,id:'pin'+q.id},{noRuler:1,minW:330})}</span>
-      <span class="pintxt"><b class="pinwant">${t.n}</b><span class="pinreq">${req.join(' · ')}</span><span class="pinfrom">${q.patron} pays <b>${q.pay}c</b></span></span>
+      <span class="pintxt"><b class="pinwant">${t.n}</b><span class="pinreq">${req.join(' · ')}</span><span class="pinfrom">${q.lock?'🔒 ':''}${q.patron} pays <b>${q.pay}c</b></span></span>
       <span class="pinact">${fit?`<button class="btn go small" data-action="boardtoggle">Deliver (${fit} fit${fit>1?'':'s'})</button>`:foreign?'<span class="fine">Not your class. Try Auctions.</span>':lk?'<span class="fine">Needs a pattern</span>':c.sel===q.type?'<span class="fine pinsel">Selected below</span>':`<button class="btn small" data-action="pick" data-type="${q.type}" data-w="${t.wt}">Forge this</button>`}<button class="linkbtn" data-action="jobpin" data-cid="${q.id}">Unpin</button></span></div>`}).join('')}</div>`}
 function forgeNeeds(c,k){return c.commissions.filter(q=>q.type===k)}
 function demandTag(c,k){const d=c.demand[k];if(d==null)return '';return d>1.1?`<span class="tag dem up" title="Merchants pay ×${d.toFixed(2)} for this blade right now">▲ ${d.toFixed(1)}×</span>`:d<.8?`<span class="tag dem down" title="Merchants pay ×${d.toFixed(2)} for this blade right now">▼ ${d.toFixed(1)}×</span>`:''}
@@ -2031,8 +2032,8 @@ function boardHTML(){const c=C(),own=owned(),mine=typesOf(c.cls);
       <p class="jfrom">${q.patron}</p><h3 class="jwant">Wanted: ${t.n}</h3>
       <div class="jart">${bladeSVG({type:q.type,len:100,rarity:q.minR,variant:0,si:2,grade:70,id:'job'+q.id},{noRuler:1,minW:330})}</div>
       <ul class="jreq">${req.join('')}</ul>
-      <div class="jpay"><span class="seal"><i class="pxi" style="background-image:var(--ico-coin)"></i></span><b>${q.pay}c</b><small>${dn}</small></div>${act}<button class="jpin ${q.pin?'on':''}" data-action="jobpin" data-cid="${q.id}" aria-pressed="${!!q.pin}">${q.pin?'Pinned to the forge · unpin':'Pin to the forge'}</button></article>`}).join('');
-  return `<div class="jobboard"><div class="jbhead"><h2>Commission board</h2><p>Bring a blade that fits and get paid on the spot. Pin an order to keep it in view on the Forge.</p><button class="btn small" data-action="refresh" ${c.coin>=10?'':'disabled'}>New notices (10c)</button><button class="btn ghost small" data-action="boardtoggle">Close</button></div><div class="jobs">${comms}</div></div>`}
+      <div class="jpay"><span class="seal"><i class="pxi" style="background-image:var(--ico-coin)"></i></span><b>${q.pay}c</b><small>${dn}</small></div>${act}<div class="jtools"><button class="jpin ${q.pin?'on':''}" data-action="jobpin" data-cid="${q.id}" aria-pressed="${!!q.pin}" title="Show this order on the Forge page">${q.pin?'Pinned':'Pin to forge'}</button><button class="jpin ${q.lock?'on':''}" data-action="joblock" data-cid="${q.id}" aria-pressed="${!!q.lock}" title="A locked order stays when you pay for new notices">${q.lock?'🔒 Locked':'Lock'}</button></div></article>`}).join('');
+  return `<div class="jobboard"><div class="jbhead"><h2>Commission board</h2><p>Bring a blade that fits and get paid on the spot. Pin an order to see it on the Forge. Lock one to keep it when you buy new notices; each lock doubles the price.</p><button class="btn small" data-action="refresh" ${refreshCost(c)!=null&&c.coin>=refreshCost(c)?'':'disabled'}>${refreshCost(c)==null?'All locked':`New notices (${refreshCost(c)}c)`}</button><button class="btn ghost small" data-action="boardtoggle">Close</button></div><div class="jobs">${comms}</div></div>`}
 let boardLast='';
 function renderBoard(){const el=$('boardpop');if(!el)return;const on=!!(UI.board&&C()&&!F&&!revealId);document.body.classList.toggle('boardopen',on);if(!on){el.innerHTML='';boardLast='';return}
   const html=`<div class="sheetbg" data-action="boardtoggle"></div><section class="boardpop" role="dialog" aria-label="Commission board">${boardHTML()}</section>`;
@@ -3428,7 +3429,8 @@ const ACT={
     QTY[row.dataset.key]=n;save();render()},
   fulfill:el=>{const c=C(),i=c.commissions.findIndex(q=>q.id===el.dataset.cid);if(i<0)return;const q=c.commissions[i],sel=$('sel-'+q.id),b=sel&&blade(sel.value);if(!b||!deliverable(b,q))return;
     c.coin+=q.pay;gainXP(c,10+Math.min(q.pay,300)/4);(b.status='commission',b.su=Date.now());c.commissions[i]=genComm(c);save();toast(`${q.patron} paid <b>${q.pay}c</b>.`);render()},
-  refresh:()=>{const c=C();if(c.coin<10)return;c.coin-=10;c.commissions=[genComm(c),genComm(c),genComm(c)];save();render()},
+  refresh:()=>{const c=C(),p=refreshCost(c);if(p==null||c.coin<p)return;c.coin-=p;c.commissions=c.commissions.map(q=>q.lock?q:genComm(c));ensure(c);save();render()},
+  joblock:el=>{const q=C().commissions.find(x=>String(x.id)===el.dataset.cid);if(!q)return;q.lock=q.lock?0:1;save();render()},
   anvil:()=>{const c=C(),a=ANVILS[c.anvil+1];if(!a||!canPay(a.cost))return;pay(a.cost);c.anvil++;save();toast(`${a.n} crafted. Your rarity odds improved.`);render()},
   hammer:el=>{const c=C(),k=el.dataset.h,h=HAMMERS[k];if(!canPay(h.cost))return;pay(h.cost);c.hammers[k]={dur:h.dur};c.hammer=k;save();toast(`${h.n} crafted and equipped.`);render()},
   equip:el=>{C().hammer=el.dataset.h;save();render()},
