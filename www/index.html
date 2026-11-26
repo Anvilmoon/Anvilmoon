@@ -1063,6 +1063,10 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+@keyframes rackup{from{transform:translateY(100%)}to{transform:none}}
+.drawer.opening{overflow:hidden!important}.drawer.opening .dpanel{animation:rackup .22s cubic-bezier(.2,.8,.3,1)!important}
+#drawer .drawerbg:has(+ .drawer.opening){animation:fadein .22s ease-out}
+@media (prefers-reduced-motion:reduce){.drawer.opening .dpanel,#drawer .drawerbg{animation:none!important}}
 .jtools{display:flex;gap:6px;margin-top:10px}.jpin{display:block;flex:1;background:none;border:2px dashed #b49f6e;color:#5a4326;font:700 13px var(--body);padding:5px;cursor:pointer}.jpin:hover,.jpin.on{background:#3a2716;color:#eadcb6;border-style:solid;border-color:#1a100a}
 .pinrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;margin-bottom:12px}
 .pin{display:flex;align-items:center;gap:12px;background:#eadcb6;color:#3a2716;border:3px solid #1a100a;box-shadow:inset 3px 3px 0 #f8efd6,inset -3px -3px 0 #c8b383;padding:8px 12px}
