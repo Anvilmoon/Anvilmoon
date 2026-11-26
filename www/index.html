@@ -992,7 +992,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
 .qseq.arc .qsteam{background:radial-gradient(circle,rgba(214,196,255,.85),rgba(143,107,255,.35) 45%,transparent 70%) center/100% 100% no-repeat!important;transform-origin:50% 100%}
 .qseq.arc img.qbb{filter:drop-shadow(0 0 10px rgba(143,107,255,.8))}
 @media (prefers-reduced-motion:reduce){.hearth.arc .hearthblade{animation:none}}
-@media (max-width:760px){.hearth.arc{padding:52px 6px 0}}
+@media (max-width:760px){.hearth.arc{padding:52px 6px 0}.shdmoon{top:46px;width:30%}.hearth.shd .hearthblade{margin-top:24%}}
 /* ===== header fit (phones and tablets), records tabs, toasts ===== */
 #toast>*{pointer-events:auto;cursor:pointer}
 .authform input::placeholder{font-size:inherit;opacity:.55}
@@ -1063,6 +1063,15 @@ input[type=checkbox]:disabled{opacity:.4;cursor:not-allowed}
   nav.rail{overflow:visible}#tabs{position:relative;overflow:visible!important}}
 .homepage h1{margin-bottom:0}
 .rackhandle{display:none}
+.hearth.shd{background:radial-gradient(ellipse 60% 70% at 50% 78%,var(--glow,transparent),transparent 75%),radial-gradient(ellipse 34% 60% at 50% 0,rgba(170,160,230,.13),transparent 70%),var(--bricks) 0 0/96px 48px repeat,#14121c;background-blend-mode:normal,normal,luminosity,normal}
+.shdmoon{position:absolute;left:50%;top:44px;width:min(26%,200px);transform:translateX(-50%);image-rendering:pixelated;z-index:0;pointer-events:none}
+.hearth.shd .hearthblade{margin-top:13%}
+.shdveil{position:absolute;left:0;top:34%;bottom:34%;width:0;background:rgba(8,6,16,.62);border-right:3px solid #c9b8ff;z-index:2;pointer-events:none}
+.shdmark{position:absolute;left:50%;top:26%;bottom:26%;width:4px;margin-left:-2px;z-index:3;pointer-events:none;background:linear-gradient(#8a84a6 0 18%,transparent 18% 82%,#8a84a6 82%)}
+.shdmark.ok{background:linear-gradient(#fff6c8 0 18%,transparent 18% 82%,#fff6c8 82%);filter:drop-shadow(0 0 3px #fff6c8)}
+.hearth.shd .spark{background:#cdb8ff}.hearth.shd .spark:nth-child(3n){background:#8f6bff}.hearth.shd .spark:nth-child(4n){background:#fff}
+.hearth.shd ~ .strikebar .z1{background:rgba(143,107,255,.3)}.hearth.shd ~ .strikebar .z2{background:rgba(232,226,255,.6)}.hearth.shd .heatind.ok{color:#d9ccff}
+.page.forging.struck .shdveil,.page.forging.struck .shdmark{display:none}
 main{isolation:isolate}
 .recgrid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}.recgrid2 .recboard{max-width:none;margin:0}.recgrid2 .rechead h2{text-align:left}
 .recside{margin:0!important}.recboard .ledger{table-layout:fixed;width:100%}.recside h2{margin:0 0 8px}.recside tr[data-action]{cursor:pointer}.recside tr[data-action]:hover td{background:rgba(226,194,117,.08)}.recside .fine{margin:8px 0 0}
@@ -1447,7 +1456,7 @@ function salvYield(b){const t=WT[TYPES[b.type].wt],y={};const iron=Math.round(t.
 function yieldStr(y){const s=Object.entries(y).filter(([,v])=>v>0).map(([k,v])=>`${v} ${MATN[k]}`).join(', ');return s||'scraps'}
 function tickFuel(){const c=C();if(!c)return;const now=Date.now();if(c.fuel>=FUEL_MAX){c.fuelTs=now;return}const n=Math.floor((now-c.fuelTs)/FUEL_MS);if(n>0){c.fuel=Math.min(FUEL_MAX,c.fuel+n);c.fuelTs+=n*FUEL_MS;if(c.fuel>=FUEL_MAX)c.fuelTs=now;save()}}
 let HEAT_ARC=false;
-function heatColor(T){const st=HEAT_ARC?[[0,[46,44,58]],[.22,[62,42,112]],[.4,[104,60,190]],[.58,[150,110,255]],[.75,[192,172,255]],[.9,[232,226,255]],[1,[255,255,255]]]:[[0,[52,48,46]],[.22,[92,26,16]],[.4,[170,30,14]],[.58,[255,100,10]],[.75,[255,190,50]],[.9,[255,240,200]],[1,[255,255,245]]];for(let i=1;i<st.length;i++){if(T<=st[i][0]){const a=st[i-1],b=st[i],f=(T-a[0])/(b[0]-a[0]);return a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*f))}}return st[6][1]}
+function heatColor(T){const st=HEAT_ARC==='shd'?[[0,[58,56,66]],[.22,[52,40,92]],[.4,[84,54,160]],[.58,[128,96,235]],[.75,[176,156,255]],[.9,[226,218,255]],[1,[255,255,255]]]:HEAT_ARC?[[0,[46,44,58]],[.22,[62,42,112]],[.4,[104,60,190]],[.58,[150,110,255]],[.75,[192,172,255]],[.9,[232,226,255]],[1,[255,255,255]]]:[[0,[52,48,46]],[.22,[92,26,16]],[.4,[170,30,14]],[.58,[255,100,10]],[.75,[255,190,50]],[.9,[255,240,200]],[1,[255,255,245]]];for(let i=1;i<st.length;i++){if(T<=st[i][0]){const a=st[i-1],b=st[i],f=(T-a[0])/(b[0]-a[0]);return a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*f))}}return st[6][1]}
 function hammerFx(){const c=C(),h=HAMMERS[c.hammer];if(c.hammer!=='worn'&&(!c.hammers[c.hammer]||c.hammers[c.hammer].dur<=0))return HAMMERS.worn;return h}
 
 // =============== ROLLS ===============
@@ -2368,18 +2377,28 @@ function arcRing(cv,ts){const c=cv.getContext('2d'),{W,H,cx,cy,rx,ry}=ARC,T=F.T,
     else if(ru.s>.8){c.fillStyle='rgba(255,224,138,.16)';c.fillRect(Math.round(px0)-5,Math.round(py0)-6,10,11)}
     for(let y=0;y<7;y++)for(let x=0;x<5;x++)if(g2[y*5+x]==='1')P(px0-2+x,py0-3+y,1,1,f)});
   for(let k=6;k>=0;k--){const[sx,sy]=arcPos(F.ang-k*.09);P(sx-(k?0:1),sy-(k?0:1),k?1:3,k?1:3,k?`rgba(255,240,200,${(.7-k*.1).toFixed(2)})`:'#ffffff')}const[sx,sy]=arcPos(F.ang);P(sx-2,sy,5,1,'rgba(255,240,200,.6)');P(sx,sy-2,1,5,'rgba(255,240,200,.6)')}
+// Shadowsmiths forge by eclipse: the same anvil and the same billet drawn out into a blade, but the 'heat' is the dark drawn across the moon,
+// and the timing cue is a shadow whose edge sweeps along the blade.
+function shdDraw(ts){const cv=$('shdmoon');if(cv){const c=cv.getContext('2d'),T=F.T,ok=T>=.48&&T<=.88,P=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(Math.round(x),Math.round(y),w,h)},
+    disc=(ex,ey,r,f)=>{c.fillStyle=f;for(let y=-r;y<=r;y++){const w=Math.round(Math.sqrt(r*r-y*y));c.fillRect(ex-w,ey+y,w*2,1)}};
+    c.clearRect(0,0,64,40);if(ok){const a=(.2+.15*Math.sin(ts/170)).toFixed(2);disc(32,20,17,`rgba(190,170,255,${a})`)}
+    disc(32,20,13,'#d9d4ee');disc(28,17,3,'#bdb7da');disc(37,24,2,'#bdb7da');disc(30,26,1,'#c9c3e2');
+    const off=Math.round(30*(1-Math.min(1,T/.7)));c.save();c.globalCompositeOperation='destination-out';disc(32+off,20,13,'#000');c.restore();
+    if(off<26){c.fillStyle=`rgba(20,16,34,.92)`;for(let y=-13;y<=13;y++){const w=Math.round(Math.sqrt(169-y*y));for(let x=-w;x<w;x++){const X=32+off+x,dx=X-32;if(dx*dx+y*y<=169)c.fillRect(X,20+y,1,1)}}}
+    if(ok){c.fillStyle='rgba(225,210,255,.9)';for(let a=0;a<6.283;a+=.035)c.fillRect(Math.round(32+Math.cos(a)*14),Math.round(20+Math.sin(a)*14),1,1)}}
+  const v=$('shdveil');if(v)v.style.width=(F.mx*100).toFixed(2)+'%';const m=$('shdmark');if(m)m.classList.toggle('ok',F.T>=.48&&F.T<=.88)}
 function startForge(labor){const c=C(),t=TYPES[labor?typesOf(c.cls)[1]:c.sel],w=WT[t.wt];let bog=0;
   if(!labor){if(!knows(c,t.wt))return toast(`Learn the ${WT[t.wt].n.toLowerCase()} blade pattern in the Workshop first.`);if(c.fuel<1||c.iron+(c.bog||0)<w.iron||c.coal<w.coal)return toast('You need more materials. Buy supplies at the Market.');
     bog=Math.max(0,w.iron-c.iron);if(c.fuel>=FUEL_MAX)c.fuelTs=Date.now();c.fuel--;c.iron-=w.iron-bog;c.bog=(c.bog||0)-bog;c.coal-=w.coal}
   const h=hammerFx();if(!labor&&c.hammer!=='worn'&&c.hammers[c.hammer]&&c.hammers[c.hammer].dur>0)c.hammers[c.hammer].dur--;save();
-  const arc=!labor&&!PX.off&&t.c==='arcane';HEAT_ARC=arc;
-  F={arc,ang:-Math.PI/2,target:-1,runes:arc?Array.from({length:w.strikes},(_,i)=>({a:i*2*Math.PI/w.strikes-Math.PI/2+.3,g:Math.floor(Math.random()*ARC.GLYPH.length),s:null})):[],type:labor?typesOf(c.cls)[1]:c.sel,labor:!!labor,bog,need:w.strikes,zone:h.zone,cool:h.cool,T:.15,strikes:[],burns:0,cold:0,t0:performance.now(),last:performance.now(),bell:false,mx:0,done:false};
+  const arc=!labor&&!PX.off&&t.c==='arcane',shd=!labor&&!PX.off&&t.c==='shadow';HEAT_ARC=shd?'shd':arc;
+  F={arc,shd,ang:-Math.PI/2,target:-1,runes:arc?Array.from({length:w.strikes},(_,i)=>({a:i*2*Math.PI/w.strikes-Math.PI/2+.3,g:Math.floor(Math.random()*ARC.GLYPH.length),s:null})):[],type:labor?typesOf(c.cls)[1]:c.sel,labor:!!labor,bog,need:w.strikes,zone:h.zone,cool:h.cool,T:.15,strikes:[],burns:0,cold:0,t0:performance.now(),last:performance.now(),bell:false,mx:0,done:false};
   if(arc)arcNext();renderHUD();renderTabs();
-  $('view').innerHTML=`<section class="page forging${arc?' arcforge':''}"><div class="pagehead"><h1>${labor?'A shift at the foreman’s forge':arc?`Enchanting a ${t.n}`:`Forging a ${t.n}`}</h1><p class="fine">${labor?'His iron, his blade, his coin. ':''}${arc?'Hold to channel mana until it says <b>Inscribe now</b>, then inscribe as the spark crosses the glowing rune.':'Hold the bellows until it says <b>Strike now</b>, then strike as the marker crosses the bright centre.'}</p></div>
-   <div class="hearth${PX.off?'':' px'}${arc?' arc':''}" id="anvil"><div class="hearthblade">${PX.off?bladeSVG({type:F.type,len:100,rarity:0,si:2},{heat:'rgb(52,48,46)',heatId:'hot',noRuler:1,minW:330}):'<canvas id="hotpx" class="pxcv"></canvas>'}</div>${PX.off?ANVIL_SVG:arc?`<canvas id="arcring" class="pxanvil arcring" width="${ARC.W}" height="${ARC.H}"></canvas>`:'<img id="pxanvil" class="pxanvil" alt="">'}<div id="sparks"></div><div class="heatind" id="heatind" aria-live="polite"></div></div>
-   <div class="forgebar"><div class="pips" id="pips" aria-label="Strikes">${'<span class="pip"></span>'.repeat(F.need)}</div><div class="msg" id="fmsg" aria-live="polite">${arc?'The circle is dark.':'The metal is cold.'}</div></div>
+  $('view').innerHTML=`<section class="page forging${arc?' arcforge':''}${shd?' shdforge':''}"><div class="pagehead"><h1>${labor?'A shift at the foreman’s forge':arc?`Enchanting a ${t.n}`:shd?`Forging a ${t.n} under the eclipse`:`Forging a ${t.n}`}</h1><p class="fine">${labor?'His iron, his blade, his coin. ':''}${arc?'Hold to channel mana until it says <b>Inscribe now</b>, then inscribe as the spark crosses the glowing rune.':shd?'Hold to draw the dark across the moon until it says <b>Strike now</b>, then strike as the shadow’s edge crosses the bright mark on the blade.':'Hold the bellows until it says <b>Strike now</b>, then strike as the marker crosses the bright centre.'}</p></div>
+   <div class="hearth${PX.off?'':' px'}${arc?' arc':''}${shd?' shd':''}" id="anvil">${shd?'<canvas id="shdmoon" class="shdmoon" width="64" height="40"></canvas>':''}<div class="hearthblade">${shd?'<div class="shdveil" id="shdveil"></div><i class="shdmark" id="shdmark"></i>':''}${PX.off?bladeSVG({type:F.type,len:100,rarity:0,si:2},{heat:'rgb(52,48,46)',heatId:'hot',noRuler:1,minW:330}):'<canvas id="hotpx" class="pxcv"></canvas>'}</div>${PX.off?ANVIL_SVG:arc?`<canvas id="arcring" class="pxanvil arcring" width="${ARC.W}" height="${ARC.H}"></canvas>`:'<img id="pxanvil" class="pxanvil" alt="">'}<div id="sparks"></div><div class="heatind" id="heatind" aria-live="polite"></div></div>
+   <div class="forgebar"><div class="pips" id="pips" aria-label="Strikes">${'<span class="pip"></span>'.repeat(F.need)}</div><div class="msg" id="fmsg" aria-live="polite">${arc?'The circle is dark.':shd?'The moon is bright.':'The metal is cold.'}</div></div>
    <div class="strikebar"><div class="z1" style="width:${(arc?9.2:25)*F.zone}%"></div><div class="z2" style="width:${(arc?3.4:9.4)*F.zone}%"></div><div class="mk" id="mk"></div></div>
-   <div class="controls" id="ctrls" data-s="cold"><button class="btn big" id="bellows">${arc?'Hold to channel':'Hold the bellows'} <kbd>F</kbd></button><button class="btn go big" id="strike">${arc?'Inscribe':'Strike'} <kbd>Space</kbd></button></div>
+   <div class="controls" id="ctrls" data-s="cold"><button class="btn big" id="bellows">${arc?'Hold to channel':shd?'Hold to draw the dark':'Hold the bellows'} <kbd>F</kbd></button><button class="btn go big" id="strike">${arc?'Inscribe':'Strike'} <kbd>Space</kbd></button></div>
    <div class="quench hidden" id="quench"><p class="qlead"></p>${labor?`<button class="btn go qbtn" data-action="handover"><b>Hand the blade to the foreman</b><small>Collect your wages</small></button>`:Object.entries(QUENCH).map(([k,q])=>{const lk=!knows(c,k);return `<button class="btn qbtn" data-action="quench" data-q="${k}" ${lk?'disabled':''}><b>${arc?`Bind with ${ARC.Q[k].toLowerCase()}`:`Quench in ${q.n.toLowerCase()}`}</b><small>${lk?`Learn ${arc?ARC.Q[k].toLowerCase():q.n.toLowerCase()} in the Workshop`:arc?q.d.replace('crack risk','risk it unravels'):q.d}</small></button>`}).join('')}</div>
    </section>`;
   $('quench').querySelector('.qlead').textContent=labor?`All ${F.need} strikes are in. The blade isn’t yours.`:arc?`All ${F.need} runes are set. Choose how to bind the blade.${F.bog?' This one is bog iron.':''}`:`All ${F.need} strikes are in. Choose how to quench the blade.${F.bog?' This one is bog iron.':''}`;
@@ -2390,15 +2409,15 @@ function startForge(labor){const c=C(),t=TYPES[labor?typesOf(c.cls)[1]:c.sel],w=
 // The hammer draws the billet out: each strike eases the shape toward its next stage with a small overshoot, like metal giving under the blow.
 function shapeAt(o,now){if(!o||o.shTo==null)return 0;const f=Math.min(1,Math.max(0,(now-o.shAt)/280)),c1=1.9,e=f>=1?1:1+(c1+1)*Math.pow(f-1,3)+c1*Math.pow(f-1,2);return o.shFrom+(o.shTo-o.shFrom)*e}
 function shapeHit(o,to,now){o.shFrom=shapeAt(o,now);o.shTo=to;o.shAt=now}
-function loop(ts){if(!F||F.done)return;const dt=Math.min(.05,(ts-F.last)/1000);F.last=ts;HEAT_ARC=!!F.arc;F.T=Math.max(0,Math.min(1,F.T+(F.bell?.32:-.055)*dt));
+function loop(ts){if(!F||F.done)return;const dt=Math.min(.05,(ts-F.last)/1000);F.last=ts;HEAT_ARC=F.shd?'shd':!!F.arc;F.T=Math.max(0,Math.min(1,F.T+(F.bell?.32:-.055)*dt));if(F.shd)shdDraw(ts);
   const[r,g,b]=heatColor(F.T),p=$('hot');if(F.spr){const cv=$('hotpx');if(cv){const sp=F.shTo==null?0:shapeAt(F,ts);if(F.arc)PX.drawArc(cv,F.spr,F.T,sp>=.999&&F.shTo>=1?1:Math.min(.999,sp),ts);else PX.drawHot(cv,F.spr,F.T,sp>=.999&&F.shTo>=1?1:Math.min(.999,sp));if(F.shTo>=1&&sp>=.999&&!F.fitted){F.fitted=1;cv.classList.add('fitted')}}}if(p){p.setAttribute('fill',`rgb(${r},${g},${b})`);p.style.filter=F.T>.35?`drop-shadow(0 0 ${4+F.T*14}px rgba(${r},${g},${b},.85))`:'none'}
-  const a=$('anvil');if(a)a.style.setProperty('--glow',F.arc?`rgba(${r},${g},${b},${(F.T*.26).toFixed(3)})`:`rgba(${r},${Math.round(g*.6)},${Math.round(b*.3)},${(F.T*.32).toFixed(3)})`);
+  const a=$('anvil');if(a)a.style.setProperty('--glow',F.arc||F.shd?`rgba(${r},${g},${b},${(F.T*.26).toFixed(3)})`:`rgba(${r},${Math.round(g*.6)},${Math.round(b*.3)},${(F.T*.32).toFixed(3)})`);
   const hf=$('hfill');if(hf){hf.style.width=(F.T*100).toFixed(1)+'%';hf.style.background=`rgb(${r},${g},${b})`;const hm=$('hmk');if(hm)hm.style.left=(F.T*100).toFixed(1)+'%'}
-  const hi=$('heatind');if(hi){const st=F.T<.48?'cold':F.T>.88?'hot':'ok';if(hi.dataset.s!==st){hi.dataset.s=st;const cs=$('ctrls');if(cs)cs.dataset.s=st;const fs=$('fsteps');if(fs&&fs.dataset.s!=='3')fs.dataset.s=st==='cold'?'1':'2';hi.className='heatind '+st;hi.innerHTML=F.arc?(st==='cold'?'<b>▼</b> Too faint':st==='hot'?'<b>▲</b> Overloading':'<b>✓</b> Inscribe now'):st==='cold'?'<b>▼</b> Too cold':st==='hot'?'<b>▲</b> Too hot':'<b>✓</b> Strike now'}}
+  const hi=$('heatind');if(hi){const st=F.T<.48?'cold':F.T>.88?'hot':'ok';if(hi.dataset.s!==st){hi.dataset.s=st;const cs=$('ctrls');if(cs)cs.dataset.s=st;const fs=$('fsteps');if(fs&&fs.dataset.s!=='3')fs.dataset.s=st==='cold'?'1':'2';hi.className='heatind '+st;hi.innerHTML=F.arc?(st==='cold'?'<b>▼</b> Too faint':st==='hot'?'<b>▲</b> Overloading':'<b>✓</b> Inscribe now'):F.shd?(st==='cold'?'<b>▼</b> Too bright':st==='hot'?'<b>▲</b> Too dark':'<b>✓</b> Strike now'):st==='cold'?'<b>▼</b> Too cold':st==='hot'?'<b>▲</b> Too hot':'<b>✓</b> Strike now'}}
   if(F.arc){F.ang+=dt*2*Math.PI/ARC.orbit;const rc=$('arcring');if(rc)arcRing(rc,ts);F.mx=F.target<0?.5:.5+arcWrap(F.ang-F.runes[F.target].a)/(2*Math.PI)}else
   F.mx=(Math.sin((ts-F.t0)/1000*3.4)+1)/2;const mk=$('mk');if(mk)mk.style.left=(F.mx*100)+'%';requestAnimationFrame(loop)}
 function strike(){if(!F||F.done||F.strikes.length>=F.need)return;const T=F.T,arc=F.arc,timing=arc?Math.max(0,1-Math.abs(arcWrap(F.ang-F.runes[F.target].a))/(.72*F.zone)):Math.max(0,1-Math.abs(F.mx-.5)*3.2/F.zone);let hf=1,note='',col='var(--ash)';
-  if(T<.3){hf=.35;F.cold+=.09;note=arc?'Far too faint. The rune gutters.':'Far too cold. The metal groans.';col='var(--red)'}else if(T<.48){hf=.65;F.cold+=.04;note=arc?'A little faint.':'A little cold.';col='var(--bronze)'}else if(T>.88){hf=.6;F.burns++;note=arc?'Overloaded. The rune scorches.':'Too hot. Scale burns away.';col='var(--red)'}
+  if(T<.3){hf=.35;F.cold+=.09;note=arc?'Far too faint. The rune gutters.':F.shd?'Far too bright. The shadow won’t take.':'Far too cold. The metal groans.';col='var(--red)'}else if(T<.48){hf=.65;F.cold+=.04;note=arc?'A little faint.':F.shd?'A little bright.':'A little cold.';col='var(--bronze)'}else if(T>.88){hf=.6;F.burns++;note=arc?'Overloaded. The rune scorches.':F.shd?'Too dark. You can’t see the edge.':'Too hot. Scale burns away.';col='var(--red)'}
   const sc=timing*hf;F.strikes.push(sc);shapeHit(F,F.strikes.length/F.need,performance.now());const hcv=$('hotpx');if(hcv&&!arc){hcv.classList.remove('thud');void hcv.offsetWidth;hcv.classList.add('thud')}let rpos=null;if(arc){const ru=F.runes[F.target];ru.s=sc;rpos=arcPos(ru.a);arcNext()}SFX.play(arc?'rune':'strike',timing);buzz(timing>.85?'MEDIUM':'LIGHT');F.T=Math.max(0,F.T-.09*F.cool);
   const lab=arc?(timing>.85?'Perfect rune':timing>.6?'Clean rune':timing>.3?'Smudged rune':'Missed the rune'):timing>.85?'Perfect strike':timing>.6?'Clean strike':timing>.3?'Glancing blow':'Missed the mark';
   $('fmsg').innerHTML=`<span style="color:${timing>.6?'var(--straw)':'var(--mute)'}">${lab}.</span>${note?` <span style="color:${col}">${note}</span>`:''}`;
